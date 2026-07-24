@@ -16,9 +16,29 @@ RUN pip install --no-cache-dir \
     uvicorn
 
 WORKDIR /app
+
+# Copy all Python source files and the start script
 COPY *.py .
+COPY start.sh .
+RUN chmod +x start.sh
 
 EXPOSE 8080
 EXPOSE 8081
 
-ENTRYPOINT ["python", "vision_service.py"]
+# Use start.sh as the entrypoint so camera auto-detection and server-wait
+# logic runs identically whether started via Docker or directly on the Pi.
+#
+# Configuration via environment variables (passed with -e / --env-file):
+#   docker run -e SERVER_URL=http://192.168.1.100:8000 \
+#              -e PICKER_ID=picker-1 \
+#              --device /dev/video0 \
+#              picker-vision-pi
+#
+# Or mount a config file to avoid typing env vars every time:
+#   docker run -v /home/pi/.picker-vision.conf:/root/.picker-vision.conf \
+#              --device /dev/video0 \
+#              picker-vision-pi
+#
+# Or use a Docker env file:
+#   docker run --env-file /home/pi/picker.env --device /dev/video0 picker-vision-pi
+ENTRYPOINT ["/bin/bash", "start.sh"]
