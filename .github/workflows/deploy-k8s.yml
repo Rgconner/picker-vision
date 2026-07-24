@@ -1,0 +1,87 @@
+name: Deploy to Kubernetes
+
+on:
+  # Auto-deploy when server images are pushed to main
+  workflow_run:
+    workflows: ["Build Server Images"]
+    types: [completed]
+    branches: [main]
+  # Manual deploy with optional image tag override
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (default: main)"
+        required: false
+        default: "main"
+
+jobs:
+  deploy:
+    name: Deploy to k8s
+    runs-on: ubuntu-latest
+    # Only deploy when the triggering build succeeded (or on manual dispatch)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Set up kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      # Write the kubeconfig from a repository secret.
+      # In GitHub: Settings → Secrets → KUBECONFIG  (base64-encoded kubeconfig)
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      # Resolve the image tag: SHA from the triggering build, or the manual input
+      - name: Resolve image tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            # Use the short SHA of the commit that triggered the build workflow
+            echo "tag=sha-$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+          fi
+
+      # Pin all image tags to the resolved value so the rollout is reproducible
+      - name: Update image tags
+        working-directory: k8s
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          kustomize edit set image \
+            ghcr.io/rgconner/picker-vision/api-gateway=ghcr.io/rgconner/picker-vision/api-gateway:${TAG} \
+            ghcr.io/rgconner/picker-vision/order-service=ghcr.io/rgconner/picker-vision/order-service:${TAG} \
+            ghcr.io/rgconner/picker-vision/event-processor=ghcr.io/rgconner/picker-vision/event-processor:${TAG} \
+            ghcr.io/rgconner/picker-vision/websocket-hub=ghcr.io/rgconner/picker-vision/websocket-hub:${TAG} \
+            ghcr.io/rgconner/picker-vision/web-ui=ghcr.io/rgconner/picker-vision/web-ui:${TAG}
+
+      # Apply MetalLB config first (it lives in metallb-system namespace, not picker-vision)
+      - name: Apply MetalLB config
+        run: kubectl apply -f k8s/metallb-config.yaml
+
+      # Apply the rest via kustomize
+      - name: Apply manifests
+        run: kubectl apply -k k8s/
+
+      # Wait for all Deployments to roll out cleanly
+      - name: Wait for rollout
+        run: |
+          for deploy in api-gateway order-service event-processor websocket-hub web-ui; do
+            echo "Waiting for $deploy..."
+            kubectl rollout status deployment/$deploy -n picker-vision --timeout=300s
+          done
+
+      # Print the external IPs assigned by MetalLB
+      - name: Show external IPs
+        run: |
+          echo "### External IPs (MetalLB)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          kubectl get svc -n picker-vision -o wide | grep LoadBalancer >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

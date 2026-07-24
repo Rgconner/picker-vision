@@ -1,0 +1,64 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-ui
+  namespace: picker-vision
+  labels:
+    app: web-ui
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-ui
+  template:
+    metadata:
+      labels:
+        app: web-ui
+    spec:
+      containers:
+        - name: web-ui
+          image: ghcr.io/rgconner/picker-vision/web-ui:main
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 15
+---
+# LoadBalancer Service — MetalLB assigns an external IP from the pool.
+# Browsers access the React UI directly on port 80.
+# The UI's /api, /ws and /stream paths are handled by the gateway's external IP.
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-ui
+  namespace: picker-vision
+  annotations:
+    # Pin to a specific IP from the pool if desired, e.g.:
+    # metallb.universe.tf/loadBalancerIPs: 192.168.1.201
+spec:
+  type: LoadBalancer
+  selector:
+    app: web-ui
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP

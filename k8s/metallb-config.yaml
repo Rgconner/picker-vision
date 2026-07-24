@@ -1,0 +1,29 @@
+---
+# MetalLB IPAddressPool — edit the addresses range to match your LAN subnet.
+# Example below uses 192.168.1.200-192.168.1.210.
+# MetalLB will assign IPs from this pool to LoadBalancer Services.
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: picker-vision-pool
+  namespace: metallb-system
+spec:
+  addresses:
+    - 192.168.1.200-192.168.1.210
+  # avoidBuggyIPs prevents .0 and .255 from being assigned
+  avoidBuggyIPs: true
+---
+# L2Advertisement — announces the pool IPs via ARP/NDP on the LAN.
+# This is the correct mode for a single-node or small bare-metal cluster
+# where BGP peering is not available.
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: picker-vision-l2
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - picker-vision-pool
+  # Optionally restrict which node interfaces advertise — leave empty for all
+  # nodeSelectors: []
+  # interfaces: []

@@ -1,0 +1,59 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: event-processor
+  namespace: picker-vision
+  labels:
+    app: event-processor
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: event-processor
+  template:
+    metadata:
+      labels:
+        app: event-processor
+    spec:
+      containers:
+        - name: event-processor
+          image: ghcr.io/rgconner/picker-vision/event-processor:main
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8002
+          envFrom:
+            - configMapRef:
+                name: picker-vision-config
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 20
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: event-processor
+  namespace: picker-vision
+spec:
+  type: ClusterIP
+  selector:
+    app: event-processor
+  ports:
+    - port: 8002
+      targetPort: 8002

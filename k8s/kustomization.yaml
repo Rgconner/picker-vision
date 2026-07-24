@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: picker-vision
+
+# Apply namespace first so all resources land in the right place
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - metallb-config.yaml
+  - redis.yaml
+  - order-service.yaml
+  - event-processor.yaml
+  - websocket-hub.yaml
+  - api-gateway.yaml
+  - web-ui.yaml
+
+# Override the image tags at deploy time using:
+#   kustomize edit set image ghcr.io/rgconner/picker-vision/api-gateway=ghcr.io/rgconner/picker-vision/api-gateway:sha-abc1234
+# or via the GitHub Actions deploy workflow which sets them to the exact SHA.
+images:
+  - name: ghcr.io/rgconner/picker-vision/api-gateway
+    newTag: main
+  - name: ghcr.io/rgconner/picker-vision/order-service
+    newTag: main
+  - name: ghcr.io/rgconner/picker-vision/event-processor
+    newTag: main
+  - name: ghcr.io/rgconner/picker-vision/websocket-hub
+    newTag: main
+  - name: ghcr.io/rgconner/picker-vision/web-ui
+    newTag: main
+
+commonLabels:
+  app.kubernetes.io/part-of: picker-vision
+  app.kubernetes.io/managed-by: kustomize
