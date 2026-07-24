@@ -1,27 +1,19 @@
 FROM python:3.11-slim
 
-# Install runtime libs + build tools needed to compile zxingcpp from source on ARM64.
-# zxingcpp does not publish aarch64 manylinux wheels on PyPI, so it must be built.
-# We install build deps, compile, then remove them in the same RUN layer to keep
-# the final image lean.
+# Runtime libs only — no build tools needed.
+# All barcode/QR detection uses OpenCV's built-in detectors (Apache 2.0),
+# which ship as pre-built aarch64 wheels on PyPI.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libglib2.0-0 \
-        # Build dependencies for zxingcpp
-        cmake \
-        g++ \
-        python3-dev \
-    && pip install --no-cache-dir \
-        opencv-python-headless \
-        zxingcpp \
-        requests \
-        Pillow \
-        fastapi \
-        uvicorn \
-    && apt-get purge -y --auto-remove \
-        cmake \
-        g++ \
-        python3-dev \
+        libgl1 \
     && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir \
+    "opencv-python-headless>=4.8" \
+    requests \
+    Pillow \
+    fastapi \
+    uvicorn
 
 WORKDIR /app
 COPY *.py .
