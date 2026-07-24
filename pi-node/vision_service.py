@@ -1,5 +1,4 @@
 import logging
-import os
 import threading
 import time
 from datetime import datetime, timezone
@@ -11,6 +10,7 @@ from pydantic import BaseModel
 
 import barcode_detector
 import camera_probe
+import config_loader
 import event_publisher as ep_module
 import frame_annotator
 import mjpeg_streamer as ms_module
@@ -19,18 +19,18 @@ import staging_detector
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-# ── Environment variables ─────────────────────────────────────────────────────
-_raw_index    = int(os.environ.get("CAMERA_INDEX", "-1"))
-FRAME_WIDTH   = int(os.environ.get("FRAME_WIDTH",   "640"))
-FRAME_HEIGHT  = int(os.environ.get("FRAME_HEIGHT",  "480"))
-FRAME_FPS     = int(os.environ.get("FRAME_FPS",     "15"))
-PICKER_ID     = os.environ.get("PICKER_ID",     "picker-1")
-SERVER_URL    = os.environ.get("SERVER_URL",    "http://localhost:8000")
-CONTROL_PORT  = int(os.environ.get("CONTROL_PORT",  "8081"))
+# ── Configuration (env vars > config file > defaults) ─────────────────────────
+_cfg         = config_loader.load()
+SERVER_URL   = config_loader.require("SERVER_URL")   # hard-fail if missing
+PICKER_ID    = _cfg["PICKER_ID"]
+FRAME_WIDTH  = int(_cfg["FRAME_WIDTH"])
+FRAME_HEIGHT = int(_cfg["FRAME_HEIGHT"])
+FRAME_FPS    = int(_cfg["FRAME_FPS"])
+CONTROL_PORT = int(_cfg["CONTROL_PORT"])
 
 # ── Camera index resolution ───────────────────────────────────────────────────
-# If CAMERA_INDEX is -1 (unset) use auto-detection; otherwise honour the pin.
-CAMERA_INDEX  = camera_probe.find_camera(prefer_index=_raw_index if _raw_index >= 0 else None)
+_raw_index   = int(_cfg["CAMERA_INDEX"])
+CAMERA_INDEX = camera_probe.find_camera(prefer_index=_raw_index if _raw_index >= 0 else None)
 
 # ── Shared mutable state (guarded by a lock where needed) ─────────────────────
 _running              = True
@@ -166,14 +166,22 @@ def _run_capture(streamer: ms_module.MJPEGStreamer, publisher: ep_module.EventPu
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    logger.info("Picker Vision Node starting (picker=%s, server=%s)", PICKER_ID, SERVER_URL)
+
     streamer = ms_module.MJPEGStreamer(port=8080)
     streamer.start()
 
-    stream_url = f"http://localhost:8080/stream"
+    stream_url = "http://localhost:8080/stream"
     publisher = ep_module.EventPublisher(SERVER_URL, PICKER_ID)
     publisher.set_stream_url(stream_url)
     publisher.start()
-    publisher.register()
+
+    # Wait for the server before registering — loops with backoff on a headless device.
+    # The camera capture loop runs locally regardless; events are buffered offline
+    # until the server comes up.
+    logger.info("Waiting for server at %s ...", SERVER_URL)
+    publisher.wait_for_server()          # blocks until server responds
+    publisher.register()                 # retries with backoff
 
     # FastAPI control server in a daemon thread
     control_thread = threading.Thread(
