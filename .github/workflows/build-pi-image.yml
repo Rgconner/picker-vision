@@ -15,7 +15,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/pi-node
+  IMAGE_NAME: ${{ github.repository }}/picker-vision/pi-node
 
 jobs:
   build:
@@ -62,7 +62,7 @@ jobs:
       - name: Build and push Pi Node image
         uses: docker/build-push-action@v5
         with:
-          context: pi-node
+          context: picker-vision/pi-node
           platforms: linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}

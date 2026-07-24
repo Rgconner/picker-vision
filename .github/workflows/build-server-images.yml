@@ -16,8 +16,8 @@ on:
 env:
   REGISTRY: ghcr.io
   # Images are published under the repository owner's namespace.
-  # e.g.  ghcr.io/your-org/picker-vision/api-gateway:main
-  IMAGE_PREFIX: ${{ github.repository }}/picker-vision
+  # e.g.  ghcr.io/rgconner/picker-vision/api-gateway:main
+  IMAGE_PREFIX: ${{ github.repository }}
 
 jobs:
   build:
@@ -32,15 +32,15 @@ jobs:
       matrix:
         include:
           - service: api-gateway
-            context: picker-vision/server/api_gateway
+            context: server/api_gateway
           - service: order-service
-            context: picker-vision/server/order_service
+            context: server/order_service
           - service: event-processor
-            context: picker-vision/server/event_processor
+            context: server/event_processor
           - service: websocket-hub
-            context: picker-vision/server/websocket_hub
+            context: server/websocket_hub
           - service: web-ui
-            context: picker-vision/server/web_ui
+            context: server/web_ui
 
     steps:
       - name: Checkout
