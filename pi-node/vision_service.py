@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 import barcode_detector
+import camera_probe
 import event_publisher as ep_module
 import frame_annotator
 import mjpeg_streamer as ms_module
@@ -19,13 +20,17 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 logger = logging.getLogger(__name__)
 
 # ── Environment variables ─────────────────────────────────────────────────────
-CAMERA_INDEX  = int(os.environ.get("CAMERA_INDEX",  "0"))
+_raw_index    = int(os.environ.get("CAMERA_INDEX", "-1"))
 FRAME_WIDTH   = int(os.environ.get("FRAME_WIDTH",   "640"))
 FRAME_HEIGHT  = int(os.environ.get("FRAME_HEIGHT",  "480"))
 FRAME_FPS     = int(os.environ.get("FRAME_FPS",     "15"))
 PICKER_ID     = os.environ.get("PICKER_ID",     "picker-1")
 SERVER_URL    = os.environ.get("SERVER_URL",    "http://localhost:8000")
 CONTROL_PORT  = int(os.environ.get("CONTROL_PORT",  "8081"))
+
+# ── Camera index resolution ───────────────────────────────────────────────────
+# If CAMERA_INDEX is -1 (unset) use auto-detection; otherwise honour the pin.
+CAMERA_INDEX  = camera_probe.find_camera(prefer_index=_raw_index if _raw_index >= 0 else None)
 
 # ── Shared mutable state (guarded by a lock where needed) ─────────────────────
 _running              = True
