@@ -1,0 +1,21 @@
+# Ensure shell scripts always use LF (required for Docker/Linux execution)
+pi-node/start.sh text eol=lf
+
+# Ensure Dockerfiles use LF
+**/Dockerfile text eol=lf
+
+# Python and web source files — normalise to LF
+*.py text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+
+# Windows-only files can keep CRLF
+*.bat text eol=crlf
+*.ps1 text eol=crlf

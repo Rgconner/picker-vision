@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+
+# SQLite database (generated at runtime)
+*.db
+*.db-shm
+*.db-wal
+
+# Node / web UI
+server/web_ui/node_modules/
+server/web_ui/dist/
+
+# Test output
+tools/test_barcodes.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+.dockerignore

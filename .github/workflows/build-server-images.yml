@@ -1,0 +1,89 @@
+name: Build Server Images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "server/**"
+      - ".github/workflows/build-server-images.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/**"
+      - ".github/workflows/build-server-images.yml"
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  # Images are published under the repository owner's namespace.
+  # e.g.  ghcr.io/your-org/picker-vision/api-gateway:main
+  IMAGE_PREFIX: ${{ github.repository }}/picker-vision
+
+jobs:
+  build:
+    name: Build ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write   # needed to push to ghcr.io
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: api-gateway
+            context: picker-vision/server/api_gateway
+          - service: order-service
+            context: picker-vision/server/order_service
+          - service: event-processor
+            context: picker-vision/server/event_processor
+          - service: websocket-hub
+            context: picker-vision/server/websocket_hub
+          - service: web-ui
+            context: picker-vision/server/web_ui
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Docker Buildx enables cache-to/from and multi-platform features even
+      # for single-platform amd64 builds.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        # Only log in when pushing (not on pull_request from forks)
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Derive tags:
+      #   push to main  → :main  and  :sha-<short>
+      #   version tag   → :1.2.3 and  :latest
+      #   pull_request  → :pr-<number>  (not pushed)
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-,format=short
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Layer cache via GitHub Actions cache backend — speeds up rebuilds
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,scope=${{ matrix.service }},mode=max

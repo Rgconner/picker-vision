@@ -1,0 +1,276 @@
+openapi: "3.0.3"
+info:
+  title: Picker Vision API
+  version: "0.1.0"
+  description: |
+    REST API for the Picker Vision warehouse picking assistance system.
+    The API Gateway is the single entry point on port 8000.
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: health
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /pickers/register:
+    post:
+      summary: Register a Pi node
+      operationId: registerPicker
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PickerRegistration"
+      responses:
+        "200":
+          description: Registration accepted
+
+  /pickers:
+    get:
+      summary: List registered pickers
+      operationId: listPickers
+      responses:
+        "200":
+          description: List of registered pickers
+
+  /events/detection:
+    post:
+      summary: Receive a detection event from a Pi node
+      operationId: receiveDetection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DetectionEvent"
+      responses:
+        "200":
+          description: Event received
+
+  /stream/{picker_id}:
+    get:
+      summary: Proxy MJPEG stream from a Pi node
+      operationId: getStream
+      parameters:
+        - in: path
+          name: picker_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: MJPEG stream
+          content:
+            multipart/x-mixed-replace:
+              schema:
+                type: string
+                format: binary
+
+  /api/orders:
+    get:
+      summary: List active orders
+      operationId: listOrders
+      responses:
+        "200":
+          description: List of active orders
+
+  /api/orders/{id}:
+    get:
+      summary: Get order by ID
+      operationId: getOrder
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order detail
+        "404":
+          description: Order not found
+
+  /api/orders/{id}/lines/{line_id}:
+    patch:
+      summary: Mark an order line as picked
+      operationId: markPicked
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: line_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Line updated
+
+  /api/orders/{id}/confirm-packed:
+    post:
+      summary: Confirm an order is packed and lock the staging target
+      operationId: confirmPacked
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order confirmed and staging locked
+
+  /api/products/{barcode}:
+    get:
+      summary: Get product metadata by barcode
+      operationId: getProduct
+      parameters:
+        - in: path
+          name: barcode
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Product metadata
+        "404":
+          description: Product not found
+
+  /api/staging/{code}:
+    get:
+      summary: Get staging container info by 4-letter code
+      operationId: getStaging
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+            maxLength: 4
+      responses:
+        "200":
+          description: Staging container info
+        "404":
+          description: Staging container not found
+
+  /control/{picker_id}:
+    post:
+      summary: Send a control command to a Pi node
+      operationId: sendControl
+      parameters:
+        - in: path
+          name: picker_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ControlCommand"
+      responses:
+        "200":
+          description: Command forwarded
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        service:
+          type: string
+          example: api-gateway
+
+    PickerRegistration:
+      type: object
+      required: [picker_id, ip, stream_url]
+      properties:
+        picker_id:
+          type: string
+        ip:
+          type: string
+        stream_url:
+          type: string
+
+    ControlCommand:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [start, stop, validate, lock_staging]
+        staging_code:
+          type: string
+          maxLength: 4
+
+    DetectionEvent:
+      type: object
+      required: [picker_id, timestamp, detections]
+      properties:
+        picker_id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        detections:
+          type: array
+          items:
+            $ref: "#/components/schemas/Detection"
+        staging_regions:
+          type: array
+          items:
+            $ref: "#/components/schemas/StagingRegion"
+
+    Detection:
+      type: object
+      properties:
+        barcode:
+          type: string
+        symbology:
+          type: string
+        bbox:
+          type: array
+          items:
+            type: integer
+        active:
+          type: boolean
+        type:
+          type: string
+          enum: [product, staging]
+
+    StagingRegion:
+      type: object
+      properties:
+        staging_code:
+          type: string
+        boundary_points:
+          type: array
+          items:
+            type: object
+            properties:
+              x:
+                type: integer
+              y:
+                type: integer
+        staging_status:
+          type: string
+          enum: [pending, complete, locked]

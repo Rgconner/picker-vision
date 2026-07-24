@@ -1,0 +1,96 @@
+networks:
+  picker-net:
+    driver: bridge
+
+volumes:
+  picker-db:
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - picker-net
+    restart: unless-stopped
+
+  api-gateway:
+    build: ./server/api_gateway
+    ports:
+      - "8000:8000"
+    environment:
+      ORDER_SERVICE_URL: http://order-service:8001
+      EVENT_PROCESSOR_URL: http://event-processor:8002
+      WEBSOCKET_HUB_URL: http://websocket-hub:8003
+      REDIS_URL: redis://redis:6379
+      REQUIRE_API_KEY: "false"
+      API_GATEWAY_URL: http://api-gateway:8000
+    depends_on:
+      - redis
+    networks:
+      - picker-net
+    restart: unless-stopped
+
+  order-service:
+    build: ./server/order_service
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: sqlite:///./picker.db
+      USE_SAP_ADAPTER: "false"
+      ORDER_SERVICE_URL: http://order-service:8001
+      EVENT_PROCESSOR_URL: http://event-processor:8002
+      WEBSOCKET_HUB_URL: http://websocket-hub:8003
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - picker-db:/app
+    depends_on:
+      - redis
+    networks:
+      - picker-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  event-processor:
+    build: ./server/event_processor
+    ports:
+      - "8002:8002"
+    environment:
+      ORDER_SERVICE_URL: http://order-service:8001
+      EVENT_PROCESSOR_URL: http://event-processor:8002
+      WEBSOCKET_HUB_URL: http://websocket-hub:8003
+      REDIS_URL: redis://redis:6379
+      API_GATEWAY_URL: http://api-gateway:8000
+    depends_on:
+      - redis
+    networks:
+      - picker-net
+    restart: unless-stopped
+
+  websocket-hub:
+    build: ./server/websocket_hub
+    ports:
+      - "8003:8003"
+    environment:
+      ORDER_SERVICE_URL: http://order-service:8001
+      EVENT_PROCESSOR_URL: http://event-processor:8002
+      WEBSOCKET_HUB_URL: http://websocket-hub:8003
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - picker-net
+    restart: unless-stopped
+
+  web-ui:
+    build: ./server/web_ui
+    ports:
+      - "3000:80"
+    networks:
+      - picker-net
+    restart: unless-stopped
