@@ -24,3 +24,4 @@ data:
 
   # API gateway
   REQUIRE_API_KEY: "false"
+  # ci-trigger: 2026-07-25
