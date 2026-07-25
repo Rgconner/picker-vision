@@ -41,19 +41,23 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      # Resolve the image tag: SHA from the triggering build, or the manual input
-      - name: Resolve image tag
+      # Resolve the image tag and branch context from the triggering build
+      - name: Resolve image tag and branch
         id: tag
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+            echo "branch=main" >> $GITHUB_OUTPUT
           else
-            # Use the short SHA of the commit that triggered the build workflow
-            echo "tag=sha-$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+            SHA="${{ github.event.workflow_run.head_sha }}"
+            echo "tag=sha-$(echo ${SHA} | cut -c1-7)" >> $GITHUB_OUTPUT
+            echo "branch=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_OUTPUT
           fi
 
-      # Pin all image tags to the resolved value so the rollout is reproducible
-      - name: Update image tags
+      # ── Production deploy (main branch only) ─────────────────────────────────
+
+      - name: Update production image tags
+        if: steps.tag.outputs.branch == 'main'
         working-directory: k8s
         run: |
           TAG="${{ steps.tag.outputs.tag }}"
@@ -64,26 +68,66 @@ jobs:
             ghcr.io/rgconner/picker-vision/websocket-hub=ghcr.io/rgconner/picker-vision/websocket-hub:${TAG} \
             ghcr.io/rgconner/picker-vision/web-ui=ghcr.io/rgconner/picker-vision/web-ui:${TAG}
 
-      # Apply MetalLB config first (it lives in metallb-system namespace, not picker-vision)
       - name: Apply MetalLB config
+        if: steps.tag.outputs.branch == 'main'
         run: kubectl apply -f k8s/metallb-config.yaml
 
-      # Apply the rest via kustomize
-      - name: Apply manifests
+      - name: Apply production manifests
+        if: steps.tag.outputs.branch == 'main'
         run: kubectl apply -k k8s/
 
-      # Wait for all Deployments to roll out cleanly
-      - name: Wait for rollout
+      - name: Wait for production rollout
+        if: steps.tag.outputs.branch == 'main'
         run: |
           for deploy in api-gateway order-service event-processor websocket-hub web-ui; do
             echo "Waiting for $deploy..."
             kubectl rollout status deployment/$deploy -n picker-vision --timeout=300s
           done
 
-      # Print the external IPs assigned by MetalLB
-      - name: Show external IPs
+      - name: Show production external IPs
+        if: steps.tag.outputs.branch == 'main'
         run: |
-          echo "### External IPs (MetalLB)" >> $GITHUB_STEP_SUMMARY
+          echo "### Production External IPs (MetalLB)" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           kubectl get svc -n picker-vision -o wide | grep LoadBalancer >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      # ── Test namespace deploy (feature/mobile-web-client branch) ─────────────
+      # Pins to the exact SHA tag so pods always restart on a new build,
+      # regardless of whether the mutable branch tag changed.
+
+      - name: Update test overlay image tags
+        if: steps.tag.outputs.branch == 'feature/mobile-web-client'
+        working-directory: k8s/overlays/test
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          kustomize edit set image \
+            ghcr.io/rgconner/picker-vision/api-gateway=ghcr.io/rgconner/picker-vision/api-gateway:${TAG} \
+            ghcr.io/rgconner/picker-vision/order-service=ghcr.io/rgconner/picker-vision/order-service:${TAG} \
+            ghcr.io/rgconner/picker-vision/event-processor=ghcr.io/rgconner/picker-vision/event-processor:${TAG} \
+            ghcr.io/rgconner/picker-vision/websocket-hub=ghcr.io/rgconner/picker-vision/websocket-hub:${TAG} \
+            ghcr.io/rgconner/picker-vision/web-ui=ghcr.io/rgconner/picker-vision/web-ui:${TAG}
+
+      - name: Apply test MetalLB pool
+        if: steps.tag.outputs.branch == 'feature/mobile-web-client'
+        run: kubectl apply -f k8s/overlays/test/metallb-pool.yaml
+
+      - name: Apply test manifests
+        if: steps.tag.outputs.branch == 'feature/mobile-web-client'
+        run: kubectl apply -k k8s/overlays/test/
+
+      - name: Wait for test rollout
+        if: steps.tag.outputs.branch == 'feature/mobile-web-client'
+        run: |
+          for deploy in api-gateway order-service event-processor websocket-hub web-ui; do
+            echo "Waiting for $deploy (test)..."
+            kubectl rollout status deployment/$deploy -n picker-vision-test --timeout=300s
+          done
+
+      - name: Show test external IPs
+        if: steps.tag.outputs.branch == 'feature/mobile-web-client'
+        run: |
+          echo "### Test External IPs (MetalLB)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          kubectl get svc -n picker-vision-test -o wide | grep LoadBalancer >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
