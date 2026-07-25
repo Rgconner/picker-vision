@@ -7,7 +7,6 @@ namespace: picker-vision
 resources:
   - namespace.yaml
   - configmap.yaml
-  - metallb-config.yaml
   - redis.yaml
   - order-service.yaml
   - event-processor.yaml
