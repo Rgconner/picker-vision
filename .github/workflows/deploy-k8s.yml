@@ -76,10 +76,10 @@ jobs:
         if: steps.tag.outputs.branch == 'main'
         run: kubectl apply -k k8s/
 
-      # kustomize edit set image only mutates the local checkout — it is never
-      # committed, so the cluster never sees the new tag via apply -k alone.
-      # kubectl set image updates the running Deployments directly to the SHA tag,
-      # which forces a pod rollout without requiring a repo write.
+      # kubectl set image pins each deployment to the exact SHA tag, which changes
+      # the pod spec and forces a rollout even if the mutable branch tag (:main)
+      # already points to the new image. Without this step the cluster would see
+      # no spec change and never restart pods.
       - name: Pin production deployments to SHA tag
         if: steps.tag.outputs.branch == 'main'
         run: |
@@ -116,8 +116,10 @@ jobs:
         if: steps.tag.outputs.branch == 'feature/mobile-web-client'
         run: kubectl apply -k k8s/overlays/test/
 
-      # Same pattern as production: kubectl set image forces the rollout to the
-      # exact SHA tag without needing to commit kustomization.yaml changes.
+      # kubectl set image pins each deployment to the exact SHA tag so the pod
+      # spec changes and a rollout is forced. The mutable :feature-mobile-web-client
+      # tag in the kustomization is only used for initial resource creation;
+      # every subsequent deploy must change the spec to trigger a restart.
       - name: Pin test deployments to SHA tag
         if: steps.tag.outputs.branch == 'feature/mobile-web-client'
         run: |
