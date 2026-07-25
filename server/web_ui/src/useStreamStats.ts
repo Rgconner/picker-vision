@@ -89,7 +89,7 @@ export function useStreamStats(streamUrl: string | null | undefined): StreamStat
     async function readStream() {
       try {
         setStats({ ...initialStats(), status: 'connecting' });
-        const res = await fetch(streamUrl, {
+        const res = await fetch(streamUrl as string, {
           signal: ctrl.signal,
           cache: 'no-store',
         });
