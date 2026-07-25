@@ -1,18 +1,22 @@
 name: Deploy to Kubernetes
 
 on:
-  # Auto-deploy when server images are pushed to main or the feature branch
+  # Auto-deploy when the build workflow completes on any branch.
+  # NOTE: workflow_run is evaluated from the default branch (main), so this
+  # workflow file must be merged to main for the trigger to fire.
+  # Branch discrimination (prod vs test namespace) is handled in the job steps.
   workflow_run:
     workflows: ["Build Server Images"]
     types: [completed]
-    branches:
-      - main
-      - feature/mobile-web-client
-  # Manual deploy with optional image tag override
+  # Manual deploy — choose branch/namespace explicitly
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Image tag to deploy (default: main)"
+        description: "Image tag to deploy (e.g. sha-a1b2c3d or main)"
+        required: false
+        default: "main"
+      target_branch:
+        description: "Branch to target: 'main' → prod namespace, 'feature/mobile-web-client' → test namespace"
         required: false
         default: "main"
 
@@ -41,13 +45,15 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      # Resolve the image tag and branch context from the triggering build
+      # Resolve the image tag and branch context from the triggering build.
+      # workflow_dispatch exposes both inputs explicitly; workflow_run reads
+      # head_sha and head_branch from the upstream build event.
       - name: Resolve image tag and branch
         id: tag
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
-            echo "branch=main" >> $GITHUB_OUTPUT
+            echo "branch=${{ inputs.target_branch }}" >> $GITHUB_OUTPUT
           else
             SHA="${{ github.event.workflow_run.head_sha }}"
             echo "tag=sha-$(echo ${SHA} | cut -c1-7)" >> $GITHUB_OUTPUT
