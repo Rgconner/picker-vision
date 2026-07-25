@@ -112,17 +112,14 @@ def _make_qr_drawing(payload: str, size_pt: float):
     qr.make(fit=True)
     pil_img = qr.make_image(fill_color="black", back_color="white")
 
-    # Convert PIL image → ReportLab ImageReader
+    # Convert PIL image → PNG bytes (ReportLab 5 accepts bytes directly)
     buf = io.BytesIO()
     pil_img.save(buf, format="PNG")
-    buf.seek(0)
 
-    from reportlab.lib.utils import ImageReader
     from reportlab.graphics.shapes import Image as RLImage
 
-    reader = ImageReader(buf)
     d = Drawing(size_pt, size_pt)
-    img = RLImage(0, 0, size_pt, size_pt, reader)
+    img = RLImage(0, 0, size_pt, size_pt, buf.getvalue())
     d.add(img)
     return d
 
