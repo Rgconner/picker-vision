@@ -1,0 +1,33 @@
+﻿{
+  "_comment": "Dev Estimator — rate scenarios. Edit any value here; they take effect on next estimate run.",
+  "_roles": {
+    "MGR": { "name": "Manager",             "count": 1 },
+    "ARC": { "name": "Architect",           "count": 1 },
+    "DES": { "name": "UI Designer",         "count": 1 },
+    "SRD": { "name": "Senior Developer",    "count": 1 },
+    "MDD": { "name": "Mid-Level Developer", "count": 2 },
+    "JRD": { "name": "Junior Developer",    "count": 2 }
+  },
+  "scenarios": {
+    "IBM US": {
+      "label": "IBM US",
+      "notes": "US-based IBM band rates — onshore delivery, full IBM G&A loaded",
+      "rates": { "MGR": 225, "ARC": 250, "DES": 175, "SRD": 225, "MDD": 175, "JRD": 125 }
+    },
+    "IBM Blended": {
+      "label": "IBM Blended",
+      "notes": "Mixed on/offshore IBM delivery model — typical iX or GTS blended team",
+      "rates": { "MGR": 175, "ARC": 200, "DES": 140, "SRD": 180, "MDD": 140, "JRD": 100 }
+    },
+    "IBM Offshore": {
+      "label": "IBM Offshore",
+      "notes": "India / eastern Europe IBM delivery centres — offshore-only",
+      "rates": { "MGR": 120, "ARC": 145, "DES": 95, "SRD": 130, "MDD": 95, "JRD": 65 }
+    },
+    "Industry Standard": {
+      "label": "Industry Standard",
+      "notes": "US mid-market benchmark rates — suitable for competitive positioning",
+      "rates": { "MGR": 150, "ARC": 175, "DES": 120, "SRD": 160, "MDD": 120, "JRD": 85 }
+    }
+  }
+}
