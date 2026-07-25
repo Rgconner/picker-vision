@@ -11,11 +11,11 @@ data:
   REDIS_URL: "redis://redis:6379"
 
   # Component versions for test build
-  API_GATEWAY_VERSION: "1.1.4-test"
-  ORDER_SERVICE_VERSION: "1.1.4-test"
-  EVENT_PROCESSOR_VERSION: "1.1.4-test"
-  WEBSOCKET_HUB_VERSION: "1.1.4-test"
-  WEB_UI_VERSION: "1.1.4-test"
+  API_GATEWAY_VERSION: "1.2.0-test"
+  ORDER_SERVICE_VERSION: "1.2.0-test"
+  EVENT_PROCESSOR_VERSION: "1.2.0-test"
+  WEBSOCKET_HUB_VERSION: "1.2.0-test"
+  WEB_UI_VERSION: "1.2.0-test"
 
   # Order service
   DATABASE_URL: "sqlite:////data/picker.db"

@@ -10,16 +10,31 @@ component **must** bump its `VERSION` file and add a row here.
 
 | Component         | Current | File                                        |
 |-------------------|---------|---------------------------------------------|
-| pi-node           | 1.1.4   | `pi-node/VERSION`                           |
-| api-gateway       | 1.1.4   | `server/api_gateway/VERSION`                |
-| event-processor   | 1.1.4   | `server/event_processor/VERSION`            |
-| websocket-hub     | 1.1.4   | `server/websocket_hub/VERSION`              |
-| order-service     | 1.1.4   | `server/order_service/VERSION`              |
-| web-ui            | 1.1.4   | `server/web_ui/VERSION`                     |
+| pi-node           | 1.2.0   | `pi-node/VERSION`                           |
+| api-gateway       | 1.2.0   | `server/api_gateway/VERSION`                |
+| event-processor   | 1.2.0   | `server/event_processor/VERSION`            |
+| websocket-hub     | 1.2.0   | `server/websocket_hub/VERSION`              |
+| order-service     | 1.2.0   | `server/order_service/VERSION`              |
+| web-ui            | 1.2.0   | `server/web_ui/VERSION`                     |
 
 ---
 
 ## Changelog
+
+### 1.2.0
+
+**web-ui**
+- Added dedicated `/mobile` route — navigating to `/mobile` (or any sub-path) renders `MobilePickerView` full-screen with no header, nav tabs, or footer. The full desktop `App` is still served at `/`. Detection logic in `main.tsx` uses `window.location.pathname` so no router dependency is added.
+- Bumped `package.json` version to `1.2.0`.
+
+**k8s**
+- Updated all `*_VERSION` keys in `configmap.yaml` to `1.2.0`.
+- Updated all `*_VERSION` keys in `overlays/test/configmap-patch.yaml` to `1.2.0-test`.
+
+**all components**
+- Bumped all `VERSION` files to `1.2.0`.
+
+---
 
 ### 1.1.4
 
