@@ -74,9 +74,18 @@ def control(body: ControlBody):
 def _run_capture(streamer: ms_module.MJPEGStreamer, publisher: ep_module.EventPublisher) -> None:
     global _validate_next_frame
 
-    cap = cv2.VideoCapture(CAMERA_INDEX)
+    # Use V4L2 backend explicitly — opencv-python-headless does not bundle
+    # the FFMPEG device backend, so without this hint it logs a spurious
+    # "VIDEOIO/FFMPEG: OpenCV should be configured with libavdevice" warning.
+    cap = cv2.VideoCapture(CAMERA_INDEX, cv2.CAP_V4L2)
     if not cap.isOpened():
-        logger.error("Failed to open camera at index %d — exiting", CAMERA_INDEX)
+        cap = cv2.VideoCapture(CAMERA_INDEX)   # fallback (non-Linux)
+    if not cap.isOpened():
+        logger.error(
+            "Failed to open camera at index %d — "
+            "check that /dev/video%d is accessible and passed to the container",
+            CAMERA_INDEX, CAMERA_INDEX,
+        )
         raise SystemExit(1)
 
     cap.set(cv2.CAP_PROP_FRAME_WIDTH,  FRAME_WIDTH)

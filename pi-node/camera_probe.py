@@ -52,7 +52,14 @@ def _probe_device(index: int, width: int = 640, height: int = 480) -> dict | Non
 
     Returns a dict with device info on success, None on failure.
     """
-    cap = cv2.VideoCapture(index)
+    # Force the V4L2 backend — opencv-python-headless does not include the
+    # FFMPEG device backend, so cv2.VideoCapture(N) without a backend hint
+    # triggers the "VIDEOIO/FFMPEG: OpenCV should be configured with
+    # libavdevice" warning and often fails to open the device.
+    cap = cv2.VideoCapture(index, cv2.CAP_V4L2)
+    if not cap.isOpened():
+        # Fallback: try without a backend hint (works on some platforms)
+        cap = cv2.VideoCapture(index)
     if not cap.isOpened():
         return None
 

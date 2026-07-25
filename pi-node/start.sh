@@ -7,6 +7,15 @@ set -e
 #
 # CAMERA_INDEX: set to a specific number (0, 1, 2...) to pin a camera,
 #               or leave unset / set to -1 to auto-detect the first working camera.
+#
+# Bare-metal system dependency (not needed in Docker):
+#   sudo apt-get install -y libv4l-dev libv4l-0
+# This gives OpenCV's V4L2 backend full access to USB cameras without
+# requiring FFMPEG device support (which opencv-python-headless omits).
+
+# Suppress the "VIDEOIO/FFMPEG: OpenCV should be configured with libavdevice"
+# message — we use the V4L2 backend; FFMPEG device support is not needed.
+export OPENCV_LOG_LEVEL=${OPENCV_LOG_LEVEL:-ERROR}
 
 export FRAME_WIDTH=${FRAME_WIDTH:-640}
 export FRAME_HEIGHT=${FRAME_HEIGHT:-480}

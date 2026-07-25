@@ -6,7 +6,13 @@ FROM python:3.11-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libglib2.0-0 \
         libgl1 \
+        libv4l-0 \
+        libv4l-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# Suppress OpenCV's FFMPEG "not configured with libavdevice" noise.
+# We use the V4L2 backend directly; FFMPEG device support is not needed.
+ENV OPENCV_LOG_LEVEL=ERROR
 
 RUN pip install --no-cache-dir \
     "opencv-python-headless>=4.8" \
