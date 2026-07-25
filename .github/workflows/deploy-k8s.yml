@@ -36,6 +36,9 @@ jobs:
 
       - name: Set up kustomize
         uses: imranismail/setup-kustomize@v2
+        # kustomize is still used for 'kubectl apply -k' (it's the backend).
+        # The explicit 'kustomize edit set image' steps have been removed —
+        # image pinning is now done via 'kubectl set image' after apply.
 
       # Write the kubeconfig from a repository secret.
       # In GitHub: Settings → Secrets → KUBECONFIG  (base64-encoded kubeconfig)
@@ -62,18 +65,6 @@ jobs:
 
       # ── Production deploy (main branch only) ─────────────────────────────────
 
-      - name: Update production image tags
-        if: steps.tag.outputs.branch == 'main'
-        working-directory: k8s
-        run: |
-          TAG="${{ steps.tag.outputs.tag }}"
-          kustomize edit set image \
-            ghcr.io/rgconner/picker-vision/api-gateway=ghcr.io/rgconner/picker-vision/api-gateway:${TAG} \
-            ghcr.io/rgconner/picker-vision/order-service=ghcr.io/rgconner/picker-vision/order-service:${TAG} \
-            ghcr.io/rgconner/picker-vision/event-processor=ghcr.io/rgconner/picker-vision/event-processor:${TAG} \
-            ghcr.io/rgconner/picker-vision/websocket-hub=ghcr.io/rgconner/picker-vision/websocket-hub:${TAG} \
-            ghcr.io/rgconner/picker-vision/web-ui=ghcr.io/rgconner/picker-vision/web-ui:${TAG}
-
       - name: Apply MetalLB config
         if: steps.tag.outputs.branch == 'main'
         # --validate=false: MetalLB CRD types (metallb.io/v1beta1) are not in
@@ -84,6 +75,19 @@ jobs:
       - name: Apply production manifests
         if: steps.tag.outputs.branch == 'main'
         run: kubectl apply -k k8s/
+
+      # kustomize edit set image only mutates the local checkout — it is never
+      # committed, so the cluster never sees the new tag via apply -k alone.
+      # kubectl set image updates the running Deployments directly to the SHA tag,
+      # which forces a pod rollout without requiring a repo write.
+      - name: Pin production deployments to SHA tag
+        if: steps.tag.outputs.branch == 'main'
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          NS=picker-vision
+          for svc in api-gateway order-service event-processor websocket-hub web-ui; do
+            kubectl set image deployment/${svc} ${svc}=ghcr.io/rgconner/picker-vision/${svc}:${TAG} -n ${NS}
+          done
 
       - name: Wait for production rollout
         if: steps.tag.outputs.branch == 'main'
@@ -102,20 +106,6 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       # ── Test namespace deploy (feature/mobile-web-client branch) ─────────────
-      # Pins to the exact SHA tag so pods always restart on a new build,
-      # regardless of whether the mutable branch tag changed.
-
-      - name: Update test overlay image tags
-        if: steps.tag.outputs.branch == 'feature/mobile-web-client'
-        working-directory: k8s/overlays/test
-        run: |
-          TAG="${{ steps.tag.outputs.tag }}"
-          kustomize edit set image \
-            ghcr.io/rgconner/picker-vision/api-gateway=ghcr.io/rgconner/picker-vision/api-gateway:${TAG} \
-            ghcr.io/rgconner/picker-vision/order-service=ghcr.io/rgconner/picker-vision/order-service:${TAG} \
-            ghcr.io/rgconner/picker-vision/event-processor=ghcr.io/rgconner/picker-vision/event-processor:${TAG} \
-            ghcr.io/rgconner/picker-vision/websocket-hub=ghcr.io/rgconner/picker-vision/websocket-hub:${TAG} \
-            ghcr.io/rgconner/picker-vision/web-ui=ghcr.io/rgconner/picker-vision/web-ui:${TAG}
 
       - name: Apply test MetalLB pool
         if: steps.tag.outputs.branch == 'feature/mobile-web-client'
@@ -125,6 +115,17 @@ jobs:
       - name: Apply test manifests
         if: steps.tag.outputs.branch == 'feature/mobile-web-client'
         run: kubectl apply -k k8s/overlays/test/
+
+      # Same pattern as production: kubectl set image forces the rollout to the
+      # exact SHA tag without needing to commit kustomization.yaml changes.
+      - name: Pin test deployments to SHA tag
+        if: steps.tag.outputs.branch == 'feature/mobile-web-client'
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          NS=picker-vision-test
+          for svc in api-gateway order-service event-processor websocket-hub web-ui; do
+            kubectl set image deployment/${svc} ${svc}=ghcr.io/rgconner/picker-vision/${svc}:${TAG} -n ${NS}
+          done
 
       - name: Wait for test rollout
         if: steps.tag.outputs.branch == 'feature/mobile-web-client'
