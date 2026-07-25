@@ -21,6 +21,9 @@ _SERVICE_ROOT = pathlib.Path(__file__).resolve().parent
 if str(_SERVICE_ROOT) not in sys.path:
     sys.path.insert(0, str(_SERVICE_ROOT))
 
+import pathlib as _pathlib
+import time as _time
+from datetime import datetime as _dt, timezone as _tz
 from fastapi import FastAPI, HTTPException
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -54,7 +57,16 @@ def _init_db() -> None:
 # ---------------------------------------------------------------------------
 
 SERVICE_NAME = "order-service"
-SERVICE_VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
+_VERSION_FILE = _pathlib.Path(__file__).parent / "VERSION"
+SERVICE_VERSION = (
+    _VERSION_FILE.read_text().strip()
+    if _VERSION_FILE.exists()
+    else os.getenv("SERVICE_VERSION", "unknown")
+)
+_STARTED_AT = _dt.now(_tz.utc).isoformat()
+_START_MONO = _time.monotonic()
+
+import log_ring as _log_ring
 
 app = FastAPI(
     title="Order Service",
@@ -73,6 +85,7 @@ def startup_event() -> None:
     global _adapter
     _init_db()
     _adapter = get_adapter()
+    _log_ring.attach()
 
 
 def _get_adapter():
@@ -92,7 +105,18 @@ def _get_adapter():
     tags=["meta"],
 )
 def health():
-    return {"status": "ok", "service": SERVICE_NAME, "version": SERVICE_VERSION}
+    return {
+        "status":         "ok",
+        "service":        SERVICE_NAME,
+        "version":        SERVICE_VERSION,
+        "started_at":     _STARTED_AT,
+        "uptime_seconds": round(_time.monotonic() - _START_MONO),
+    }
+
+
+@app.get("/logs", summary="In-memory log ring", tags=["meta"])
+def get_logs():
+    return {"service": SERVICE_NAME, "lines": _log_ring.get_lines()}
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 ---
-# MetalLB IPAddressPool — edit the addresses range to match your LAN subnet.
-# Example below uses 192.168.1.200-192.168.1.210.
+# MetalLB IPAddressPool — addresses range must match your LAN subnet.
+# This is configured for the 192.168.11.x subnet where the server lives at
+# 192.168.11.7.  Adjust the range if your cluster node IPs differ.
 # MetalLB will assign IPs from this pool to LoadBalancer Services.
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
@@ -9,7 +10,7 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-    - 192.168.1.200-192.168.1.210
+    - 192.168.11.200-192.168.11.210
   # avoidBuggyIPs prevents .0 and .255 from being assigned
   avoidBuggyIPs: true
 ---

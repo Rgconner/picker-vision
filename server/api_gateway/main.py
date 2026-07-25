@@ -2,6 +2,8 @@ import asyncio
 import json
 import logging
 import os
+import pathlib
+import time
 from datetime import datetime, timezone
 
 import httpx
@@ -9,11 +11,23 @@ import redis as redis_lib
 import websockets
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 SERVICE_NAME = "api-gateway"
-SERVICE_VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
+_VERSION_FILE = pathlib.Path(__file__).parent / "VERSION"
+SERVICE_VERSION = (
+    _VERSION_FILE.read_text().strip()
+    if _VERSION_FILE.exists()
+    else os.getenv("SERVICE_VERSION", "unknown")
+)
+_STARTED_AT = datetime.now(timezone.utc).isoformat()
+_START_MONO = time.monotonic()
+_COUNTERS: dict[str, int] = {
+    "pickers_registered": 0,
+    "events_proxied":     0,
+    "http_requests":      0,
+}
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -39,6 +53,8 @@ PICKER_STALE_AFTER = 120  # seconds
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("api_gateway")
+import log_ring as _log_ring
+_log_ring.attach()
 
 # ---------------------------------------------------------------------------
 # Redis (with in-memory fallback)
@@ -142,11 +158,12 @@ app.add_middleware(
 )
 
 # API key middleware
-_API_KEY_EXEMPT = {"/health", "/pickers/register"}
+_API_KEY_EXEMPT = {"/health", "/pickers/register", "/api/logs", "/api/telemetry"}
 
 
 @app.middleware("http")
 async def api_key_middleware(request: Request, call_next):
+    _COUNTERS["http_requests"] += 1
     if REQUIRE_API_KEY and request.url.path not in _API_KEY_EXEMPT:
         key = request.headers.get("X-API-Key", "")
         if not key or key != API_KEY:
@@ -218,11 +235,24 @@ class ControlBody(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": SERVICE_NAME, "version": SERVICE_VERSION}
+    return {
+        "status":          "ok",
+        "service":         SERVICE_NAME,
+        "version":         SERVICE_VERSION,
+        "started_at":      _STARTED_AT,
+        "uptime_seconds":  round(time.monotonic() - _START_MONO),
+        "counters":        dict(_COUNTERS),
+    }
+
+
+@app.get("/logs")
+def get_logs():
+    return {"service": SERVICE_NAME, "lines": _log_ring.get_lines()}
 
 
 @app.post("/pickers/register")
 async def register_picker(body: PickerRegisterBody):
+    _COUNTERS["pickers_registered"] += 1
     now = datetime.now(timezone.utc).isoformat()
     existing = _redis_get_picker(body.picker_id) or {}
     info = {
@@ -263,6 +293,7 @@ async def control(picker_id: str, body: ControlBody):
 
 @app.post("/events/detection")
 async def events_detection(request: Request):
+    _COUNTERS["events_proxied"] += 1
     body = await request.json()
     return await _proxy("POST", f"{EVENT_PROCESSOR_URL}/events/detection", body)
 
@@ -323,6 +354,99 @@ async def api_pickers():
 async def api_versions():
     return await _collect_service_versions()
 
+
+# Service name → internal URL mapping for log proxying
+_LOG_SERVICE_URLS: dict[str, str] = {
+    "api-gateway":     None,          # self — served directly
+    "order-service":   ORDER_SERVICE_URL,
+    "event-processor": EVENT_PROCESSOR_URL,
+    "websocket-hub":   WEBSOCKET_HUB_URL,
+}
+
+
+@app.get("/api/logs/{service}")
+async def api_logs_service(service: str):
+    if service == "api-gateway":
+        return get_logs()
+    url = _LOG_SERVICE_URLS.get(service)
+    if url is None:
+        raise HTTPException(status_code=404, detail=f"Unknown service: {service!r}")
+    return await _proxy("GET", f"{url}/logs")
+
+
+@app.get("/api/logs/pi/{picker_id}")
+async def api_logs_pi(picker_id: str):
+    info = _redis_get_picker(picker_id)
+    if not info:
+        raise HTTPException(status_code=404, detail=f"Picker {picker_id!r} not found")
+    control_url = info.get("control_url", "").rstrip("/")
+    if not control_url:
+        raise HTTPException(status_code=503, detail=f"Picker {picker_id!r} has no control_url registered")
+    return await _proxy("GET", f"{control_url}/logs")
+
+
+# ---------------------------------------------------------------------------
+# Telemetry — aggregated health + picker registry
+# ---------------------------------------------------------------------------
+
+_TELEMETRY_SERVICES = {
+    "api-gateway":     None,             # self
+    "order-service":   ORDER_SERVICE_URL,
+    "event-processor": EVENT_PROCESSOR_URL,
+    "websocket-hub":   WEBSOCKET_HUB_URL,
+}
+
+
+async def _collect_telemetry() -> dict:
+    """Collect /health from all internal services and merge with picker registry."""
+    results: dict[str, dict] = {}
+
+    async with httpx.AsyncClient(timeout=3.0) as client:
+        for name, url in _TELEMETRY_SERVICES.items():
+            if url is None:
+                # Self — build from live counters
+                results[name] = {
+                    "status":         "ok",
+                    "service":        SERVICE_NAME,
+                    "version":        SERVICE_VERSION,
+                    "started_at":     _STARTED_AT,
+                    "uptime_seconds": round(time.monotonic() - _START_MONO),
+                    "counters":       dict(_COUNTERS),
+                }
+                continue
+            try:
+                resp = await client.get(f"{url}/health")
+                if resp.status_code == 200:
+                    results[name] = {**resp.json(), "reachable": True}
+                else:
+                    results[name] = {"status": "error", "http_status": resp.status_code, "reachable": False}
+            except Exception as exc:
+                results[name] = {"status": "unreachable", "error": str(exc), "reachable": False}
+
+    pickers = _redis_list_pickers()
+    return {"services": results, "pickers": pickers, "collected_at": datetime.now(timezone.utc).isoformat()}
+
+
+@app.get("/api/telemetry")
+async def api_telemetry():
+    return await _collect_telemetry()
+
+
+@app.get("/api/telemetry/stream")
+async def api_telemetry_stream():
+    """Server-Sent Events stream — pushes telemetry every 5 seconds."""
+    async def _generate():
+        while True:
+            data = await _collect_telemetry()
+            yield f"data: {json.dumps(data)}\n\n"
+            await asyncio.sleep(5)
+
+    return StreamingResponse(_generate(), media_type="text/event-stream")
+
+
+# ---------------------------------------------------------------------------
+# State proxies
+# ---------------------------------------------------------------------------
 
 @app.get("/state/{picker_id}")
 async def state_picker(picker_id: str):

@@ -23,7 +23,13 @@ import threading
 from typing import Any
 
 SERVICE_NAME = "websocket-hub"
-SERVICE_VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
+import pathlib as _pathlib
+_VERSION_FILE = _pathlib.Path(__file__).parent / "VERSION"
+SERVICE_VERSION = (
+    _VERSION_FILE.read_text().strip()
+    if _VERSION_FILE.exists()
+    else os.getenv("SERVICE_VERSION", "unknown")
+)
 
 import redis as redis_lib
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -45,7 +51,44 @@ _redis_sync = redis_lib.from_url(REDIS_URL, decode_responses=True)
 # App
 # ---------------------------------------------------------------------------
 
+import log_ring as _log_ring
+_log_ring.attach()
+
+import time as _time
+from datetime import datetime as _dt, timezone as _tz
+
+_STARTED_AT = _dt.now(_tz.utc).isoformat()
+_START_MONO = _time.monotonic()
+_COUNTERS: dict[str, int] = {
+    "picker_sockets_opened":     0,
+    "supervisor_sockets_opened": 0,
+    "messages_broadcast":        0,
+    "active_picker_sockets":     0,
+    "active_supervisor_sockets": 0,
+}
+
 app = FastAPI(title="WebSocket Hub", version=SERVICE_VERSION)
+
+
+# ---------------------------------------------------------------------------
+# Health
+# ---------------------------------------------------------------------------
+
+@app.get("/health")
+def health():
+    return {
+        "status":          "ok",
+        "service":         SERVICE_NAME,
+        "version":         SERVICE_VERSION,
+        "started_at":      _STARTED_AT,
+        "uptime_seconds":  round(_time.monotonic() - _START_MONO),
+        "counters":        dict(_COUNTERS),
+    }
+
+
+@app.get("/logs")
+def get_logs():
+    return {"service": SERVICE_NAME, "lines": _log_ring.get_lines()}
 
 
 # ---------------------------------------------------------------------------
@@ -82,15 +125,6 @@ def _launch_listener(
     t = threading.Thread(target=_run, daemon=True)
     t.start()
     return t
-
-
-# ---------------------------------------------------------------------------
-# Health
-# ---------------------------------------------------------------------------
-
-@app.get("/health")
-def health():
-    return {"status": "ok", "service": SERVICE_NAME, "version": SERVICE_VERSION}
 
 
 # ---------------------------------------------------------------------------
@@ -135,6 +169,8 @@ def get_state(picker_id: str):
 @app.websocket("/ws/supervisor")
 async def ws_supervisor(websocket: WebSocket):
     """Supervisor feed — receives state updates from ALL active picker channels."""
+    _COUNTERS["supervisor_sockets_opened"] += 1
+    _COUNTERS["active_supervisor_sockets"] += 1
     await websocket.accept()
 
     loop = asyncio.get_event_loop()
@@ -164,6 +200,7 @@ async def ws_supervisor(websocket: WebSocket):
         while True:
             try:
                 data = await asyncio.wait_for(queue.get(), timeout=30.0)
+                _COUNTERS["messages_broadcast"] += 1
                 await websocket.send_text(data)
             except asyncio.TimeoutError:
                 # Send a keepalive ping to detect stale connections
@@ -171,6 +208,7 @@ async def ws_supervisor(websocket: WebSocket):
     except WebSocketDisconnect:
         pass
     finally:
+        _COUNTERS["active_supervisor_sockets"] = max(0, _COUNTERS["active_supervisor_sockets"] - 1)
         stop_event.set()
         try:
             pubsub.punsubscribe("picker:*:updates")
@@ -186,6 +224,8 @@ async def ws_supervisor(websocket: WebSocket):
 @app.websocket("/ws/{picker_id}")
 async def ws_picker(websocket: WebSocket, picker_id: str):
     """Operator feed — receives state updates for a single picker."""
+    _COUNTERS["picker_sockets_opened"] += 1
+    _COUNTERS["active_picker_sockets"] += 1
     await websocket.accept()
 
     loop = asyncio.get_event_loop()
@@ -206,12 +246,14 @@ async def ws_picker(websocket: WebSocket, picker_id: str):
         while True:
             try:
                 data = await asyncio.wait_for(queue.get(), timeout=30.0)
+                _COUNTERS["messages_broadcast"] += 1
                 await websocket.send_text(data)
             except asyncio.TimeoutError:
                 await websocket.send_text(json.dumps({"type": "ping"}))
     except WebSocketDisconnect:
         pass
     finally:
+        _COUNTERS["active_picker_sockets"] = max(0, _COUNTERS["active_picker_sockets"] - 1)
         stop_event.set()
         try:
             pubsub.unsubscribe(channel)

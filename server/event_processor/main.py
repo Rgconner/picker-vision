@@ -15,10 +15,25 @@ import asyncio
 import json
 import os
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 SERVICE_NAME = "event-processor"
-SERVICE_VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
+import pathlib as _pathlib
+_VERSION_FILE = _pathlib.Path(__file__).parent / "VERSION"
+SERVICE_VERSION = (
+    _VERSION_FILE.read_text().strip()
+    if _VERSION_FILE.exists()
+    else os.getenv("SERVICE_VERSION", "unknown")
+)
+
+_STARTED_AT  = datetime.now(timezone.utc).isoformat()
+_START_MONO  = time.monotonic()
+_COUNTERS: dict[str, int] = {
+    "events_received":      0,
+    "events_processed":     0,
+    "order_service_errors": 0,
+}
 
 import httpx
 import redis as redis_lib
@@ -65,6 +80,9 @@ def _cache_set(key: str, data: Any) -> None:
 # App
 # ---------------------------------------------------------------------------
 
+import log_ring as _log_ring
+_log_ring.attach()
+
 app = FastAPI(title="Event Processor", version=SERVICE_VERSION)
 
 
@@ -74,7 +92,19 @@ app = FastAPI(title="Event Processor", version=SERVICE_VERSION)
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": SERVICE_NAME, "version": SERVICE_VERSION}
+    return {
+        "status":          "ok",
+        "service":         SERVICE_NAME,
+        "version":         SERVICE_VERSION,
+        "started_at":      _STARTED_AT,
+        "uptime_seconds":  round(time.monotonic() - _START_MONO),
+        "counters":        dict(_COUNTERS),
+    }
+
+
+@app.get("/logs")
+def get_logs():
+    return {"service": SERVICE_NAME, "lines": _log_ring.get_lines()}
 
 
 # ---------------------------------------------------------------------------
@@ -84,6 +114,7 @@ def health():
 @app.post("/events/detection")
 async def receive_detection(body: dict):
     """Receive a detection event from a Pi node, enrich it, and broadcast state."""
+    _COUNTERS["events_received"] += 1
 
     picker_id: str = body.get("picker_id", "unknown")
     action: str | None = body.get("action")
@@ -97,7 +128,11 @@ async def receive_detection(body: dict):
         orders_data = _cache_get("orders")
         if orders_data is None:
             resp = await client.get(f"{ORDER_SERVICE_URL}/orders")
-            orders_data = resp.json() if resp.status_code == 200 else []
+            if resp.status_code == 200:
+                orders_data = resp.json()
+            else:
+                _COUNTERS["order_service_errors"] += 1
+                orders_data = []
             _cache_set("orders", orders_data)
 
         # Build a flat lookup: barcode → list of matching open order lines
@@ -280,6 +315,7 @@ async def receive_detection(body: dict):
         if validation_result:
             _redis.publish(channel, json.dumps(validation_result))
 
+    _COUNTERS["events_processed"] += 1
     return {
         "status": "processed",
         "picker_id": picker_id,

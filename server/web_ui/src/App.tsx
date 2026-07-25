@@ -1,13 +1,21 @@
 import React, { useState } from 'react';
 import { OperatorView } from './OperatorView';
 import { SupervisorView } from './SupervisorView';
-import { useServiceVersions } from './useServiceVersions';
+import { SystemView } from './SystemView';
+import { HealthStrip } from './HealthStrip';
+import { useSystemHealth } from './useSystemHealth';
 
-type Mode = 'operator' | 'supervisor';
+type Mode = 'operator' | 'supervisor' | 'system';
 
 export default function App() {
   const [mode, setMode] = useState<Mode>('operator');
-  const versions = useServiceVersions();
+  const [focusService, setFocusService] = useState<string | null>(null);
+  const { telemetry } = useSystemHealth();
+
+  function handleServiceClick(name: string) {
+    setFocusService(name);
+    setMode('system');
+  }
 
   return (
     <div
@@ -20,44 +28,49 @@ export default function App() {
         style={{ background: '#1a1d27' }}
       >
         <span className="font-bold text-[#e2e8f0] text-base tracking-tight">
-          Picker Vision System
+          Picker Vision
         </span>
 
         {/* Mode tabs */}
         <nav className="flex gap-1 ml-4">
-          <button
-            onClick={() => setMode('operator')}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-              mode === 'operator'
-                ? 'bg-[#06b6d4] text-black'
-                : 'text-[#94a3b8] hover:text-[#e2e8f0] hover:bg-[#2d3142]'
-            }`}
-          >
-            Operator
-          </button>
-          <button
-            onClick={() => setMode('supervisor')}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-              mode === 'supervisor'
-                ? 'bg-[#06b6d4] text-black'
-                : 'text-[#94a3b8] hover:text-[#e2e8f0] hover:bg-[#2d3142]'
-            }`}
-          >
-            Supervisor
-          </button>
+          {(['operator', 'supervisor', 'system'] as Mode[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => { setMode(m); if (m !== 'system') setFocusService(null); }}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all capitalize ${
+                mode === m
+                  ? 'bg-[#06b6d4] text-black'
+                  : 'text-[#94a3b8] hover:text-[#e2e8f0] hover:bg-[#2d3142]'
+              }`}
+            >
+              {m}
+            </button>
+          ))}
         </nav>
+
+        {/* Version badges — pulled from live telemetry */}
         <div className="ml-auto flex items-center gap-2 text-xs text-[#94a3b8] flex-wrap justify-end">
-          {Object.entries(versions).map(([name, info]) => (
+          {telemetry && Object.entries(telemetry.services).map(([name, svc]) => (
             <span key={name} className="rounded-full border border-[#2d3142] px-2 py-0.5">
-              {name} {info.version}
+              {name} <span className="text-[#57606a]">{svc.version ?? '—'}</span>
             </span>
           ))}
         </div>
       </header>
 
+      {/* Persistent health strip */}
+      <HealthStrip telemetry={telemetry} onServiceClick={handleServiceClick} />
+
       {/* Main content */}
       <main className="flex-1 min-h-0 overflow-auto">
-        {mode === 'operator' ? <OperatorView /> : <SupervisorView />}
+        {mode === 'operator'   && <OperatorView />}
+        {mode === 'supervisor' && <SupervisorView />}
+        {mode === 'system'     && (
+          <SystemView
+            telemetry={telemetry}
+            focusService={focusService}
+          />
+        )}
       </main>
 
       {/* Footer */}
@@ -65,7 +78,7 @@ export default function App() {
         className="shrink-0 text-center text-xs py-2 border-t border-[#2d3142]"
         style={{ color: '#57606a' }}
       >
-        Powered by IBM Bob
+        Picker Vision · v{telemetry?.services['api-gateway']?.version ?? '—'} · Powered by IBM Bob
       </footer>
     </div>
   );

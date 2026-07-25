@@ -72,9 +72,11 @@ export interface ValidationResult {
 export interface PickerInfo {
   picker_id: string;
   stream_url: string;
+  control_url?: string;
   status: 'online' | 'offline';
   version?: string;
   last_seen_at?: string;
+  registered_at?: string;
 }
 
 export interface ServiceVersionInfo {
@@ -83,3 +85,37 @@ export interface ServiceVersionInfo {
 }
 
 export type ServiceVersions = Record<string, ServiceVersionInfo>;
+
+// ── Telemetry ─────────────────────────────────────────────────────────────────
+
+export interface ServiceTelemetry {
+  status: string;           // 'ok' | 'error' | 'unreachable'
+  service?: string;
+  version?: string;
+  started_at?: string;
+  uptime_seconds?: number;
+  counters?: Record<string, number>;
+  reachable?: boolean;
+  error?: string;
+  http_status?: number;
+}
+
+export interface SystemTelemetry {
+  services: Record<string, ServiceTelemetry>;
+  pickers: PickerInfo[];
+  collected_at: string;
+}
+
+export interface LogLine {
+  ts: number;
+  time: string;
+  level: string;
+  logger: string;
+  message: string;
+}
+
+export interface LogResponse {
+  service: string;
+  picker_id?: string;
+  lines: LogLine[];
+}

@@ -22,6 +22,8 @@ export FRAME_HEIGHT=${FRAME_HEIGHT:-480}
 export FRAME_FPS=${FRAME_FPS:-15}
 export PICKER_ID=${PICKER_ID:-picker-1}
 export SERVER_URL=${SERVER_URL:-http://localhost:8000}
+export STREAM_PORT=${STREAM_PORT:-8080}
+export STREAM_HOST=${STREAM_HOST:-}           # empty = auto-detect via UDP probe
 export CONTROL_PORT=${CONTROL_PORT:-8081}
 export STAGING_AREA_THRESHOLD=${STAGING_AREA_THRESHOLD:-50,150}
 export MJPEG_QUALITY=${MJPEG_QUALITY:-80}
@@ -54,9 +56,11 @@ export CAMERA_INDEX
 
 echo ""
 echo "Starting Picker Vision Node"
-echo "  Picker ID  : $PICKER_ID"
-echo "  Camera     : /dev/video$CAMERA_INDEX at ${FRAME_WIDTH}x${FRAME_HEIGHT} @ ${FRAME_FPS}fps"
-echo "  Server     : $SERVER_URL"
+echo "  Picker ID   : $PICKER_ID"
+echo "  Camera      : /dev/video$CAMERA_INDEX at ${FRAME_WIDTH}x${FRAME_HEIGHT} @ ${FRAME_FPS}fps"
+echo "  Server      : $SERVER_URL"
+echo "  Stream port : $STREAM_PORT  (host auto-detected unless STREAM_HOST is set)"
+echo "  Control port: $CONTROL_PORT"
 echo ""
 
 exec python vision_service.py

@@ -1,5 +1,6 @@
 import logging
 import os
+import pathlib
 import threading
 import time
 from datetime import datetime, timezone
@@ -14,11 +15,21 @@ import camera_probe
 import config_loader
 import event_publisher as ep_module
 import frame_annotator
+import log_ring as _log_ring
 import mjpeg_streamer as ms_module
+import network_utils
 import staging_detector
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
+
+# ── Version ───────────────────────────────────────────────────────────────────
+_VERSION_FILE = pathlib.Path(__file__).parent / "VERSION"
+SERVICE_VERSION = (
+    _VERSION_FILE.read_text().strip()
+    if _VERSION_FILE.exists()
+    else os.getenv("SERVICE_VERSION", "unknown")
+)
 
 # ── Configuration (env vars > config file > defaults) ─────────────────────────
 _cfg         = config_loader.load()
@@ -27,8 +38,8 @@ PICKER_ID    = _cfg["PICKER_ID"]
 FRAME_WIDTH  = int(_cfg["FRAME_WIDTH"])
 FRAME_HEIGHT = int(_cfg["FRAME_HEIGHT"])
 FRAME_FPS    = int(_cfg["FRAME_FPS"])
+STREAM_PORT  = int(_cfg["STREAM_PORT"])
 CONTROL_PORT = int(_cfg["CONTROL_PORT"])
-SERVICE_VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
 
 # ── Camera index resolution ───────────────────────────────────────────────────
 _raw_index   = int(_cfg["CAMERA_INDEX"])
@@ -40,7 +51,17 @@ _validate_next_frame  = False
 _locked_staging_codes: set[str] = set()
 _state_lock           = threading.Lock()
 
+# ── Telemetry counters ────────────────────────────────────────────────────────
+import time as _time
+from datetime import timezone as _tz
+_STARTED_AT    = __import__("datetime").datetime.now(_tz.utc).isoformat()
+_START_MONO    = _time.monotonic()
+_frames_captured   = 0
+_events_published  = 0
+_last_event_at: str | None = None
+
 # ── FastAPI control app ───────────────────────────────────────────────────────
+_log_ring.attach()
 app = FastAPI(title="Pi Vision Control", version=SERVICE_VERSION)
 
 
@@ -51,7 +72,31 @@ class ControlBody(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "pi-vision", "version": SERVICE_VERSION}
+    with _state_lock:
+        frames   = _frames_captured
+        events   = _events_published
+        last_evt = _last_event_at
+        running  = _running
+    return {
+        "status":           "ok",
+        "service":          "pi-vision",
+        "version":          SERVICE_VERSION,
+        "picker_id":        PICKER_ID,
+        "started_at":       _STARTED_AT,
+        "uptime_seconds":   round(_time.monotonic() - _START_MONO),
+        "camera_index":     CAMERA_INDEX,
+        "running":          running,
+        "counters": {
+            "frames_captured":  frames,
+            "events_published": events,
+        },
+        "last_event_at":    last_evt,
+    }
+
+
+@app.get("/logs")
+def get_logs():
+    return {"service": "pi-vision", "picker_id": PICKER_ID, "lines": _log_ring.get_lines()}
 
 
 @app.post("/control")
@@ -115,6 +160,8 @@ def _run_capture(streamer: ms_module.MJPEGStreamer, publisher: ep_module.EventPu
                 logger.warning("Camera read failed — retrying")
                 time.sleep(0.05)
                 continue
+            with _state_lock:
+                _frames_captured += 1
 
             # ── Barcode detection ──────────────────────────────────────────
             all_detections = barcode_detector.detect(frame)
@@ -147,12 +194,17 @@ def _run_capture(streamer: ms_module.MJPEGStreamer, publisher: ep_module.EventPu
 
             # ── Event publishing ───────────────────────────────────────────
             if product_detections_only or staging_regions:
+                _ts = datetime.now(timezone.utc).isoformat()
                 publisher.publish({
                     "picker_id":       PICKER_ID,
-                    "timestamp":       datetime.now(timezone.utc).isoformat(),
+                    "timestamp":       _ts,
                     "detections":      product_detections_only,
                     "staging_regions": staging_regions,
                 })
+                with _state_lock:
+                    global _events_published, _last_event_at
+                    _events_published += 1
+                    _last_event_at = _ts
 
             with _state_lock:
                 do_validate = _validate_next_frame
@@ -179,11 +231,22 @@ def _run_capture(streamer: ms_module.MJPEGStreamer, publisher: ep_module.EventPu
 if __name__ == "__main__":
     logger.info("Picker Vision Node starting (picker=%s, server=%s)", PICKER_ID, SERVER_URL)
 
-    streamer = ms_module.MJPEGStreamer(port=8080)
+    streamer = ms_module.MJPEGStreamer(port=STREAM_PORT)
     streamer.start()
 
     publisher = ep_module.EventPublisher(SERVER_URL, PICKER_ID, version=SERVICE_VERSION)
     publisher.start()
+
+    # Resolve the LAN IP this Pi should advertise to the server.
+    # STREAM_HOST env/config overrides; otherwise the UDP probe picks the
+    # correct outbound interface automatically (works on DHCP networks).
+    _stream_host = network_utils.resolve_stream_host(
+        SERVER_URL, override=_cfg.get("STREAM_HOST", "")
+    )
+    logger.info("Pi LAN IP resolved as %s (stream port %d, control port %d)",
+                _stream_host, STREAM_PORT, CONTROL_PORT)
+    publisher.set_stream_url(f"http://{_stream_host}:{STREAM_PORT}/stream")
+    publisher.set_control_url(f"http://{_stream_host}:{CONTROL_PORT}")
 
     # Wait for the server before registering — loops with backoff on a headless device.
     # The camera capture loop runs locally regardless; events are buffered offline

@@ -33,6 +33,8 @@ DEFAULTS: dict[str, str] = {
     "FRAME_HEIGHT":            "480",
     "FRAME_FPS":               "15",
     "MJPEG_QUALITY":           "80",
+    "STREAM_HOST":             "",          # empty = auto-detect via UDP probe
+    "STREAM_PORT":             "8080",
     "CONTROL_PORT":            "8081",
     "STAGING_AREA_THRESHOLD":  "50,150",
     "MIN_STAGING_AREA":        "5000",
