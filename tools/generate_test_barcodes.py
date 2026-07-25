@@ -100,8 +100,8 @@ def _make_code128_drawing(value: str, width_pt: float, height_pt: float):
     return d
 
 
-def _make_qr_drawing(payload: str, size_pt: float):
-    """Return a ReportLab Drawing containing a QR code image."""
+def _make_qr_image(payload: str, size_pt: float):
+    """Return a ReportLab platypus Image (flowable) containing a QR code."""
     qr = qrcode.QRCode(
         version=None,
         error_correction=qrcode.constants.ERROR_CORRECT_M,
@@ -112,16 +112,12 @@ def _make_qr_drawing(payload: str, size_pt: float):
     qr.make(fit=True)
     pil_img = qr.make_image(fill_color="black", back_color="white")
 
-    # Convert PIL image → PNG bytes (ReportLab 5 accepts bytes directly)
     buf = io.BytesIO()
     pil_img.save(buf, format="PNG")
+    buf.seek(0)
 
-    from reportlab.graphics.shapes import Image as RLImage
-
-    d = Drawing(size_pt, size_pt)
-    img = RLImage(0, 0, size_pt, size_pt, buf.getvalue())
-    d.add(img)
-    return d
+    from reportlab.platypus import Image as PlatypusImage
+    return PlatypusImage(buf, width=size_pt, height=size_pt)
 
 
 # ── PDF builder ────────────────────────────────────────────────────────────────
@@ -220,9 +216,9 @@ def build_pdf(output_path: str) -> None:
     qr_size = 28 * mm
     qr_cells = []
     for stg in STAGING_QR:
-        qr_drawing = _make_qr_drawing(stg["payload"], qr_size)
+        qr_image = _make_qr_image(stg["payload"], qr_size)
         qr_cells.append([
-            qr_drawing,
+            qr_image,
             Paragraph(f"<b>{stg['code']}</b>", caption_style),
             Paragraph(stg["label"], caption_style),
         ])
