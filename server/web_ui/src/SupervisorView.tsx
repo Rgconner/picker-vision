@@ -97,6 +97,7 @@ export function SupervisorView() {
                 {/* Compact video panel */}
                 <VideoPanel
                   pickerId={pickerId}
+                  streamUrl={info?.stream_url}
                   detections={detections}
                   stagingRegions={stagingRegions}
                   compact

@@ -111,6 +111,7 @@ export function OperatorView() {
           {selectedId ? (
             <VideoPanel
               pickerId={selectedId}
+              streamUrl={pickers.find((p) => p.picker_id === selectedId)?.stream_url}
               detections={detections}
               stagingRegions={stagingRegions}
             />

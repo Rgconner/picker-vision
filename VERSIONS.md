@@ -10,16 +10,27 @@ component **must** bump its `VERSION` file and add a row here.
 
 | Component         | Current | File                                        |
 |-------------------|---------|---------------------------------------------|
-| pi-node           | 1.1.3   | `pi-node/VERSION`                           |
-| api-gateway       | 1.1.3   | `server/api_gateway/VERSION`                |
-| event-processor   | 1.1.3   | `server/event_processor/VERSION`            |
-| websocket-hub     | 1.1.3   | `server/websocket_hub/VERSION`              |
-| order-service     | 1.1.3   | `server/order_service/VERSION`              |
-| web-ui            | 1.1.3   | `server/web_ui/VERSION`                     |
+| pi-node           | 1.1.4   | `pi-node/VERSION`                           |
+| api-gateway       | 1.1.4   | `server/api_gateway/VERSION`                |
+| event-processor   | 1.1.4   | `server/event_processor/VERSION`            |
+| websocket-hub     | 1.1.4   | `server/websocket_hub/VERSION`              |
+| order-service     | 1.1.4   | `server/order_service/VERSION`              |
+| web-ui            | 1.1.4   | `server/web_ui/VERSION`                     |
 
 ---
 
 ## Changelog
+
+### 1.1.4
+
+**web-ui**
+- Fixed video stream — `VideoPanel` was loading `/stream/{pickerId}` via the nginx proxy, which the api-gateway returns HTTP 404 for in k8s mode. It now uses the picker's registered `stream_url` directly (browser → Pi over LAN), bypassing the api-gateway entirely.
+- Added `useStreamStats` hook — opens the MJPEG stream via `fetch()` + `ReadableStream`, counts bytes and JPEG boundary markers per second to produce sampled real-time throughput stats (kbps, fps, status, lastFrameAge).
+- Added `StreamMeter` component to `VideoPanel` — appears on all three views per picker:
+  - **Operator view**: full bar below video with throughput bar, 20-sample sparkline, fps + kb/s readout. Colour coded: green=streaming, amber=connecting, orange=stalled, red=error.
+  - **Supervisor view**: compact pill badge overlaid top-right of each picker tile.
+  - **System tab**: inline `PickerStreamBadge` next to stream URL in the picker registration table.
+- Added placeholder with error message when stream URL is absent or fails to load.
 
 ### 1.1.3
 

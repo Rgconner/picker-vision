@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { LogLine, LogResponse, PickerInfo, ServiceTelemetry, SystemTelemetry } from './types';
+import { useStreamStats } from './useStreamStats';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -82,6 +83,24 @@ function ServiceCard({ name, svc }: { name: string; svc: ServiceTelemetry }) {
   );
 }
 
+// ── PickerStreamBadge — inline stream health indicator for the table ──────────
+
+function PickerStreamBadge({ streamUrl }: { streamUrl: string }) {
+  const stats = useStreamStats(streamUrl);
+  const colour =
+    stats.status === 'streaming'  ? 'text-[#22c55e]' :
+    stats.status === 'connecting' ? 'text-[#f59e0b]' :
+    stats.status === 'stalled'    ? 'text-[#f97316]' : 'text-[#ef4444]';
+
+  return (
+    <span className={`ml-2 font-sans text-[10px] font-semibold ${colour}`}>
+      {stats.status === 'streaming'
+        ? `● ${stats.fps.toFixed(1)} fps · ${stats.kbps} kb/s`
+        : `● ${stats.status}`}
+    </span>
+  );
+}
+
 // ── PickerTable ───────────────────────────────────────────────────────────────
 
 function PickerTable({ pickers }: { pickers: PickerInfo[] }) {
@@ -123,7 +142,10 @@ function PickerTable({ pickers }: { pickers: PickerInfo[] }) {
               <td className="px-3 py-2 font-mono">{p.version ?? '—'}</td>
               <td className="px-3 py-2 font-mono break-all">
                 {p.stream_url
-                  ? <a href={p.stream_url} target="_blank" rel="noreferrer" className="text-[#3b82d4] hover:underline">{p.stream_url}</a>
+                  ? <>
+                      <a href={p.stream_url} target="_blank" rel="noreferrer" className="text-[#3b82d4] hover:underline">{p.stream_url}</a>
+                      <PickerStreamBadge streamUrl={p.stream_url} />
+                    </>
                   : <span className="text-[#ef4444]">not registered</span>
                 }
               </td>
