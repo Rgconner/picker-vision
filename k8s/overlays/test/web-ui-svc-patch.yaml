@@ -1,0 +1,11 @@
+---
+# Pin the web-ui LoadBalancer to .212 from the shared sandbox pool
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-ui
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: 192.168.11.212
+    metallb.universe.tf/address-pool: sandbox
+spec:
+  type: LoadBalancer

@@ -1,11 +1,13 @@
 name: Deploy to Kubernetes
 
 on:
-  # Auto-deploy when server images are pushed to main
+  # Auto-deploy when server images are pushed to main or the feature branch
   workflow_run:
     workflows: ["Build Server Images"]
     types: [completed]
-    branches: [main]
+    branches:
+      - main
+      - feature/mobile-web-client
   # Manual deploy with optional image tag override
   workflow_dispatch:
     inputs:

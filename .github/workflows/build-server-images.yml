@@ -2,14 +2,18 @@ name: Build Server Images
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - feature/mobile-web-client
     paths:
       - "server/**"
+      - "k8s/**"
       - ".github/workflows/build-server-images.yml"
   pull_request:
     branches: [main]
     paths:
       - "server/**"
+      - "k8s/**"
       - ".github/workflows/build-server-images.yml"
   workflow_dispatch:
 

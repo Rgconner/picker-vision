@@ -1,0 +1,49 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: picker-vision-test
+
+resources:
+  # The namespace manifest for picker-vision-test
+  - namespace.yaml
+  # Reuse all base manifests via k8s/base/kustomization.yaml
+  - ../../base
+
+patches:
+  # Override the configmap with test-specific values — target by name since
+  # the base manifest has namespace: picker-vision hardcoded.
+  - path: configmap-patch.yaml
+    target:
+      kind: ConfigMap
+      name: picker-vision-config
+  # Pin LoadBalancer IPs to the test pool addresses (separate files per service)
+  - path: api-gateway-svc-patch.yaml
+    target:
+      kind: Service
+      name: api-gateway
+  - path: web-ui-svc-patch.yaml
+    target:
+      kind: Service
+      name: web-ui
+
+# Image tags — point to the feature branch images.
+# Once CI produces a SHA tag, update with:
+#   kustomize edit set image ghcr.io/rgconner/picker-vision/web-ui=ghcr.io/rgconner/picker-vision/web-ui:sha-XXXXXXX
+images:
+  - name: ghcr.io/rgconner/picker-vision/api-gateway
+    newTag: feature-mobile-web-client
+  - name: ghcr.io/rgconner/picker-vision/order-service
+    newTag: feature-mobile-web-client
+  - name: ghcr.io/rgconner/picker-vision/event-processor
+    newTag: feature-mobile-web-client
+  - name: ghcr.io/rgconner/picker-vision/websocket-hub
+    newTag: feature-mobile-web-client
+  - name: ghcr.io/rgconner/picker-vision/web-ui
+    newTag: feature-mobile-web-client
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: picker-vision
+      app.kubernetes.io/managed-by: kustomize
+      environment: test
+    includeSelectors: false

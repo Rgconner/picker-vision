@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: picker-vision-test
+  labels:
+    app.kubernetes.io/part-of: picker-vision
+    environment: test

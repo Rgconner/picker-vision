@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: picker-vision-config
+  namespace: picker-vision
+data:
+  # Internal service URLs — these match the Kubernetes ClusterIP Service names
+  ORDER_SERVICE_URL: "http://order-service:8001"
+  EVENT_PROCESSOR_URL: "http://event-processor:8002"
+  WEBSOCKET_HUB_URL: "http://websocket-hub:8003"
+  API_GATEWAY_URL: "http://api-gateway:8000"
+  REDIS_URL: "redis://redis:6379"
+
+  # Runtime service versions displayed in the UI
+  API_GATEWAY_VERSION: "1.1.4"
+  ORDER_SERVICE_VERSION: "1.1.4"
+  EVENT_PROCESSOR_VERSION: "1.1.4"
+  WEBSOCKET_HUB_VERSION: "1.1.4"
+  WEB_UI_VERSION: "1.1.4"
+
+  # Order service
+  DATABASE_URL: "sqlite:////data/picker.db"
+  USE_SAP_ADAPTER: "false"
+
+  # API gateway
+  REQUIRE_API_KEY: "false"

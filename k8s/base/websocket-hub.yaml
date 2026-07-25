@@ -1,0 +1,72 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: websocket-hub
+  namespace: picker-vision
+  labels:
+    app: websocket-hub
+spec:
+  # Single replica: WebSocket sessions are in-process (not shared across pods).
+  # Scale horizontally only after adding a shared session store.
+  replicas: 1
+  selector:
+    matchLabels:
+      app: websocket-hub
+  template:
+    metadata:
+      labels:
+        app: websocket-hub
+    spec:
+      containers:
+        - name: websocket-hub
+          image: ghcr.io/rgconner/picker-vision/websocket-hub:main
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8003
+          env:
+            - name: SERVICE_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: picker-vision-config
+                  key: WEBSOCKET_HUB_VERSION
+          envFrom:
+            - configMapRef:
+                name: picker-vision-config
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 20
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: websocket-hub
+  namespace: picker-vision
+spec:
+  type: ClusterIP
+  # sessionAffinity ensures a browser's WebSocket reconnects to the same pod
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 3600
+  selector:
+    app: websocket-hub
+  ports:
+    - port: 8003
+      targetPort: 8003

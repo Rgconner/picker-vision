@@ -1,0 +1,22 @@
+---
+# Pin the api-gateway LoadBalancer to .211 in the test pool
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: 192.168.11.211
+    metallb.universe.tf/address-pool: picker-vision-test-pool
+spec:
+  type: LoadBalancer
+---
+# Pin the web-ui LoadBalancer to .212 in the test pool
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-ui
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: 192.168.11.212
+    metallb.universe.tf/address-pool: picker-vision-test-pool
+spec:
+  type: LoadBalancer

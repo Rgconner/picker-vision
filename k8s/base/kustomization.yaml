@@ -1,14 +1,16 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Production overlay — delegates to base/, then pins image tags to :main.
-# Override image tags at deploy time with:
-#   kustomize edit set image ghcr.io/rgconner/picker-vision/api-gateway=ghcr.io/rgconner/picker-vision/api-gateway:sha-abc1234
-# or via the GitHub Actions deploy workflow which sets them to the exact SHA.
+namespace: picker-vision
 
 resources:
-  - base/namespace.yaml
-  - base/
+  - configmap.yaml
+  - redis.yaml
+  - order-service.yaml
+  - event-processor.yaml
+  - websocket-hub.yaml
+  - api-gateway.yaml
+  - web-ui.yaml
 
 images:
   - name: ghcr.io/rgconner/picker-vision/api-gateway
@@ -21,3 +23,9 @@ images:
     newTag: main
   - name: ghcr.io/rgconner/picker-vision/web-ui
     newTag: main
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: picker-vision
+      app.kubernetes.io/managed-by: kustomize
+    includeSelectors: false
