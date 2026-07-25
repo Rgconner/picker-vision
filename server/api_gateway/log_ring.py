@@ -18,18 +18,27 @@ Usage
 import collections
 import logging
 import os
-import time
 from typing import Any
 
 _RING_SIZE = int(os.environ.get("LOG_RING_SIZE", "200"))
 
 
 class _RingBufferHandler(logging.Handler):
+    """Thread-safe in-memory ring buffer for log records.
+
+    Guard flag ``_emitting`` prevents re-entrant calls (e.g. httpx's own
+    logger firing *inside* emit, which caused handleError recursion).
+    """
+
     def __init__(self, maxlen: int = _RING_SIZE):
         super().__init__()
         self._buf: collections.deque[dict[str, Any]] = collections.deque(maxlen=maxlen)
+        self._emitting = False   # re-entrancy guard
 
     def emit(self, record: logging.LogRecord) -> None:
+        if self._emitting:
+            return
+        self._emitting = True
         try:
             self._buf.append({
                 "ts":      record.created,          # float epoch — sortable
@@ -38,8 +47,10 @@ class _RingBufferHandler(logging.Handler):
                 "logger":  record.name,
                 "message": record.getMessage(),
             })
-        except Exception:  # noqa: BLE001
-            self.handleError(record)
+        except Exception:  # noqa: BLE001  — never crash the calling thread
+            pass
+        finally:
+            self._emitting = False
 
     def get_lines(self) -> list[dict[str, Any]]:
         return list(self._buf)

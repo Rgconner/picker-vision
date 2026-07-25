@@ -74,58 +74,73 @@ data:
         try_files $uri $uri/ /index.html;
       }
 
+      # All backend routes proxy to the api-gateway ClusterIP Service.
+      # The Service exposes port 80 (maps to container port 8000 internally).
+      # Using port 80 here ensures kube-proxy iptables rules are hit correctly.
+
       location /api/ {
-        proxy_pass http://api-gateway:8000/api/;
+        proxy_pass http://api-gateway.picker-vision.svc.cluster.local:80/api/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 30s;
       }
 
       location /state/ {
-        proxy_pass http://api-gateway:8000/state/;
+        proxy_pass http://api-gateway.picker-vision.svc.cluster.local:80/state/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 30s;
       }
 
       location /stream/ {
-        proxy_pass http://api-gateway:8000/stream/;
+        proxy_pass http://api-gateway.picker-vision.svc.cluster.local:80/stream/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 60s;
       }
 
       location /control/ {
-        proxy_pass http://api-gateway:8000/control/;
+        proxy_pass http://api-gateway.picker-vision.svc.cluster.local:80/control/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 10s;
       }
 
       location /ws/ {
-        proxy_pass http://api-gateway:8000/ws/;
+        proxy_pass http://api-gateway.picker-vision.svc.cluster.local:80/ws/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 3600s;
       }
 
       location /pickers {
-        proxy_pass http://api-gateway:8000/pickers;
+        proxy_pass http://api-gateway.picker-vision.svc.cluster.local:80/pickers;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
+        proxy_connect_timeout 5s;
       }
 
       location /health {
-        proxy_pass http://api-gateway:8000/health;
+        proxy_pass http://api-gateway.picker-vision.svc.cluster.local:80/health;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
+        proxy_connect_timeout 5s;
       }
     }
 ---

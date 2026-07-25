@@ -10,12 +10,12 @@ component **must** bump its `VERSION` file and add a row here.
 
 | Component         | Current | File                                        |
 |-------------------|---------|---------------------------------------------|
-| pi-node           | 1.1.0   | `pi-node/VERSION`                           |
-| api-gateway       | 1.1.0   | `server/api_gateway/VERSION`                |
-| event-processor   | 1.1.0   | `server/event_processor/VERSION`            |
-| websocket-hub     | 1.1.0   | `server/websocket_hub/VERSION`              |
-| order-service     | 1.1.0   | `server/order_service/VERSION`              |
-| web-ui            | 1.1.0   | `server/web_ui/VERSION`                     |
+| pi-node           | 1.1.1   | `pi-node/VERSION`                           |
+| api-gateway       | 1.1.1   | `server/api_gateway/VERSION`                |
+| event-processor   | 1.1.1   | `server/event_processor/VERSION`            |
+| websocket-hub     | 1.1.1   | `server/websocket_hub/VERSION`              |
+| order-service     | 1.1.1   | `server/order_service/VERSION`              |
+| web-ui            | 1.1.1   | `server/web_ui/VERSION`                     |
 
 ---
 
