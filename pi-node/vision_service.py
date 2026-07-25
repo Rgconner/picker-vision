@@ -143,9 +143,6 @@ def _run_capture(streamer: ms_module.MJPEGStreamer, publisher: ep_module.EventPu
         CAMERA_INDEX, FRAME_WIDTH, FRAME_HEIGHT, FRAME_FPS,
     )
 
-    frame_cx = FRAME_WIDTH  // 2
-    frame_cy = FRAME_HEIGHT // 2
-
     try:
         while True:
             with _state_lock:
@@ -171,14 +168,9 @@ def _run_capture(streamer: ms_module.MJPEGStreamer, publisher: ep_module.EventPu
             # ── Staging region detection ───────────────────────────────────
             staging_regions = staging_detector.detect_staging_regions(frame, staging_detections)
 
-            # ── Active-product scoring ─────────────────────────────────────
+            # ── All visible products are active simultaneously ─────────────
             for d in product_detections_only:
-                cx, cy = d["centre"]
-                d["distance_to_centre"] = ((cx - frame_cx) ** 2 + (cy - frame_cy) ** 2) ** 0.5
-                d["active"] = False
-            if product_detections_only:
-                closest = min(product_detections_only, key=lambda d: d["distance_to_centre"])
-                closest["active"] = True
+                d["active"] = True
 
             # ── Annotation & streaming ─────────────────────────────────────
             with _state_lock:

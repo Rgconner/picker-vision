@@ -17,7 +17,7 @@ import barcode
 from barcode.writer import SVGWriter
 import qrcode
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import letter, landscape
 from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -57,7 +57,7 @@ OUTPUT_FILE = os.path.join(os.path.dirname(__file__), "test_barcodes.pdf")
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
-PAGE_W, PAGE_H = A4          # 595 x 842 pt
+PAGE_W, PAGE_H = landscape(letter)   # 792 x 612 pt  (11 x 8.5 in)
 MARGIN = 18 * mm
 
 
@@ -159,7 +159,7 @@ def build_pdf(output_path: str) -> None:
 
     doc = SimpleDocTemplate(
         output_path,
-        pagesize=A4,
+        pagesize=landscape(letter),
         leftMargin=MARGIN,
         rightMargin=MARGIN,
         topMargin=MARGIN,
@@ -178,7 +178,7 @@ def build_pdf(output_path: str) -> None:
     # 2-column grid; cell width = (usable width) / 2
     usable_w = PAGE_W - 2 * MARGIN
     cell_w = usable_w / 2 - 4 * mm
-    bc_h = 22 * mm   # barcode graphic height inside the cell
+    bc_h = 33 * mm   # barcode graphic height — 150% of standard 22 mm
 
     rows = []
     row = []
@@ -213,7 +213,7 @@ def build_pdf(output_path: str) -> None:
     # ── Staging QR section ─────────────────────────────────────────────────────
     story.append(Paragraph("Staging QR Codes", section_style))
 
-    qr_size = 28 * mm
+    qr_size = 76.2 * mm   # 3 inches
     qr_cells = []
     for stg in STAGING_QR:
         qr_image = _make_qr_image(stg["payload"], qr_size)
@@ -223,8 +223,12 @@ def build_pdf(output_path: str) -> None:
             Paragraph(stg["label"], caption_style),
         ])
 
-    qr_col_w = usable_w / 5
-    qr_table = Table([qr_cells], colWidths=[qr_col_w] * 5)
+    # 3 columns × 2 rows; pad last row to 3 cells
+    qr_col_w = usable_w / 3
+    qr_rows = [qr_cells[i:i + 3] for i in range(0, len(qr_cells), 3)]
+    if len(qr_rows[-1]) < 3:
+        qr_rows[-1] += [""] * (3 - len(qr_rows[-1]))
+    qr_table = Table(qr_rows, colWidths=[qr_col_w] * 3)
     qr_table.setStyle(TableStyle([
         ("VALIGN",        (0, 0), (-1, -1), "TOP"),
         ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
