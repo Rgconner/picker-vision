@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { OperatorView } from './OperatorView';
 import { SupervisorView } from './SupervisorView';
 import { SystemView } from './SystemView';
+import { MobilePickerView } from './MobilePickerView';
 import { HealthStrip } from './HealthStrip';
 import { useSystemHealth } from './useSystemHealth';
 
-type Mode = 'operator' | 'supervisor' | 'system';
+type Mode = 'operator' | 'supervisor' | 'system' | 'mobile';
 
 export default function App() {
   const [mode, setMode] = useState<Mode>('operator');
@@ -33,7 +34,7 @@ export default function App() {
 
         {/* Mode tabs */}
         <nav className="flex gap-1 ml-4">
-          {(['operator', 'supervisor', 'system'] as Mode[]).map((m) => (
+          {(['operator', 'supervisor', 'mobile', 'system'] as Mode[]).map((m) => (
             <button
               key={m}
               onClick={() => { setMode(m); if (m !== 'system') setFocusService(null); }}
@@ -43,7 +44,7 @@ export default function App() {
                   : 'text-[#94a3b8] hover:text-[#e2e8f0] hover:bg-[#2d3142]'
               }`}
             >
-              {m}
+              {m === 'mobile' ? '📱 Mobile' : m}
             </button>
           ))}
         </nav>
@@ -65,6 +66,7 @@ export default function App() {
       <main className="flex-1 min-h-0 overflow-auto">
         {mode === 'operator'   && <OperatorView />}
         {mode === 'supervisor' && <SupervisorView />}
+        {mode === 'mobile'     && <MobilePickerView />}
         {mode === 'system'     && (
           <SystemView
             telemetry={telemetry}
