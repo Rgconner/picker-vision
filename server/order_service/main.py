@@ -53,13 +53,16 @@ def _init_db() -> None:
 # App
 # ---------------------------------------------------------------------------
 
+SERVICE_NAME = "order-service"
+SERVICE_VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
+
 app = FastAPI(
     title="Order Service",
     description=(
         "Manages warehouse orders, products, and staging containers. "
         "Backed by a local SQLite simulation; swap to SAP/OMS via USE_SAP_ADAPTER=true."
     ),
-    version="1.0.0",
+    version=SERVICE_VERSION,
 )
 
 _adapter = None
@@ -89,7 +92,7 @@ def _get_adapter():
     tags=["meta"],
 )
 def health():
-    return {"status": "ok", "service": "order-service"}
+    return {"status": "ok", "service": SERVICE_NAME, "version": SERVICE_VERSION}
 
 
 # ---------------------------------------------------------------------------

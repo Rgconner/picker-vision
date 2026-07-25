@@ -1,4 +1,5 @@
 import logging
+import os
 import socket
 import threading
 import time
@@ -28,6 +29,7 @@ FRAME_WIDTH  = int(_cfg["FRAME_WIDTH"])
 FRAME_HEIGHT = int(_cfg["FRAME_HEIGHT"])
 FRAME_FPS    = int(_cfg["FRAME_FPS"])
 CONTROL_PORT = int(_cfg["CONTROL_PORT"])
+SERVICE_VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
 
 # ── Camera index resolution ───────────────────────────────────────────────────
 _raw_index   = int(_cfg["CAMERA_INDEX"])
@@ -40,7 +42,7 @@ _locked_staging_codes: set[str] = set()
 _state_lock           = threading.Lock()
 
 # ── FastAPI control app ───────────────────────────────────────────────────────
-app = FastAPI(title="Pi Vision Control")
+app = FastAPI(title="Pi Vision Control", version=SERVICE_VERSION)
 
 
 class ControlBody(BaseModel):
@@ -50,7 +52,7 @@ class ControlBody(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "pi-vision"}
+    return {"status": "ok", "service": "pi-vision", "version": SERVICE_VERSION}
 
 
 @app.post("/control")
@@ -194,7 +196,7 @@ if __name__ == "__main__":
 
     stream_url  = f"http://{_local_ip}:8080/stream"
     control_url = f"http://{_local_ip}:{CONTROL_PORT}"
-    publisher = ep_module.EventPublisher(SERVER_URL, PICKER_ID)
+    publisher = ep_module.EventPublisher(SERVER_URL, PICKER_ID, version=SERVICE_VERSION)
     publisher.set_stream_url(stream_url)
     publisher.set_control_url(control_url)
     publisher.start()

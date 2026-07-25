@@ -17,6 +17,9 @@ import os
 import time
 from typing import Any
 
+SERVICE_NAME = "event-processor"
+SERVICE_VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
+
 import httpx
 import redis as redis_lib
 from fastapi import FastAPI, HTTPException
@@ -62,7 +65,7 @@ def _cache_set(key: str, data: Any) -> None:
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="Event Processor")
+app = FastAPI(title="Event Processor", version=SERVICE_VERSION)
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +74,7 @@ app = FastAPI(title="Event Processor")
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "event-processor"}
+    return {"status": "ok", "service": SERVICE_NAME, "version": SERVICE_VERSION}
 
 
 # ---------------------------------------------------------------------------

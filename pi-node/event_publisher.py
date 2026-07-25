@@ -39,9 +39,10 @@ _BACKOFF_FACTOR  = 2.0         # multiply interval on each consecutive failure
 class EventPublisher:
     """Posts detection events to the server in a background thread."""
 
-    def __init__(self, server_url: str, picker_id: str):
+    def __init__(self, server_url: str, picker_id: str, version: str = "unknown"):
         self._server_url  = server_url.rstrip("/")
         self._picker_id   = picker_id
+        self._version     = version
         self._queue: queue.Queue[dict] = queue.Queue(maxsize=_QUEUE_MAXSIZE)
         self._stream_url   = f"http://localhost:8080/stream"
         self._control_url  = f"http://localhost:8081"
@@ -77,6 +78,8 @@ class EventPublisher:
         """Start the background drain thread."""
         thread = threading.Thread(target=self._drain, daemon=True, name="event-publisher")
         thread.start()
+        heartbeat = threading.Thread(target=self._heartbeat_loop, daemon=True, name="picker-heartbeat")
+        heartbeat.start()
         logger.info("EventPublisher started (server=%s, offline_buffer=%s)",
                     self._server_url, _OFFLINE_BUFFER)
 
@@ -130,6 +133,7 @@ class EventPublisher:
             "picker_id":   self._picker_id,
             "stream_url":  self._stream_url,
             "control_url": self._control_url,
+            "version":     self._version,
         }
         logger.debug("Registration payload: %s", payload)
         interval = _BACKOFF_START
@@ -261,3 +265,8 @@ class EventPublisher:
 
         logger.info("Offline buffer flushed (%d events sent)", sent)
         _OFFLINE_BUFFER.unlink(missing_ok=True)
+
+    def _heartbeat_loop(self) -> None:
+        while True:
+            self.register(retries=0)
+            time.sleep(30)

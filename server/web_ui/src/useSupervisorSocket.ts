@@ -25,7 +25,17 @@ export function useSupervisorSocket() {
         if (unmountedRef.current) return;
         try {
           const msg = JSON.parse(event.data as string) as unknown;
-          if (typeof msg === 'object' && msg !== null && 'picker_id' in msg) {
+          if (typeof msg !== 'object' || msg === null) return;
+
+          if ('type' in msg && msg.type === 'snapshot' && 'pickers' in msg) {
+            const snapshot = msg.pickers;
+            if (typeof snapshot === 'object' && snapshot !== null) {
+              setStates(snapshot as Record<string, PickerState>);
+            }
+            return;
+          }
+
+          if ('picker_id' in msg) {
             const pickerState = msg as PickerState;
             setStates((prev) => ({ ...prev, [pickerState.picker_id]: pickerState }));
           }

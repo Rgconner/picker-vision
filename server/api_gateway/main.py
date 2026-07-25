@@ -12,6 +12,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
+SERVICE_NAME = "api-gateway"
+SERVICE_VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -27,7 +30,8 @@ ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*")
 # Derive WebSocket host from WEBSOCKET_HUB_URL (strip http:// prefix)
 _ws_hub_host = WEBSOCKET_HUB_URL.removeprefix("http://").removeprefix("https://")
 
-PICKER_TTL = 120  # seconds
+PICKER_TTL = 300  # seconds
+PICKER_STALE_AFTER = 120  # seconds
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -51,16 +55,49 @@ except Exception as exc:
     _redis = None
 
 
+def _picker_key(picker_id: str, suffix: str) -> str:
+    return f"picker:{picker_id}:{suffix}"
+
+
+async def _collect_service_versions() -> dict[str, dict]:
+    services = {
+        "api-gateway": {"url": None, "version": SERVICE_VERSION},
+        "order-service": {"url": ORDER_SERVICE_URL},
+        "event-processor": {"url": EVENT_PROCESSOR_URL},
+        "websocket-hub": {"url": WEBSOCKET_HUB_URL},
+    }
+
+    async with httpx.AsyncClient(timeout=3.0) as client:
+        for name, service in services.items():
+            if service["url"] is None:
+                continue
+            try:
+                resp = await client.get(f"{service['url']}/health")
+                if resp.status_code == 200:
+                    payload = resp.json()
+                    service["version"] = payload.get("version", "unknown")
+                else:
+                    service["version"] = "unreachable"
+            except Exception:
+                service["version"] = "unreachable"
+
+    return services
+
+
 def _redis_set_picker(info: dict) -> None:
-    key = f"picker:{info['picker_id']}:info"
+    key = _picker_key(info["picker_id"], "info")
+    heartbeat_key = _picker_key(info["picker_id"], "heartbeat")
     if _redis:
-        _redis.setex(key, PICKER_TTL, json.dumps(info))
+        pipe = _redis.pipeline()
+        pipe.setex(key, PICKER_TTL, json.dumps(info))
+        pipe.setex(heartbeat_key, PICKER_TTL, info["last_seen_at"])
+        pipe.execute()
     else:
         _memory_registry[key] = info
 
 
 def _redis_get_picker(picker_id: str) -> dict | None:
-    key = f"picker:{picker_id}:info"
+    key = _picker_key(picker_id, "info")
     if _redis:
         raw = _redis.get(key)
         return json.loads(raw) if raw else None
@@ -68,13 +105,25 @@ def _redis_get_picker(picker_id: str) -> dict | None:
 
 
 def _redis_list_pickers() -> list[dict]:
+    now = datetime.now(timezone.utc)
     if _redis:
         keys = _redis.keys("picker:*:info")
         pickers = []
         for key in keys:
             raw = _redis.get(key)
-            if raw:
-                pickers.append(json.loads(raw))
+            if not raw:
+                continue
+            info = json.loads(raw)
+            last_seen_at = info.get("last_seen_at")
+            status = "offline"
+            if last_seen_at:
+                try:
+                    age = (now - datetime.fromisoformat(last_seen_at)).total_seconds()
+                    status = "online" if age <= PICKER_STALE_AFTER else "offline"
+                except ValueError:
+                    status = info.get("status", "offline")
+            info["status"] = status
+            pickers.append(info)
         return pickers
     return list(_memory_registry.values())
 
@@ -83,7 +132,7 @@ def _redis_list_pickers() -> list[dict]:
 # FastAPI app
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="API Gateway")
+app = FastAPI(title="API Gateway", version=SERVICE_VERSION)
 
 # CORS middleware
 _origins = [o.strip() for o in ALLOWED_ORIGINS.split(",")]
@@ -157,6 +206,7 @@ class PickerRegisterBody(BaseModel):
     picker_id: str
     stream_url: str
     control_url: str
+    version: str = "unknown"
 
 
 class ControlBody(BaseModel):
@@ -170,17 +220,21 @@ class ControlBody(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "api-gateway"}
+    return {"status": "ok", "service": SERVICE_NAME, "version": SERVICE_VERSION}
 
 
 @app.post("/pickers/register")
 async def register_picker(body: PickerRegisterBody):
+    now = datetime.now(timezone.utc).isoformat()
+    existing = _redis_get_picker(body.picker_id) or {}
     info = {
         "picker_id": body.picker_id,
         "stream_url": body.stream_url,
         "control_url": body.control_url,
         "status": "online",
-        "registered_at": datetime.now(timezone.utc).isoformat(),
+        "registered_at": existing.get("registered_at", now),
+        "last_seen_at": now,
+        "version": body.version,
     }
     _redis_set_picker(info)
     return {"registered": True, "picker_id": body.picker_id}
@@ -274,6 +328,11 @@ async def api_staging(code: str):
 @app.get("/api/pickers")
 async def api_pickers():
     return _redis_list_pickers()
+
+
+@app.get("/api/versions")
+async def api_versions():
+    return await _collect_service_versions()
 
 
 @app.get("/state/{picker_id}")

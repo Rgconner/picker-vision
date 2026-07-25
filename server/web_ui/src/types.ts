@@ -73,4 +73,13 @@ export interface PickerInfo {
   picker_id: string;
   stream_url: string;
   status: 'online' | 'offline';
+  version?: string;
+  last_seen_at?: string;
 }
+
+export interface ServiceVersionInfo {
+  url?: string | null;
+  version: string;
+}
+
+export type ServiceVersions = Record<string, ServiceVersionInfo>;

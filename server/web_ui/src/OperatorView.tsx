@@ -87,6 +87,14 @@ export function OperatorView() {
             </option>
           ))}
         </select>
+        {selectedId && (() => {
+          const selectedPicker = pickers.find((p) => p.picker_id === selectedId);
+          return selectedPicker ? (
+            <span className="text-xs text-[#94a3b8]">
+              {selectedPicker.status} · {selectedPicker.version ?? 'unknown'}
+            </span>
+          ) : null;
+        })()}
         <span
           className={`ml-2 text-xs font-medium px-2 py-0.5 rounded-full ${
             connected ? 'bg-[#0a2d14] text-[#22c55e]' : 'bg-[#2d3142] text-[#94a3b8]'

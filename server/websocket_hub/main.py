@@ -22,6 +22,9 @@ import os
 import threading
 from typing import Any
 
+SERVICE_NAME = "websocket-hub"
+SERVICE_VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
+
 import redis as redis_lib
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
@@ -42,7 +45,7 @@ _redis_sync = redis_lib.from_url(REDIS_URL, decode_responses=True)
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="WebSocket Hub")
+app = FastAPI(title="WebSocket Hub", version=SERVICE_VERSION)
 
 
 # ---------------------------------------------------------------------------
@@ -87,7 +90,7 @@ def _launch_listener(
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "websocket-hub"}
+    return {"status": "ok", "service": SERVICE_NAME, "version": SERVICE_VERSION}
 
 
 # ---------------------------------------------------------------------------

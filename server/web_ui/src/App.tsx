@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { OperatorView } from './OperatorView';
 import { SupervisorView } from './SupervisorView';
+import { useServiceVersions } from './useServiceVersions';
 
 type Mode = 'operator' | 'supervisor';
 
 export default function App() {
   const [mode, setMode] = useState<Mode>('operator');
+  const versions = useServiceVersions();
 
   return (
     <div
@@ -44,6 +46,13 @@ export default function App() {
             Supervisor
           </button>
         </nav>
+        <div className="ml-auto flex items-center gap-2 text-xs text-[#94a3b8] flex-wrap justify-end">
+          {Object.entries(versions).map(([name, info]) => (
+            <span key={name} className="rounded-full border border-[#2d3142] px-2 py-0.5">
+              {name} {info.version}
+            </span>
+          ))}
+        </div>
       </header>
 
       {/* Main content */}
