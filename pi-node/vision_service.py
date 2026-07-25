@@ -246,16 +246,14 @@ if __name__ == "__main__":
     logger.info("Pi LAN IP resolved as %s (stream port %d, control port %d)",
                 _stream_host, STREAM_PORT, CONTROL_PORT)
 
-    # Warn if STREAM_HOST was not set explicitly — the auto-detected IP may not
-    # be reachable from the server if the Pi has multiple interfaces or if NAT
-    # is involved.  This is purely advisory; the operator must verify reachability.
-    if not _cfg.get("STREAM_HOST", ""):
-        logger.warning(
-            "STREAM_HOST not set — using auto-detected IP %s. "
-            "Verify the server at %s can reach http://%s:%d/stream. "
-            "If not, set STREAM_HOST=<reachable-ip> in your config or env.",
-            _stream_host, SERVER_URL, _stream_host, STREAM_PORT,
-        )
+    # Log the resolved host so operators can see which interface was selected.
+    # On multi-homed devices the UDP probe picks the interface whose default
+    # route reaches the server — this is correct in DHCP environments and
+    # requires no configuration.
+    logger.info(
+        "Stream will be advertised as http://%s:%d/stream (auto-detected via UDP probe to %s)",
+        _stream_host, STREAM_PORT, SERVER_URL,
+    )
 
     publisher.set_stream_url(f"http://{_stream_host}:{STREAM_PORT}/stream")
     publisher.set_control_url(f"http://{_stream_host}:{CONTROL_PORT}")

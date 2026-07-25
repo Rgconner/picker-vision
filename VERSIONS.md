@@ -10,17 +10,24 @@ component **must** bump its `VERSION` file and add a row here.
 
 | Component         | Current | File                                        |
 |-------------------|---------|---------------------------------------------|
-| pi-node           | 1.1.2   | `pi-node/VERSION`                           |
-| api-gateway       | 1.1.2   | `server/api_gateway/VERSION`                |
-| event-processor   | 1.1.2   | `server/event_processor/VERSION`            |
-| websocket-hub     | 1.1.2   | `server/websocket_hub/VERSION`              |
-| order-service     | 1.1.2   | `server/order_service/VERSION`              |
-| web-ui            | 1.1.2   | `server/web_ui/VERSION`                     |
+| pi-node           | 1.1.3   | `pi-node/VERSION`                           |
+| api-gateway       | 1.1.3   | `server/api_gateway/VERSION`                |
+| event-processor   | 1.1.3   | `server/event_processor/VERSION`            |
+| websocket-hub     | 1.1.3   | `server/websocket_hub/VERSION`              |
+| order-service     | 1.1.3   | `server/order_service/VERSION`              |
+| web-ui            | 1.1.3   | `server/web_ui/VERSION`                     |
 
 ---
 
 ## Changelog
 
+### 1.1.3
+
+**pi-node**
+- Removed spurious `STREAM_HOST` warning and pinning suggestion. The UDP probe is the correct and only mechanism for DHCP environments — no configuration needed. Replaced warning with an INFO log showing the advertised stream URL so operators can confirm which interface was selected.
+- Cleaned up `picker.env.template` — `STREAM_HOST` is now commented out and documented as an emergency-only override, not a normal setting.
+
+---
 
 ### 1.1.2
 
