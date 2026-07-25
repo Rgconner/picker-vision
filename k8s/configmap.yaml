@@ -12,11 +12,11 @@ data:
   REDIS_URL: "redis://redis:6379"
 
   # Runtime service versions displayed in the UI
-  API_GATEWAY_VERSION: "1.1.1"
-  ORDER_SERVICE_VERSION: "1.1.1"
-  EVENT_PROCESSOR_VERSION: "1.1.1"
-  WEBSOCKET_HUB_VERSION: "1.1.1"
-  WEB_UI_VERSION: "1.1.1"
+  API_GATEWAY_VERSION: "1.1.2"
+  ORDER_SERVICE_VERSION: "1.1.2"
+  EVENT_PROCESSOR_VERSION: "1.1.2"
+  WEBSOCKET_HUB_VERSION: "1.1.2"
+  WEB_UI_VERSION: "1.1.2"
 
   # Order service
   DATABASE_URL: "sqlite:////data/picker.db"

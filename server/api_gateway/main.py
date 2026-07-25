@@ -44,8 +44,8 @@ ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*")
 # Derive WebSocket host from WEBSOCKET_HUB_URL (strip http:// prefix)
 _ws_hub_host = WEBSOCKET_HUB_URL.removeprefix("http://").removeprefix("https://")
 
-PICKER_TTL = 300  # seconds
-PICKER_STALE_AFTER = 120  # seconds
+PICKER_TTL = 120          # seconds — Redis key TTL; must be > PICKER_STALE_AFTER
+PICKER_STALE_AFTER = 45   # seconds — Pi heartbeats every 30s; allow 1.5× before marking offline
 
 # ---------------------------------------------------------------------------
 # Logging

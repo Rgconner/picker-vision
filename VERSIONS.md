@@ -10,16 +10,29 @@ component **must** bump its `VERSION` file and add a row here.
 
 | Component         | Current | File                                        |
 |-------------------|---------|---------------------------------------------|
-| pi-node           | 1.1.1   | `pi-node/VERSION`                           |
-| api-gateway       | 1.1.1   | `server/api_gateway/VERSION`                |
-| event-processor   | 1.1.1   | `server/event_processor/VERSION`            |
-| websocket-hub     | 1.1.1   | `server/websocket_hub/VERSION`              |
-| order-service     | 1.1.1   | `server/order_service/VERSION`              |
-| web-ui            | 1.1.1   | `server/web_ui/VERSION`                     |
+| pi-node           | 1.1.2   | `pi-node/VERSION`                           |
+| api-gateway       | 1.1.2   | `server/api_gateway/VERSION`                |
+| event-processor   | 1.1.2   | `server/event_processor/VERSION`            |
+| websocket-hub     | 1.1.2   | `server/websocket_hub/VERSION`              |
+| order-service     | 1.1.2   | `server/order_service/VERSION`              |
+| web-ui            | 1.1.2   | `server/web_ui/VERSION`                     |
 
 ---
 
 ## Changelog
+
+
+### 1.1.2
+
+**pi-node**
+- Fixed `UnboundLocalError: cannot access local variable '_frames_captured'` — `_run_capture()` mutates module-level globals but was missing `global _frames_captured, _events_published, _last_event_at` declaration. Also removed erroneous `global` declaration inside a `with _state_lock:` block (global declarations must be at function scope, not block scope).
+- Added subnet mismatch warning: if the UDP-probed stream host is on a different subnet than the server, a `WARNING` is logged at startup telling the operator to set `STREAM_HOST` explicitly.
+
+**api-gateway**
+- Reduced `PICKER_TTL` from 300s → 120s and `PICKER_STALE_AFTER` from 120s → 45s. Pi heartbeats every 30s; the old values kept a rebooted/dead picker showing as "online" for up to 2 minutes. Now a picker goes offline within 45s of missing its first heartbeat.
+
+---
+
 
 ### 1.1.0
 

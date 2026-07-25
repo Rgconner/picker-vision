@@ -119,7 +119,7 @@ def control(body: ControlBody):
 # ── Main capture loop ─────────────────────────────────────────────────────────
 
 def _run_capture(streamer: ms_module.MJPEGStreamer, publisher: ep_module.EventPublisher) -> None:
-    global _validate_next_frame
+    global _validate_next_frame, _frames_captured, _events_published, _last_event_at
 
     # Use V4L2 backend explicitly — opencv-python-headless does not bundle
     # the FFMPEG device backend, so without this hint it logs a spurious
@@ -245,6 +245,18 @@ if __name__ == "__main__":
     )
     logger.info("Pi LAN IP resolved as %s (stream port %d, control port %d)",
                 _stream_host, STREAM_PORT, CONTROL_PORT)
+
+    # Warn if STREAM_HOST was not set explicitly — the auto-detected IP may not
+    # be reachable from the server if the Pi has multiple interfaces or if NAT
+    # is involved.  This is purely advisory; the operator must verify reachability.
+    if not _cfg.get("STREAM_HOST", ""):
+        logger.warning(
+            "STREAM_HOST not set — using auto-detected IP %s. "
+            "Verify the server at %s can reach http://%s:%d/stream. "
+            "If not, set STREAM_HOST=<reachable-ip> in your config or env.",
+            _stream_host, SERVER_URL, _stream_host, STREAM_PORT,
+        )
+
     publisher.set_stream_url(f"http://{_stream_host}:{STREAM_PORT}/stream")
     publisher.set_control_url(f"http://{_stream_host}:{CONTROL_PORT}")
 
