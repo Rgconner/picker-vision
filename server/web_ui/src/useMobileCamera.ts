@@ -65,6 +65,17 @@ export function useMobileCamera(): MobileCameraState {
     setReady(false);
     setError(null);
 
+    // getUserMedia requires a secure context (HTTPS or localhost).
+    // navigator.mediaDevices is undefined on plain HTTP over LAN.
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError(
+        'Camera unavailable: this page must be served over HTTPS. ' +
+        'Ask your administrator to enable TLS on the web-ui service, ' +
+        'or open the site via https://.'
+      );
+      return;
+    }
+
     // Build constraints: prefer environment-facing; allow explicit deviceId override
     let constraints: MediaStreamConstraints;
     if (deviceId) {

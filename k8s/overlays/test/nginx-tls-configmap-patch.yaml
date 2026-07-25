@@ -1,0 +1,105 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-ui-nginx-config
+data:
+  default.conf: |
+    # Redirect all HTTP → HTTPS
+    server {
+      listen 80;
+      server_name _;
+      return 301 https://$host$request_uri;
+    }
+
+    server {
+      listen 443 ssl;
+      server_name _;
+
+      ssl_certificate     /etc/nginx/tls/tls.crt;
+      ssl_certificate_key /etc/nginx/tls/tls.key;
+      ssl_protocols       TLSv1.2 TLSv1.3;
+      ssl_ciphers         HIGH:!aNULL:!MD5;
+
+      root /usr/share/nginx/html;
+      index index.html;
+
+      location / {
+        try_files $uri $uri/ /index.html;
+      }
+
+      location /api/ {
+        proxy_pass http://api-gateway.picker-vision-test.svc.cluster.local:80/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 30s;
+      }
+
+      location /state/ {
+        proxy_pass http://api-gateway.picker-vision-test.svc.cluster.local:80/state/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 30s;
+      }
+
+      location /stream/ {
+        proxy_pass http://api-gateway.picker-vision-test.svc.cluster.local:80/stream/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 60s;
+      }
+
+      location /control/ {
+        proxy_pass http://api-gateway.picker-vision-test.svc.cluster.local:80/control/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 10s;
+      }
+
+      location /ws/ {
+        proxy_pass http://api-gateway.picker-vision-test.svc.cluster.local:80/ws/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 3600s;
+      }
+
+      location /pickers {
+        proxy_pass http://api-gateway.picker-vision-test.svc.cluster.local:80/pickers;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 10s;
+      }
+
+      location /events/ {
+        proxy_pass http://api-gateway.picker-vision-test.svc.cluster.local:80/events/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 10s;
+      }
+
+      location /health {
+        proxy_pass http://api-gateway.picker-vision-test.svc.cluster.local:80/health;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_connect_timeout 5s;
+      }
+    }

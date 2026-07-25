@@ -8,6 +8,8 @@ resources:
   - namespace.yaml
   # Reuse all base manifests via k8s/base/kustomization.yaml
   - ../../base
+  # cert-manager Issuer + Certificate for self-signed TLS
+  - tls.yaml
 
 patches:
   # Override the configmap with test-specific values — target by name since
@@ -16,7 +18,17 @@ patches:
     target:
       kind: ConfigMap
       name: picker-vision-config
-  # Pin LoadBalancer IPs to the test pool addresses (separate files per service)
+  # Replace nginx config with TLS-enabled version (HTTP→HTTPS redirect + SSL block)
+  - path: nginx-tls-configmap-patch.yaml
+    target:
+      kind: ConfigMap
+      name: web-ui-nginx-config
+  # Mount TLS secret into web-ui pods and expose port 443
+  - path: web-ui-deployment-patch.yaml
+    target:
+      kind: Deployment
+      name: web-ui
+  # Pin LoadBalancer IPs; expose ports 80 + 443 on web-ui
   - path: api-gateway-svc-patch.yaml
     target:
       kind: Service

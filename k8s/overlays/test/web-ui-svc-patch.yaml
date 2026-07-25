@@ -1,5 +1,5 @@
 ---
-# Pin the web-ui LoadBalancer to .212 from the shared sandbox pool
+# Pin the web-ui LoadBalancer to .212 from the shared sandbox pool, expose HTTP + HTTPS
 apiVersion: v1
 kind: Service
 metadata:
@@ -9,3 +9,12 @@ metadata:
     metallb.universe.tf/address-pool: sandbox
 spec:
   type: LoadBalancer
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+    - name: https
+      port: 443
+      targetPort: 443
+      protocol: TCP
