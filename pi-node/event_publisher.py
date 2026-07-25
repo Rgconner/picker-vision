@@ -131,6 +131,7 @@ class EventPublisher:
             "stream_url":  self._stream_url,
             "control_url": self._control_url,
         }
+        logger.debug("Registration payload: %s", payload)
         interval = _BACKOFF_START
         attempt  = 0
 
@@ -142,7 +143,12 @@ class EventPublisher:
                     json=payload,
                     timeout=5,
                 )
-                resp.raise_for_status()
+                if not resp.ok:
+                    logger.warning(
+                        "Registration attempt %d failed: HTTP %d — response: %s",
+                        attempt, resp.status_code, resp.text,
+                    )
+                    resp.raise_for_status()
                 logger.info("Registered picker '%s' with server (attempt %d)",
                             self._picker_id, attempt)
                 return True
