@@ -1,4 +1,5 @@
 import logging
+import socket
 import threading
 import time
 from datetime import datetime, timezone
@@ -180,9 +181,22 @@ if __name__ == "__main__":
     streamer = ms_module.MJPEGStreamer(port=8080)
     streamer.start()
 
-    stream_url = "http://localhost:8080/stream"
+    # Resolve the Pi's LAN IP so the server can reach back to us.
+    # Opens a UDP socket toward the server address — no packets are sent,
+    # but the OS picks the correct outbound interface.
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as _s:
+        try:
+            _server_host = SERVER_URL.split("//")[-1].split(":")[0]
+            _s.connect((_server_host, 80))
+            _local_ip = _s.getsockname()[0]
+        except Exception:
+            _local_ip = "127.0.0.1"
+
+    stream_url  = f"http://{_local_ip}:8080/stream"
+    control_url = f"http://{_local_ip}:{CONTROL_PORT}"
     publisher = ep_module.EventPublisher(SERVER_URL, PICKER_ID)
     publisher.set_stream_url(stream_url)
+    publisher.set_control_url(control_url)
     publisher.start()
 
     # Wait for the server before registering — loops with backoff on a headless device.

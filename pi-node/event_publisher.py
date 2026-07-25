@@ -43,7 +43,8 @@ class EventPublisher:
         self._server_url  = server_url.rstrip("/")
         self._picker_id   = picker_id
         self._queue: queue.Queue[dict] = queue.Queue(maxsize=_QUEUE_MAXSIZE)
-        self._stream_url  = f"http://localhost:8080/stream"
+        self._stream_url   = f"http://localhost:8080/stream"
+        self._control_url  = f"http://localhost:8081"
 
         # Connectivity state — only log on transitions, not every frame
         self._server_online = False
@@ -54,6 +55,9 @@ class EventPublisher:
 
     def set_stream_url(self, url: str) -> None:
         self._stream_url = url
+
+    def set_control_url(self, url: str) -> None:
+        self._control_url = url
 
     def publish(self, event: dict) -> None:
         """Non-blocking: enqueue *event*. Drops oldest if queue is full."""
@@ -122,7 +126,11 @@ class EventPublisher:
         Returns:
             True if registration succeeded.
         """
-        payload  = {"picker_id": self._picker_id, "stream_url": self._stream_url}
+        payload  = {
+            "picker_id":   self._picker_id,
+            "stream_url":  self._stream_url,
+            "control_url": self._control_url,
+        }
         interval = _BACKOFF_START
         attempt  = 0
 
