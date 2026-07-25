@@ -9,7 +9,7 @@ import redis as redis_lib
 import websockets
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 SERVICE_NAME = "api-gateway"
@@ -59,6 +59,17 @@ def _picker_key(picker_id: str, suffix: str) -> str:
     return f"picker:{picker_id}:{suffix}"
 
 
+def _picker_status(info: dict) -> str:
+    last_seen_at = info.get("last_seen_at")
+    if not last_seen_at:
+        return info.get("status", "offline")
+    try:
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(last_seen_at)).total_seconds()
+        return "online" if age <= PICKER_STALE_AFTER else "offline"
+    except ValueError:
+        return info.get("status", "offline")
+
+
 async def _collect_service_versions() -> dict[str, dict]:
     services = {
         "api-gateway": {"url": None, "version": SERVICE_VERSION},
@@ -86,12 +97,8 @@ async def _collect_service_versions() -> dict[str, dict]:
 
 def _redis_set_picker(info: dict) -> None:
     key = _picker_key(info["picker_id"], "info")
-    heartbeat_key = _picker_key(info["picker_id"], "heartbeat")
     if _redis:
-        pipe = _redis.pipeline()
-        pipe.setex(key, PICKER_TTL, json.dumps(info))
-        pipe.setex(heartbeat_key, PICKER_TTL, info["last_seen_at"])
-        pipe.execute()
+        _redis.setex(key, PICKER_TTL, json.dumps(info))
     else:
         _memory_registry[key] = info
 
@@ -105,7 +112,6 @@ def _redis_get_picker(picker_id: str) -> dict | None:
 
 
 def _redis_list_pickers() -> list[dict]:
-    now = datetime.now(timezone.utc)
     if _redis:
         keys = _redis.keys("picker:*:info")
         pickers = []
@@ -114,15 +120,7 @@ def _redis_list_pickers() -> list[dict]:
             if not raw:
                 continue
             info = json.loads(raw)
-            last_seen_at = info.get("last_seen_at")
-            status = "offline"
-            if last_seen_at:
-                try:
-                    age = (now - datetime.fromisoformat(last_seen_at)).total_seconds()
-                    status = "online" if age <= PICKER_STALE_AFTER else "offline"
-                except ValueError:
-                    status = info.get("status", "offline")
-            info["status"] = status
+            info["status"] = _picker_status(info)
             pickers.append(info)
         return pickers
     return list(_memory_registry.values())
@@ -240,6 +238,11 @@ async def register_picker(body: PickerRegisterBody):
     return {"registered": True, "picker_id": body.picker_id}
 
 
+@app.post("/pickers/heartbeat")
+async def heartbeat_picker(body: PickerRegisterBody):
+    return await register_picker(body)
+
+
 @app.get("/pickers")
 async def list_pickers():
     return _redis_list_pickers()
@@ -247,21 +250,7 @@ async def list_pickers():
 
 @app.get("/stream/{picker_id}")
 async def stream(picker_id: str):
-    info = _redis_get_picker(picker_id)
-    if not info:
-        raise HTTPException(status_code=404, detail="Picker not found")
-    stream_url = info["stream_url"]
-
-    async def _generate():
-        async with httpx.AsyncClient(timeout=None) as client:
-            async with client.stream("GET", stream_url) as resp:
-                async for chunk in resp.aiter_bytes():
-                    yield chunk
-
-    return StreamingResponse(
-        _generate(),
-        media_type="multipart/x-mixed-replace; boundary=frame",
-    )
+    raise HTTPException(status_code=404, detail="Direct picker streaming is not available in Kubernetes mode")
 
 
 @app.post("/control/{picker_id}")
@@ -269,7 +258,7 @@ async def control(picker_id: str, body: ControlBody):
     info = _redis_get_picker(picker_id)
     if not info:
         raise HTTPException(status_code=404, detail="Picker not found")
-    return await _proxy("POST", info["control_url"], body.model_dump())
+    raise HTTPException(status_code=501, detail="Direct picker control is not available in Kubernetes mode")
 
 
 @app.post("/events/detection")

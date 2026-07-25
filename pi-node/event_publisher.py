@@ -44,8 +44,8 @@ class EventPublisher:
         self._picker_id   = picker_id
         self._version     = version
         self._queue: queue.Queue[dict] = queue.Queue(maxsize=_QUEUE_MAXSIZE)
-        self._stream_url   = f"http://localhost:8080/stream"
-        self._control_url  = f"http://localhost:8081"
+        self._stream_url   = ""
+        self._control_url  = ""
 
         # Connectivity state — only log on transitions, not every frame
         self._server_online = False
@@ -267,6 +267,7 @@ class EventPublisher:
         _OFFLINE_BUFFER.unlink(missing_ok=True)
 
     def _heartbeat_loop(self) -> None:
+        time.sleep(30)
         while True:
             self.register(retries=0)
             time.sleep(30)

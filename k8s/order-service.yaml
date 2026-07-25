@@ -36,6 +36,12 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8001
+          env:
+            - name: SERVICE_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: picker-vision-config
+                  key: ORDER_SERVICE_VERSION
           envFrom:
             - configMapRef:
                 name: picker-vision-config
