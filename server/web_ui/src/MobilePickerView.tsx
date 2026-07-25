@@ -216,6 +216,7 @@ export function MobilePickerView() {
       </div>
       <MobilePickList
         orders={orders}
+        detections={detections}
         orderCompletePending={pickerState?.order_complete_pending}
         onConfirmPacked={handleConfirmPacked}
       />

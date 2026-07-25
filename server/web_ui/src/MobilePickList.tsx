@@ -1,40 +1,104 @@
 /**
- * MobilePickList — compact pick list optimised for a phone screen.
+ * MobilePickList — live pick list for the mobile picker view.
  *
- * Shows all orders with their lines.  Pending lines are highlighted,
- * picked lines are struck through.  Confirm Packed CTA is shown inline
- * when all items are picked and visible in staging.
+ * Connects order lines to the real-time enriched detection state so the
+ * picker sees immediately which items are in-frame and whether they are
+ * correct or unexpected.
+ *
+ * Features:
+ *  - Active order always floats to the top; complete orders sink to bottom
+ *  - Per-order progress bar (picked / total)
+ *  - Per-line live status dot driven by server-enriched detections:
+ *      ● amber  — barcode is currently in-frame (active detection)
+ *      ● green  — confirmed correct by event-processor
+ *      ● red    — unexpected (wrong item scanned against this order)
+ *      ● grey   — pending (not yet seen)
+ *      ✓ muted  — already picked (collapsed row)
+ *  - Picked lines collapse to a single compact row so attention stays on
+ *    what is still outstanding
+ *  - Confirm Packed CTA pulses green when all lines are picked
  */
 
-import React from 'react';
-import type { Order, PickerState } from './types';
+import React, { useMemo } from 'react';
+import type { Detection, Order, PickerState } from './types';
 
 interface Props {
   orders:               Order[];
+  detections:           Detection[];
   orderCompletePending: PickerState['order_complete_pending'] | undefined;
   onConfirmPacked:      (orderId: string) => void;
 }
 
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+/** Build a lookup: barcode → most-significant live detection */
+function buildDetectionMap(detections: Detection[]): Map<string, Detection> {
+  const map = new Map<string, Detection>();
+  for (const det of detections) {
+    if (det.type !== 'product') continue;
+    const existing = map.get(det.value);
+    // Prefer active > correct > unexpected > null; within same priority keep first
+    if (!existing || (!existing.active && det.active)) {
+      map.set(det.value, det);
+    }
+  }
+  return map;
+}
+
+/** Order sort weight: in-progress first, then pending, then complete/packed */
+function orderWeight(order: Order): number {
+  if (order.status === 'picking') return 0;
+  if (order.status === 'pending') return 1;
+  return 2;
+}
+
 function stagingBadge(code: string, label: string | null) {
   return (
-    <span className="text-xs font-mono font-semibold px-1.5 py-0.5 rounded bg-[#0a1e2d] text-[#06b6d4] border border-[#06b6d4]/30">
-      {code}{label ? ` ${label}` : ''}
+    <span className="shrink-0 text-xs font-mono font-semibold px-1.5 py-0.5 rounded bg-[#0a1e2d] text-[#06b6d4] border border-[#06b6d4]/30">
+      {code}{label ? ` · ${label}` : ''}
     </span>
   );
 }
 
-function statusDot(status: string) {
-  const colours: Record<string, string> = {
-    pending:  'bg-[#94a3b8]',
-    picking:  'bg-[#eab308]',
-    complete: 'bg-[#22c55e]',
-    packed:   'bg-[#06b6d4]',
-  };
-  return <span className={`inline-block w-2 h-2 rounded-full ${colours[status] ?? 'bg-[#94a3b8]'}`} />;
+/** Colour + label for a live detection status */
+function detectionStyle(det: Detection | undefined): {
+  dot: string;
+  ring: string;
+  label: string;
+} | null {
+  if (!det) return null;
+  if (det.active)                   return { dot: 'bg-[#eab308]', ring: 'ring-[#eab308]/30', label: 'In frame' };
+  if (det.status === 'correct')     return { dot: 'bg-[#22c55e]', ring: 'ring-[#22c55e]/30', label: 'Correct'  };
+  if (det.status === 'unexpected')  return { dot: 'bg-[#ef4444]', ring: 'ring-[#ef4444]/30', label: 'Wrong item' };
+  return null;
 }
 
-export function MobilePickList({ orders, orderCompletePending, onConfirmPacked }: Props) {
-  if (orders.length === 0) {
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
+function ProgressBar({ picked, total }: { picked: number; total: number }) {
+  const pct = total > 0 ? Math.round((picked / total) * 100) : 0;
+  const colour = pct === 100 ? '#22c55e' : pct > 0 ? '#06b6d4' : '#2d3142';
+  return (
+    <div className="h-1 w-full rounded-full bg-[#2d3142] overflow-hidden">
+      <div
+        className="h-full rounded-full transition-all duration-300"
+        style={{ width: `${pct}%`, background: colour }}
+      />
+    </div>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
+
+export function MobilePickList({ orders, detections, orderCompletePending, onConfirmPacked }: Props) {
+  const detMap = useMemo(() => buildDetectionMap(detections), [detections]);
+
+  const sorted = useMemo(
+    () => [...orders].sort((a, b) => orderWeight(a) - orderWeight(b)),
+    [orders],
+  );
+
+  if (sorted.length === 0) {
     return (
       <div className="flex items-center justify-center py-8 text-[#57606a] text-sm">
         No active orders
@@ -43,58 +107,113 @@ export function MobilePickList({ orders, orderCompletePending, onConfirmPacked }
   }
 
   return (
-    <div className="flex flex-col gap-3 px-3 py-2">
-      {orders.map((order) => {
-        const isPending = orderCompletePending?.order_id === order.id;
-        const pickedCount = order.lines.filter((l) => l.status === 'picked').length;
-        const totalCount  = order.lines.length;
+    <div className="flex flex-col gap-2 px-2 py-2">
+      {sorted.map((order) => {
+        const isPending    = orderCompletePending?.order_id === order.id;
+        const pickedLines  = order.lines.filter((l) => l.status === 'picked');
+        const pendingLines = order.lines.filter((l) => l.status !== 'picked');
+        const pickedCount  = pickedLines.length;
+        const totalCount   = order.lines.length;
+        const allPicked    = pickedCount === totalCount && totalCount > 0;
+        const isComplete   = order.status === 'complete' || order.status === 'packed';
 
         return (
           <div
             key={order.id}
-            className={`rounded-xl border ${isPending ? 'border-[#22c55e]' : 'border-[#2d3142]'} bg-[#1a1d27] overflow-hidden`}
+            className={`rounded-xl border overflow-hidden transition-all ${
+              isPending
+                ? 'border-[#22c55e] shadow-[0_0_0_1px_rgba(34,197,94,0.2)]'
+                : isComplete
+                  ? 'border-[#2d3142] opacity-60'
+                  : 'border-[#2d3142]'
+            } bg-[#1a1d27]`}
           >
-            {/* Order header */}
+            {/* ── Order header ── */}
             <div className="flex items-center gap-2 px-3 py-2 border-b border-[#2d3142]">
-              {statusDot(order.status)}
-              <span className="font-semibold text-[#e2e8f0] text-sm flex-1 truncate">
+              {/* Status dot */}
+              <span className={`shrink-0 w-2 h-2 rounded-full ${
+                allPicked    ? 'bg-[#22c55e]' :
+                order.status === 'picking' ? 'bg-[#eab308]' :
+                isComplete   ? 'bg-[#06b6d4]' :
+                'bg-[#94a3b8]'
+              }`} />
+
+              <span className="font-semibold text-[#e2e8f0] text-sm flex-1 truncate min-w-0">
                 {order.reference}
               </span>
-              <span className="text-[#57606a] text-xs truncate max-w-[100px]">{order.customer}</span>
-              <span className="text-xs font-mono text-[#94a3b8] ml-1 shrink-0">
+              <span className="text-[#57606a] text-xs shrink-0 truncate max-w-[80px]">
+                {order.customer}
+              </span>
+              <span className="text-xs font-mono text-[#94a3b8] shrink-0 ml-1">
                 {pickedCount}/{totalCount}
               </span>
             </div>
 
-            {/* Lines */}
-            <div className="divide-y divide-[#1e2130]">
-              {order.lines.map((line) => {
-                const picked    = line.status === 'picked';
-                const remaining = line.quantity - line.quantity_picked;
-                return (
-                  <div
-                    key={line.id}
-                    className={`flex items-center gap-2 px-3 py-2 ${picked ? 'opacity-40' : ''}`}
-                  >
-                    <span className={`flex-1 text-sm ${picked ? 'line-through text-[#57606a]' : 'text-[#e2e8f0]'}`}>
-                      {line.product_description ?? line.product_barcode}
-                    </span>
-                    <span className={`text-xs tabular-nums shrink-0 ${picked ? 'text-[#57606a]' : 'text-[#e2e8f0]'}`}>
-                      ×{remaining}
-                    </span>
-                    {stagingBadge(line.staging_code, line.staging_label)}
-                  </div>
-                );
-              })}
+            {/* Progress bar */}
+            <div className="px-3 pt-1.5 pb-1">
+              <ProgressBar picked={pickedCount} total={totalCount} />
             </div>
 
-            {/* Confirm packed CTA */}
+            {/* ── Pending lines ── */}
+            {pendingLines.length > 0 && (
+              <div className="divide-y divide-[#1e2130]">
+                {pendingLines.map((line) => {
+                  const det   = detMap.get(line.product_barcode);
+                  const style = detectionStyle(det);
+
+                  return (
+                    <div
+                      key={line.id}
+                      className={`flex items-center gap-2 px-3 py-2 transition-all ${
+                        style ? `ring-inset ring-1 ${style.ring}` : ''
+                      } ${line.status === 'error' ? 'bg-[#2d0a0a]' : ''}`}
+                    >
+                      {/* Live detection dot */}
+                      <span className={`shrink-0 w-2.5 h-2.5 rounded-full border ${
+                        style
+                          ? `${style.dot} border-transparent`
+                          : 'border-[#2d3142] bg-transparent'
+                      }`} />
+
+                      {/* Product name */}
+                      <span className="flex-1 min-w-0 text-sm text-[#e2e8f0] truncate">
+                        {line.product_description ?? line.product_barcode}
+                      </span>
+
+                      {/* Qty remaining */}
+                      <span className="shrink-0 text-xs tabular-nums font-semibold text-[#e2e8f0]">
+                        ×{line.quantity - line.quantity_picked}
+                      </span>
+
+                      {stagingBadge(line.staging_code, line.staging_label)}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ── Picked lines (collapsed) ── */}
+            {pickedLines.length > 0 && (
+              <div className="px-3 py-1.5 border-t border-[#1e2130] flex flex-wrap gap-1.5">
+                {pickedLines.map((line) => (
+                  <span
+                    key={line.id}
+                    className="text-xs text-[#57606a] line-through truncate max-w-[120px]"
+                    title={line.product_description ?? line.product_barcode}
+                  >
+                    ✓ {line.product_description ?? line.product_barcode}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* ── Confirm Packed CTA ── */}
             {isPending && (
               <button
                 onClick={() => onConfirmPacked(order.id)}
-                className="w-full py-3 px-3 bg-[#22c55e] text-black font-bold text-sm flex items-center justify-center gap-2 pulse-green"
+                className="w-full py-3 px-3 bg-[#22c55e] text-black font-bold text-sm flex items-center justify-center gap-2 animate-pulse"
               >
-                ✅ All items picked — Confirm Packed?
+                ✅ All picked — Confirm Packed
               </button>
             )}
           </div>
