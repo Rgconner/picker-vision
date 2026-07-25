@@ -163,7 +163,7 @@ export function MobileCameraView({
   }, [draw]);
 
   return (
-    <div className="relative w-full bg-black overflow-hidden" style={{ aspectRatio: '4/3' }}>
+    <div className="relative w-full h-full bg-black overflow-hidden">
       {/* Camera feed */}
       <video
         ref={videoRef as React.RefObject<HTMLVideoElement>}

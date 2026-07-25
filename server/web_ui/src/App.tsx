@@ -62,8 +62,8 @@ export default function App() {
       {/* Persistent health strip */}
       <HealthStrip telemetry={telemetry} onServiceClick={handleServiceClick} />
 
-      {/* Main content */}
-      <main className="flex-1 min-h-0 overflow-auto">
+      {/* Main content — mobile view manages its own scroll, so suppress overflow there */}
+      <main className={`flex-1 min-h-0 ${mode === 'mobile' ? 'overflow-hidden' : 'overflow-auto'}`}>
         {mode === 'operator'   && <OperatorView />}
         {mode === 'supervisor' && <SupervisorView />}
         {mode === 'mobile'     && <MobilePickerView />}

@@ -1,20 +1,33 @@
 /**
  * MobilePickerView — the top-level mobile picker screen.
  *
- * Layout (portrait-first, works landscape too):
+ * Layout adapts to orientation:
+ *
+ *  LANDSCAPE (tablet default — e.g. Samsung Tab A7 FE):
+ *
+ *   ┌──────────────────────────┬──────────────────┐
+ *   │  Header: picker ID       │                  │
+ *   ├──────────────────────────┤  Pick list       │
+ *   │                          │  (scrollable)    │
+ *   │  Camera + AR overlay     │                  │
+ *   │  (fills column height)   │                  │
+ *   │                          │                  │
+ *   ├──────────────────────────┤                  │
+ *   │  Controls bar            │                  │
+ *   └──────────────────────────┴──────────────────┘
+ *        55 % width                 45 % width
+ *
+ *  PORTRAIT (phone fallback):
  *
  *   ┌──────────────────────────────┐
- *   │  Header: picker ID selector  │
+ *   │  Header: picker ID           │
  *   ├──────────────────────────────┤
- *   │  Camera + AR overlay         │  ← 4:3 aspect, fills width
+ *   │  Camera + AR  (max 42 vh)    │
  *   ├──────────────────────────────┤
- *   │  Controls bar                │  ← Start/Stop · Validate
+ *   │  Controls bar                │
  *   ├──────────────────────────────┤
  *   │  Pick list (scrollable)      │
  *   └──────────────────────────────┘
- *
- * The camera feed occupies the top of the screen so the picker's thumb can
- * reach the controls without obscuring the camera view.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -36,6 +49,21 @@ function savePickerId(id: string) {
   try { localStorage.setItem(STORAGE_KEY, id); } catch { /* ignore */ }
 }
 
+// ── Orientation hook ───────────────────────────────────────────────────────────
+function useIsLandscape(): boolean {
+  const query = '(orientation: landscape)';
+  const [landscape, setLandscape] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(query).matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const handler = (e: MediaQueryListEvent) => setLandscape(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return landscape;
+}
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export function MobilePickerView() {
@@ -46,7 +74,8 @@ export function MobilePickerView() {
   const [orders, setOrders]       = useState<Order[]>([]);
   const [localValidation, setLocalValidation] = useState<ReturnType<typeof useMobilePickerSession>['validationResult']>(null);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef    = useRef<HTMLVideoElement>(null);
+  const isLandscape = useIsLandscape();
 
   // ── Camera ──────────────────────────────────────────────────────────────────
   const camera = useMobileCamera();
@@ -55,7 +84,6 @@ export function MobilePickerView() {
   const { connected, pickerState, validationResult, lastScan, publish, sendAction } =
     useMobilePickerSession(pickerId || null);
 
-  // Sync validation result into local state so Controls can clear it
   useEffect(() => {
     if (validationResult) setLocalValidation(validationResult);
   }, [validationResult]);
@@ -77,7 +105,7 @@ export function MobilePickerView() {
       } catch { /* ignore */ }
     }
     fetchOrders();
-  }, [pickerState]); // re-fetch when state updates so pick status stays fresh
+  }, [pickerState]);
 
   // ── Confirm packed ──────────────────────────────────────────────────────────
   const handleConfirmPacked = useCallback(async (orderId: string) => {
@@ -101,99 +129,139 @@ export function MobilePickerView() {
     sendAction(active ? 'start' : 'stop');
   }
 
-  const detections    = pickerState?.detections     ?? [];
+  const detections     = pickerState?.detections     ?? [];
   const stagingRegions = pickerState?.staging_regions ?? [];
 
-  return (
-    <div className="flex flex-col min-h-screen bg-[#0f1117] text-[#e2e8f0] overflow-x-hidden">
+  // ── Shared sub-sections ────────────────────────────────────────────────────
 
-      {/* ── Picker ID header ────────────────────────────────────────────── */}
-      <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-[#2d3142] bg-[#1a1d27]">
-        {editMode ? (
-          <>
-            <input
-              autoFocus
-              type="text"
-              value={editId}
-              onChange={(e) => setEditId(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveId(); }}
-              placeholder="Enter picker ID (e.g. picker-1)"
-              className="flex-1 bg-[#0f1117] border border-[#2d3142] text-[#e2e8f0] text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-[#06b6d4]"
-            />
-            <button
-              onClick={handleSaveId}
-              className="px-4 py-2 rounded-lg bg-[#06b6d4] text-black font-bold text-sm shrink-0"
-            >
-              Set
-            </button>
-          </>
-        ) : (
-          <>
-            <span className="text-[#94a3b8] text-xs">Picker</span>
-            <span className="font-semibold text-[#e2e8f0] text-sm flex-1 truncate">{pickerId}</span>
-            <button
-              onClick={() => setEditMode(true)}
-              className="text-[#57606a] text-xs px-2 py-1 rounded hover:text-[#94a3b8]"
-            >
-              ✎ Edit
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* ── Camera + AR overlay ─────────────────────────────────────────── */}
-      <div className="shrink-0 w-full">
-        <MobileCameraView
-          stream={camera.stream}
-          devices={camera.devices}
-          activeDeviceId={camera.activeDeviceId}
-          facing={camera.facing}
-          error={camera.error}
-          ready={camera.ready}
-          onSwitch={camera.switchCamera}
-          onToggleFacing={camera.toggleFacing}
-          detections={detections}
-          stagingRegions={stagingRegions}
-          lastScan={lastScan}
-          videoRef={videoRef as React.RefObject<HTMLVideoElement | null>}
-        />
-      </div>
-
-      {/* Scan indicator strip */}
-      {scanning && (
-        <div className="shrink-0 flex items-center justify-center gap-2 py-1.5 bg-[#1a1d27] border-b border-[#2d3142]">
-          <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />
-          <span className="text-[#22c55e] text-xs font-semibold">Scanning…</span>
-        </div>
+  const header = (
+    <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-[#2d3142] bg-[#1a1d27]">
+      {editMode ? (
+        <>
+          <input
+            autoFocus
+            type="text"
+            value={editId}
+            onChange={(e) => setEditId(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveId(); }}
+            placeholder="Enter picker ID (e.g. picker-1)"
+            className="flex-1 bg-[#0f1117] border border-[#2d3142] text-[#e2e8f0] text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-[#06b6d4]"
+          />
+          <button
+            onClick={handleSaveId}
+            className="px-4 py-2 rounded-lg bg-[#06b6d4] text-black font-bold text-sm shrink-0"
+          >
+            Set
+          </button>
+        </>
+      ) : (
+        <>
+          <span className="text-[#94a3b8] text-xs">Picker</span>
+          <span className="font-semibold text-[#e2e8f0] text-sm flex-1 truncate">{pickerId}</span>
+          <button
+            onClick={() => setEditMode(true)}
+            className="text-[#57606a] text-xs px-2 py-1 rounded hover:text-[#94a3b8]"
+          >
+            ✎ Edit
+          </button>
+        </>
       )}
+    </div>
+  );
 
-      {/* ── Controls ────────────────────────────────────────────────────── */}
-      <div className="shrink-0 pt-2">
-        <MobileControls
-          pickerId={pickerId}
-          scanning={scanning}
-          onStartStop={handleStartStop}
-          onValidate={() => sendAction('validate')}
-          validationResult={localValidation}
-          onClearValidation={() => setLocalValidation(null)}
-          lastScanValue={lastScan?.value ?? null}
-          connected={connected}
-        />
+  const cameraPanel = (
+    <MobileCameraView
+      stream={camera.stream}
+      devices={camera.devices}
+      activeDeviceId={camera.activeDeviceId}
+      facing={camera.facing}
+      error={camera.error}
+      ready={camera.ready}
+      onSwitch={camera.switchCamera}
+      onToggleFacing={camera.toggleFacing}
+      detections={detections}
+      stagingRegions={stagingRegions}
+      lastScan={lastScan}
+      videoRef={videoRef as React.RefObject<HTMLVideoElement | null>}
+    />
+  );
+
+  const scanStrip = scanning && (
+    <div className="shrink-0 flex items-center justify-center gap-2 py-1 bg-[#1a1d27] border-b border-[#2d3142]">
+      <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />
+      <span className="text-[#22c55e] text-xs font-semibold">Scanning…</span>
+    </div>
+  );
+
+  const controls = (
+    <MobileControls
+      pickerId={pickerId}
+      scanning={scanning}
+      onStartStop={handleStartStop}
+      onValidate={() => sendAction('validate')}
+      validationResult={localValidation}
+      onClearValidation={() => setLocalValidation(null)}
+      lastScanValue={lastScan?.value ?? null}
+      connected={connected}
+      compact={isLandscape}
+    />
+  );
+
+  const pickList = (
+    <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="px-3 pt-2 pb-1">
+        <span className="text-[#57606a] text-xs font-semibold uppercase tracking-wider">
+          Pick List
+        </span>
       </div>
+      <MobilePickList
+        orders={orders}
+        orderCompletePending={pickerState?.order_complete_pending}
+        onConfirmPacked={handleConfirmPacked}
+      />
+    </div>
+  );
 
-      {/* ── Pick list ────────────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto pb-6">
-        <div className="px-3 pt-2 pb-1">
-          <span className="text-[#57606a] text-xs font-semibold uppercase tracking-wider">
-            Pick List
-          </span>
+  // ── LANDSCAPE layout ───────────────────────────────────────────────────────
+  if (isLandscape) {
+    return (
+      <div className="flex h-screen overflow-hidden bg-[#0f1117] text-[#e2e8f0]">
+
+        {/* Left column — camera + controls (55 %) */}
+        <div className="flex flex-col overflow-hidden border-r border-[#2d3142]" style={{ width: '55%' }}>
+          {header}
+          {/* Camera fills the remaining vertical space */}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            {cameraPanel}
+          </div>
+          {scanStrip}
+          <div className="shrink-0">
+            {controls}
+          </div>
         </div>
-        <MobilePickList
-          orders={orders}
-          orderCompletePending={pickerState?.order_complete_pending}
-          onConfirmPacked={handleConfirmPacked}
-        />
+
+        {/* Right column — pick list (45 %) */}
+        <div className="flex flex-col overflow-hidden" style={{ width: '45%' }}>
+          {pickList}
+        </div>
+
       </div>
+    );
+  }
+
+  // ── PORTRAIT layout (phone fallback) ───────────────────────────────────────
+  return (
+    <div className="flex flex-col h-screen overflow-hidden bg-[#0f1117] text-[#e2e8f0]">
+      {header}
+      {/* Camera capped at 42 vh so controls + list always fit */}
+      <div className="shrink-0 w-full overflow-hidden" style={{ maxHeight: '42vh' }}>
+        {cameraPanel}
+      </div>
+      {scanStrip}
+      <div className="shrink-0">
+        {controls}
+      </div>
+      {pickList}
     </div>
   );
 }
