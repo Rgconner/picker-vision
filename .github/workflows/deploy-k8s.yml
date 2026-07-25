@@ -76,7 +76,10 @@ jobs:
 
       - name: Apply MetalLB config
         if: steps.tag.outputs.branch == 'main'
-        run: kubectl apply -f k8s/metallb-config.yaml
+        # --validate=false: MetalLB CRD types (metallb.io/v1beta1) are not in
+        # kubectl's built-in schema. Without this flag kubectl tries to fetch the
+        # OpenAPI schema from localhost:8080, which doesn't exist on the runner.
+        run: kubectl apply --validate=false -f k8s/metallb-config.yaml
 
       - name: Apply production manifests
         if: steps.tag.outputs.branch == 'main'
@@ -116,7 +119,8 @@ jobs:
 
       - name: Apply test MetalLB pool
         if: steps.tag.outputs.branch == 'feature/mobile-web-client'
-        run: kubectl apply -f k8s/overlays/test/metallb-pool.yaml
+        # --validate=false: same CRD schema reason as production MetalLB step above.
+        run: kubectl apply --validate=false -f k8s/overlays/test/metallb-pool.yaml
 
       - name: Apply test manifests
         if: steps.tag.outputs.branch == 'feature/mobile-web-client'
