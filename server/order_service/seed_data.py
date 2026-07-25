@@ -4,7 +4,6 @@ Checks whether the Product table is empty before inserting — safe to call on
 every startup without creating duplicate rows.
 """
 
-import uuid
 from datetime import datetime
 
 from models import Order, OrderLine, Product, StagingContainer

@@ -12,11 +12,12 @@ from .base_adapter import BaseAdapter
 # When running inside the container, sys.path includes the service root, so
 # a direct import works; when imported as a sub-package we go one level up.
 try:
-    from models import Base, Order, OrderLine, Product, StagingContainer
+    from models import Order, OrderLine, Product, StagingContainer
 except ImportError:
-    import sys, pathlib
+    import sys
+    import pathlib
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-    from models import Base, Order, OrderLine, Product, StagingContainer
+    from models import Order, OrderLine, Product, StagingContainer
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./picker.db")
 

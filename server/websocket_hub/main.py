@@ -140,7 +140,7 @@ async def ws_supervisor(websocket: WebSocket):
 
     pubsub = _make_pubsub()
     pubsub.psubscribe("picker:*:updates")
-    thread = _launch_listener(pubsub, queue, loop, stop_event, pattern=True)
+    _launch_listener(pubsub, queue, loop, stop_event, pattern=True)
 
     # Send current snapshot of all picker states on connect
     snapshot: dict[str, Any] = {}
@@ -192,7 +192,7 @@ async def ws_picker(websocket: WebSocket, picker_id: str):
     pubsub = _make_pubsub()
     channel = f"picker:{picker_id}:updates"
     pubsub.subscribe(channel)
-    thread = _launch_listener(pubsub, queue, loop, stop_event)
+    _launch_listener(pubsub, queue, loop, stop_event)
 
     # Send current state immediately on connect (before any Pub/Sub messages arrive)
     raw = _redis_sync.get(f"picker:{picker_id}:state")
