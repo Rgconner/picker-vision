@@ -1,16 +1,22 @@
 name: Deploy to Kubernetes
 
 on:
-  # Auto-deploy when server images are pushed to main
+  # Auto-deploy when the build workflow completes on any branch.
+  # NOTE: workflow_run is evaluated from the default branch (main), so this
+  # workflow file must be merged to main for the trigger to fire.
+  # Branch discrimination (prod vs test namespace) is handled in the job steps.
   workflow_run:
     workflows: ["Build Server Images"]
     types: [completed]
-    branches: [main]
-  # Manual deploy with optional image tag override
+  # Manual deploy — choose branch/namespace explicitly
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Image tag to deploy (default: main)"
+        description: "Image tag to deploy (e.g. sha-a1b2c3d or main)"
+        required: false
+        default: "main"
+      target_branch:
+        description: "Branch to target: 'main' → prod namespace, 'feature/mobile-web-client' → test namespace"
         required: false
         default: "main"
 
@@ -30,6 +36,9 @@ jobs:
 
       - name: Set up kustomize
         uses: imranismail/setup-kustomize@v2
+        # kustomize is still used for 'kubectl apply -k' (it's the backend).
+        # The explicit 'kustomize edit set image' steps have been removed —
+        # image pinning is now done via 'kubectl set image' after apply.
 
       # Write the kubeconfig from a repository secret.
       # In GitHub: Settings → Secrets → KUBECONFIG  (base64-encoded kubeconfig)
@@ -39,49 +48,97 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      # Resolve the image tag: SHA from the triggering build, or the manual input
-      - name: Resolve image tag
+      # Resolve the image tag and branch context from the triggering build.
+      # workflow_dispatch exposes both inputs explicitly; workflow_run reads
+      # head_sha and head_branch from the upstream build event.
+      - name: Resolve image tag and branch
         id: tag
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+            echo "branch=${{ inputs.target_branch }}" >> $GITHUB_OUTPUT
           else
-            # Use the short SHA of the commit that triggered the build workflow
-            echo "tag=sha-$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+            SHA="${{ github.event.workflow_run.head_sha }}"
+            echo "tag=sha-$(echo ${SHA} | cut -c1-7)" >> $GITHUB_OUTPUT
+            echo "branch=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_OUTPUT
           fi
 
-      # Pin all image tags to the resolved value so the rollout is reproducible
-      - name: Update image tags
-        working-directory: k8s
-        run: |
-          TAG="${{ steps.tag.outputs.tag }}"
-          kustomize edit set image \
-            ghcr.io/rgconner/picker-vision/api-gateway=ghcr.io/rgconner/picker-vision/api-gateway:${TAG} \
-            ghcr.io/rgconner/picker-vision/order-service=ghcr.io/rgconner/picker-vision/order-service:${TAG} \
-            ghcr.io/rgconner/picker-vision/event-processor=ghcr.io/rgconner/picker-vision/event-processor:${TAG} \
-            ghcr.io/rgconner/picker-vision/websocket-hub=ghcr.io/rgconner/picker-vision/websocket-hub:${TAG} \
-            ghcr.io/rgconner/picker-vision/web-ui=ghcr.io/rgconner/picker-vision/web-ui:${TAG}
+      # ── Production deploy (main branch only) ─────────────────────────────────
 
-      # Apply MetalLB config first (it lives in metallb-system namespace, not picker-vision)
       - name: Apply MetalLB config
-        run: kubectl apply -f k8s/metallb-config.yaml
+        if: steps.tag.outputs.branch == 'main'
+        # --validate=false: MetalLB CRD types (metallb.io/v1beta1) are not in
+        # kubectl's built-in schema. Without this flag kubectl tries to fetch the
+        # OpenAPI schema from localhost:8080, which doesn't exist on the runner.
+        run: kubectl apply --validate=false -f k8s/metallb-config.yaml
 
-      # Apply the rest via kustomize
-      - name: Apply manifests
+      - name: Apply production manifests
+        if: steps.tag.outputs.branch == 'main'
         run: kubectl apply -k k8s/
 
-      # Wait for all Deployments to roll out cleanly
-      - name: Wait for rollout
+      # kustomize edit set image only mutates the local checkout — it is never
+      # committed, so the cluster never sees the new tag via apply -k alone.
+      # kubectl set image updates the running Deployments directly to the SHA tag,
+      # which forces a pod rollout without requiring a repo write.
+      - name: Pin production deployments to SHA tag
+        if: steps.tag.outputs.branch == 'main'
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          NS=picker-vision
+          for svc in api-gateway order-service event-processor websocket-hub web-ui; do
+            kubectl set image deployment/${svc} ${svc}=ghcr.io/rgconner/picker-vision/${svc}:${TAG} -n ${NS}
+          done
+
+      - name: Wait for production rollout
+        if: steps.tag.outputs.branch == 'main'
         run: |
           for deploy in api-gateway order-service event-processor websocket-hub web-ui; do
             echo "Waiting for $deploy..."
             kubectl rollout status deployment/$deploy -n picker-vision --timeout=300s
           done
 
-      # Print the external IPs assigned by MetalLB
-      - name: Show external IPs
+      - name: Show production external IPs
+        if: steps.tag.outputs.branch == 'main'
         run: |
-          echo "### External IPs (MetalLB)" >> $GITHUB_STEP_SUMMARY
+          echo "### Production External IPs (MetalLB)" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           kubectl get svc -n picker-vision -o wide | grep LoadBalancer >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      # ── Test namespace deploy (feature/mobile-web-client branch) ─────────────
+
+      - name: Apply test MetalLB pool
+        if: steps.tag.outputs.branch == 'feature/mobile-web-client'
+        # --validate=false: same CRD schema reason as production MetalLB step above.
+        run: kubectl apply --validate=false -f k8s/overlays/test/metallb-pool.yaml
+
+      - name: Apply test manifests
+        if: steps.tag.outputs.branch == 'feature/mobile-web-client'
+        run: kubectl apply -k k8s/overlays/test/
+
+      # Same pattern as production: kubectl set image forces the rollout to the
+      # exact SHA tag without needing to commit kustomization.yaml changes.
+      - name: Pin test deployments to SHA tag
+        if: steps.tag.outputs.branch == 'feature/mobile-web-client'
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          NS=picker-vision-test
+          for svc in api-gateway order-service event-processor websocket-hub web-ui; do
+            kubectl set image deployment/${svc} ${svc}=ghcr.io/rgconner/picker-vision/${svc}:${TAG} -n ${NS}
+          done
+
+      - name: Wait for test rollout
+        if: steps.tag.outputs.branch == 'feature/mobile-web-client'
+        run: |
+          for deploy in api-gateway order-service event-processor websocket-hub web-ui; do
+            echo "Waiting for $deploy (test)..."
+            kubectl rollout status deployment/$deploy -n picker-vision-test --timeout=300s
+          done
+
+      - name: Show test external IPs
+        if: steps.tag.outputs.branch == 'feature/mobile-web-client'
+        run: |
+          echo "### Test External IPs (MetalLB)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          kubectl get svc -n picker-vision-test -o wide | grep LoadBalancer >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY

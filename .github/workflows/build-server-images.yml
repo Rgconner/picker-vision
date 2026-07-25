@@ -2,14 +2,18 @@ name: Build Server Images
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - feature/mobile-web-client
     paths:
       - "server/**"
+      - "k8s/**"
       - ".github/workflows/build-server-images.yml"
   pull_request:
     branches: [main]
     paths:
       - "server/**"
+      - "k8s/**"
       - ".github/workflows/build-server-images.yml"
   workflow_dispatch:
 
@@ -46,10 +50,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Docker Buildx enables cache-to/from and multi-platform features even
-      # for single-platform amd64 builds.
+      # Use the runner's pre-installed Docker daemon as the buildx builder.
+      # driver: docker avoids pulling moby/buildkit from Docker Hub on every run,
+      # which eliminates the intermittent "Client.Timeout exceeded" bootstrap error.
+      # Trade-off: GHA cache backend is not supported with the docker driver, so
+      # cache-from/cache-to are removed below. Layer caching still works via the
+      # daemon's own image cache across jobs on the same runner.
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
 
       - name: Log in to GitHub Container Registry
         # Only log in when pushing (not on pull_request from forks)
@@ -84,6 +94,5 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Layer cache via GitHub Actions cache backend — speeds up rebuilds
-          cache-from: type=gha,scope=${{ matrix.service }}
-          cache-to: type=gha,scope=${{ matrix.service }},mode=max
+          # Note: cache-from/cache-to (type=gha) is not supported with driver: docker.
+          # The daemon image cache still avoids redundant layer pulls within a run.
