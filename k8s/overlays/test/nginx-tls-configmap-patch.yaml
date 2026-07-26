@@ -4,13 +4,98 @@ metadata:
   name: web-ui-nginx-config
 data:
   default.conf: |
-    # Redirect all HTTP → HTTPS
+    # HTTP — serves content directly so cloudflared can use http://192.168.11.212:80
+    # as its origin without chasing a redirect into the self-signed TLS cert.
+    # Public TLS is handled by Cloudflare's edge; browsers always see HTTPS.
     server {
       listen 80;
       server_name _;
-      return 301 https://$host$request_uri;
+
+      root /usr/share/nginx/html;
+      index index.html;
+
+      location / {
+        try_files $uri $uri/ /index.html;
+      }
+
+      location /api/ {
+        proxy_pass http://api-gateway.picker-vision-test.svc.cluster.local:80/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 30s;
+      }
+
+      location /state/ {
+        proxy_pass http://api-gateway.picker-vision-test.svc.cluster.local:80/state/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 30s;
+      }
+
+      location /stream/ {
+        proxy_pass http://api-gateway.picker-vision-test.svc.cluster.local:80/stream/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 60s;
+      }
+
+      location /control/ {
+        proxy_pass http://api-gateway.picker-vision-test.svc.cluster.local:80/control/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 10s;
+      }
+
+      location /ws/ {
+        proxy_pass http://api-gateway.picker-vision-test.svc.cluster.local:80/ws/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 3600s;
+      }
+
+      location /pickers {
+        proxy_pass http://api-gateway.picker-vision-test.svc.cluster.local:80/pickers;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 10s;
+      }
+
+      location /events/ {
+        proxy_pass http://api-gateway.picker-vision-test.svc.cluster.local:80/events/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 10s;
+      }
+
+      location /health {
+        proxy_pass http://api-gateway.picker-vision-test.svc.cluster.local:80/health;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_connect_timeout 5s;
+      }
     }
 
+    # HTTPS — kept for direct LAN access (e.g. on-site devices hitting 192.168.11.212)
     server {
       listen 443 ssl;
       server_name _;
