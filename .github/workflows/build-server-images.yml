@@ -19,8 +19,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # Images are published under the repository owner's namespace.
-  # e.g.  ghcr.io/rgconner/picker-vision/api-gateway:main
   IMAGE_PREFIX: ${{ github.repository }}
 
 jobs:
@@ -29,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write   # needed to push to ghcr.io
+      packages: write
 
     strategy:
       fail-fast: false
@@ -50,19 +48,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Use the runner's pre-installed Docker daemon as the buildx builder.
-      # driver: docker avoids pulling moby/buildkit from Docker Hub on every run,
-      # which eliminates the intermittent "Client.Timeout exceeded" bootstrap error.
-      # Trade-off: GHA cache backend is not supported with the docker driver, so
-      # cache-from/cache-to are removed below. Layer caching still works via the
-      # daemon's own image cache across jobs on the same runner.
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           driver: docker
 
       - name: Log in to GitHub Container Registry
-        # Only log in when pushing (not on pull_request from forks)
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
@@ -70,10 +61,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Derive tags:
-      #   push to main  → :main  and  :sha-<short>
-      #   version tag   → :1.2.3 and  :latest
-      #   pull_request  → :pr-<number>  (not pushed)
       - name: Docker metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -94,5 +81,104 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Note: cache-from/cache-to (type=gha) is not supported with driver: docker.
-          # The daemon image cache still avoids redundant layer pulls within a run.
+
+  # ── Deploy ────────────────────────────────────────────────────────────────────
+  # Runs after ALL build matrix jobs pass, on push only (not PRs).
+  # Triggered directly from this workflow — no workflow_run cross-workflow
+  # dependency, which only fires from the default branch.
+  deploy:
+    name: Deploy to k8s
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Set up kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      # Short SHA tag — same format as docker/metadata-action produces above
+      - name: Resolve image tag
+        id: tag
+        run: echo "sha=sha-$(echo '${{ github.sha }}' | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      # ── Production deploy (main) ──────────────────────────────────────────────
+
+      - name: Apply MetalLB config (prod)
+        if: github.ref_name == 'main'
+        run: kubectl apply --validate=false -f k8s/metallb-config.yaml
+
+      - name: Apply production manifests
+        if: github.ref_name == 'main'
+        run: kubectl apply -k k8s/
+
+      - name: Pin production deployments to SHA tag
+        if: github.ref_name == 'main'
+        run: |
+          TAG="${{ steps.tag.outputs.sha }}"
+          NS=picker-vision
+          for svc in api-gateway order-service event-processor websocket-hub web-ui; do
+            kubectl set image deployment/${svc} ${svc}=ghcr.io/rgconner/picker-vision/${svc}:${TAG} -n ${NS}
+          done
+
+      - name: Wait for production rollout
+        if: github.ref_name == 'main'
+        run: |
+          for deploy in api-gateway order-service event-processor websocket-hub web-ui; do
+            kubectl rollout status deployment/${deploy} -n picker-vision --timeout=300s
+          done
+
+      - name: Show production external IPs
+        if: github.ref_name == 'main'
+        run: |
+          echo "### Production External IPs (MetalLB)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          kubectl get svc -n picker-vision -o wide | grep LoadBalancer >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      # ── Test deploy (feature/mobile-web-client) ───────────────────────────────
+
+      - name: Apply MetalLB pool (test)
+        if: github.ref_name == 'feature/mobile-web-client'
+        run: kubectl apply --validate=false -f k8s/overlays/test/metallb-pool.yaml
+
+      - name: Apply test manifests
+        if: github.ref_name == 'feature/mobile-web-client'
+        run: kubectl apply -k k8s/overlays/test/
+
+      - name: Pin test deployments to SHA tag
+        if: github.ref_name == 'feature/mobile-web-client'
+        run: |
+          TAG="${{ steps.tag.outputs.sha }}"
+          NS=picker-vision-test
+          for svc in api-gateway order-service event-processor websocket-hub web-ui; do
+            kubectl set image deployment/${svc} ${svc}=ghcr.io/rgconner/picker-vision/${svc}:${TAG} -n ${NS}
+          done
+
+      - name: Wait for test rollout
+        if: github.ref_name == 'feature/mobile-web-client'
+        run: |
+          for deploy in api-gateway order-service event-processor websocket-hub web-ui; do
+            kubectl rollout status deployment/${deploy} -n picker-vision-test --timeout=300s
+          done
+
+      - name: Show test external IPs
+        if: github.ref_name == 'feature/mobile-web-client'
+        run: |
+          echo "### Test External IPs (MetalLB)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          kubectl get svc -n picker-vision-test -o wide | grep LoadBalancer >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
