@@ -77,7 +77,8 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
 
     function connect() {
       if (!activeRef.current || !pickerIdRef.current) return;
-      const ws = new WebSocket(`ws://${window.location.host}/ws/${pickerIdRef.current}`);
+      const wsScheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${wsScheme}//${window.location.host}/ws/${pickerIdRef.current}`);
       wsRef.current = ws;
 
       ws.onopen = () => { if (activeRef.current) setConnected(true); };

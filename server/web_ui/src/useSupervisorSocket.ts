@@ -14,7 +14,8 @@ export function useSupervisorSocket() {
     function connect() {
       if (unmountedRef.current) return;
 
-      const ws = new WebSocket(`ws://${window.location.host}/ws/supervisor`);
+      const wsScheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${wsScheme}//${window.location.host}/ws/supervisor`);
       wsRef.current = ws;
 
       ws.onopen = () => {

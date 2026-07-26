@@ -18,7 +18,8 @@ export function usePickerSocket(pickerId: string | null) {
     function connect() {
       if (!activeRef.current) return;
 
-      const ws = new WebSocket(`ws://${window.location.host}/ws/${id}`);
+      const wsScheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${wsScheme}//${window.location.host}/ws/${id}`);
       wsRef.current = ws;
 
       ws.onopen = () => {
