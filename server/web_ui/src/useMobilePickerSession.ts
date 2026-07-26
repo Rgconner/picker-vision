@@ -38,6 +38,12 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
   const offlineQueue      = useRef<object[]>([]);
   const flushingRef       = useRef(false);
 
+  // Coalescing buffer — accumulate scans within a 300 ms window then flush
+  // as a single event so the server receives all visible codes together.
+  const scanBufferRef     = useRef<ScanResult[]>([]);
+  const coalesceTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const COALESCE_MS       = 300;
+
   // ── Registration + heartbeat ───────────────────────────────────────────────
 
   const register = useCallback(async (id: string) => {
@@ -103,6 +109,8 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
       activeRef.current = false;
       clearInterval(heartbeatTimer.current!);
       clearTimeout(reconnectTimer.current!);
+      clearTimeout(coalesceTimer.current!);
+      scanBufferRef.current = [];
       wsRef.current?.close();
       wsRef.current = null;
       setConnected(false);
@@ -145,38 +153,52 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
     if (!pickerIdRef.current) return;
     setLastScan(scan);
 
-    const detection = {
-      symbology:    scan.symbology,
-      value:        scan.value,
-      bbox:         scan.bbox ? [scan.bbox.x, scan.bbox.y, scan.bbox.w, scan.bbox.h] : [0, 0, 0, 0],
-      centre:       scan.bbox
-        ? [Math.round(scan.bbox.x + scan.bbox.w / 2), Math.round(scan.bbox.y + scan.bbox.h / 2)]
-        : [0, 0],
-      type:         scan.type,
-      staging_code: scan.stagingCode,
-      corners:      scan.corners?.map((c) => [c.x, c.y]) ?? [],
-      active:       true,
-      distance_to_centre: 0,
-    };
+    // Add to coalesce buffer
+    scanBufferRef.current.push(scan);
 
-    const payload = {
-      picker_id:       pickerIdRef.current,
-      timestamp:       new Date().toISOString(),
-      detections:      scan.type === 'product' ? [detection] : [],
-      staging_regions: scan.type === 'staging'
-        ? [{
-            staging_code:    scan.stagingCode,
-            boundary_points: scan.corners?.map((c) => [c.x, c.y]) ?? [],
-            centre:          scan.bbox ? [scan.bbox.x + scan.bbox.w / 2, scan.bbox.y + scan.bbox.h / 2] : [0, 0],
-            area:            scan.bbox ? scan.bbox.w * scan.bbox.h : 0,
-          }]
-        : [],
-    };
+    // Reset the coalesce window — fire 300 ms after the last scan in the burst
+    if (coalesceTimer.current) clearTimeout(coalesceTimer.current);
+    coalesceTimer.current = setTimeout(() => {
+      const id = pickerIdRef.current;
+      if (!id) return;
 
-    _postEvent(payload).then((ok) => {
-      if (!ok) offlineQueue.current.push(payload);
-      else _flushQueue();
-    });
+      const scans = scanBufferRef.current;
+      scanBufferRef.current = [];
+
+      const toDetection = (s: ScanResult) => ({
+        symbology:    s.symbology,
+        value:        s.value,
+        bbox:         s.bbox ? [s.bbox.x, s.bbox.y, s.bbox.w, s.bbox.h] : [0, 0, 0, 0],
+        centre:       s.bbox
+          ? [Math.round(s.bbox.x + s.bbox.w / 2), Math.round(s.bbox.y + s.bbox.h / 2)]
+          : [0, 0],
+        type:         s.type,
+        staging_code: s.stagingCode,
+        corners:      s.corners?.map((c) => [c.x, c.y]) ?? [],
+        active:       true,
+      });
+
+      const payload = {
+        picker_id:       id,
+        timestamp:       new Date().toISOString(),
+        detections:      scans.filter((s) => s.type === 'product').map(toDetection),
+        staging_regions: scans
+          .filter((s) => s.type === 'staging')
+          .map((s) => ({
+            staging_code:    s.stagingCode,
+            boundary_points: s.corners?.map((c) => [c.x, c.y]) ?? [],
+            centre:          s.bbox
+              ? [Math.round(s.bbox.x + s.bbox.w / 2), Math.round(s.bbox.y + s.bbox.h / 2)]
+              : [0, 0],
+            area:            s.bbox ? s.bbox.w * s.bbox.h : 0,
+          })),
+      };
+
+      _postEvent(payload).then((ok) => {
+        if (!ok) offlineQueue.current.push(payload);
+        else _flushQueue();
+      });
+    }, COALESCE_MS);
   }, []);
 
   // ── Control actions (start / stop / validate) ─────────────────────────────
