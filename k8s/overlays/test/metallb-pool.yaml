@@ -1,16 +1,8 @@
 ---
-# Separate MetalLB pool for the test namespace so it never conflicts with
-# the production picker-vision IPs (.200–.210).
-apiVersion: metallb.io/v1beta1
-kind: IPAddressPool
-metadata:
-  name: picker-vision-test-pool
-  namespace: metallb-system
-spec:
-  addresses:
-    - 192.168.11.211-192.168.11.215
-  avoidBuggyIPs: true
----
+# The sandbox pool (192.168.11.0/24) already covers the test IPs (.211/.212).
+# A separate IPAddressPool would conflict. This L2Advertisement ensures the
+# sandbox pool is announced on the network; services pin their IPs via the
+# metallb.universe.tf/loadBalancerIPs annotation and reference sandbox directly.
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
 metadata:
@@ -18,4 +10,4 @@ metadata:
   namespace: metallb-system
 spec:
   ipAddressPools:
-    - picker-vision-test-pool
+    - sandbox
