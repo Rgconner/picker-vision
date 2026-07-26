@@ -28,6 +28,10 @@ interface Props {
   /** Most recent local scan — drawn immediately before server round-trip completes */
   lastScan:       ScanResult | null;
   videoRef:       React.RefObject<HTMLVideoElement | null>;
+  /** When provided, the AR canvas ref is forwarded here for external use (e.g. debug snapshot) */
+  canvasRef?:     React.RefObject<HTMLCanvasElement | null>;
+  /** Show the debug info panel overlay (activated via ?debug=1) */
+  debugMode?:     boolean;
 }
 
 const COLOURS = {
@@ -44,9 +48,23 @@ export function MobileCameraView({
   onSwitch, onToggleFacing,
   detections, stagingRegions, lastScan,
   videoRef,
+  canvasRef: externalCanvasRef,
+  debugMode = false,
 }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const internalCanvasRef = useRef<HTMLCanvasElement>(null);
+  // Use the externally-supplied ref if provided, otherwise use the internal one
+  const canvasRef = (externalCanvasRef ?? internalCanvasRef) as React.RefObject<HTMLCanvasElement>;
   const rafRef    = useRef<number>(0);
+
+  // Keep latest render data in refs so the draw loop never needs to be recreated.
+  // This prevents a one-frame window where two rAF loops run concurrently and
+  // paint overlapping (stacked) bounding boxes onto the canvas.
+  const detectionsRef     = useRef(detections);
+  const stagingRef        = useRef(stagingRegions);
+  const lastScanRef       = useRef(lastScan);
+  useEffect(() => { detectionsRef.current  = detections;     }, [detections]);
+  useEffect(() => { stagingRef.current     = stagingRegions; }, [stagingRegions]);
+  useEffect(() => { lastScanRef.current    = lastScan;       }, [lastScan]);
 
   // Attach stream to video element
   useEffect(() => {
@@ -88,7 +106,7 @@ export function MobileCameraView({
     const sy = vh > 0 ? dh / vh : 1;
 
     // ── Draw enriched server detections ──────────────────────────────────────
-    for (const det of detections) {
+    for (const det of detectionsRef.current) {
       if (det.type !== 'product') continue;
       const [bx, by, bw, bh] = det.bbox;
       const x = bx * sx, y = by * sy, w = bw * sx, h = bh * sy;
@@ -103,18 +121,19 @@ export function MobileCameraView({
       ctx.lineWidth   = det.active ? 3 : 2;
       ctx.strokeRect(x, y, w, h);
 
-      // Label
+      // Label — both lines use the same threshold so they never cross
+      const labelBelow = y <= 30;
       ctx.fillStyle  = colour;
       ctx.font       = '13px monospace';
-      ctx.fillText(det.value, x + 2, y > 16 ? y - 4 : y + h + 14);
+      ctx.fillText(det.value, x + 2, labelBelow ? y + h + 14 : y - 4);
       if (det.staging_code) {
         ctx.fillStyle = '#f97316';
-        ctx.fillText(`→ ${det.staging_code}${det.staging_label ? ' ' + det.staging_label : ''}`, x + 2, y > 30 ? y - 18 : y + h + 28);
+        ctx.fillText(`→ ${det.staging_code}${det.staging_label ? ' ' + det.staging_label : ''}`, x + 2, labelBelow ? y + h + 28 : y - 18);
       }
     }
 
     // ── Draw staging region polygons ──────────────────────────────────────────
-    for (const region of stagingRegions) {
+    for (const region of stagingRef.current) {
       if (!region.boundary_points?.length) continue;
       const isLocked = region.lock_state || region.staging_status === 'locked';
       ctx.strokeStyle = isLocked ? COLOURS.unexpected : COLOURS.staging;
@@ -142,8 +161,8 @@ export function MobileCameraView({
     }
 
     // ── Draw local last scan (purple) before server round-trip ───────────────
-    if (lastScan?.bbox) {
-      const { x, y, w, h } = lastScan.bbox;
+    if (lastScanRef.current?.bbox) {
+      const { x, y, w, h } = lastScanRef.current.bbox;
       ctx.strokeStyle = COLOURS.local;
       ctx.lineWidth   = 2;
       ctx.setLineDash([5, 3]);
@@ -151,11 +170,11 @@ export function MobileCameraView({
       ctx.setLineDash([]);
       ctx.fillStyle = COLOURS.local;
       ctx.font      = '12px monospace';
-      ctx.fillText(lastScan.value, x * sx + 2, y * sy > 14 ? y * sy - 4 : y * sy + h * sy + 13);
+      ctx.fillText(lastScanRef.current.value, x * sx + 2, y * sy > 14 ? y * sy - 4 : y * sy + h * sy + 13);
     }
 
     rafRef.current = requestAnimationFrame(draw);
-  }, [detections, stagingRegions, lastScan, videoRef]);
+  }, [videoRef]);
 
   useEffect(() => {
     rafRef.current = requestAnimationFrame(draw);
@@ -176,7 +195,7 @@ export function MobileCameraView({
 
       {/* AR overlay canvas */}
       <canvas
-        ref={canvasRef}
+        ref={canvasRef as React.RefObject<HTMLCanvasElement>}
         className="absolute inset-0 w-full h-full pointer-events-none"
         style={{ transform: facing === 'user' ? 'scaleX(-1)' : 'none' }}
       />
@@ -218,7 +237,27 @@ export function MobileCameraView({
             ))}
           </select>
         )}
+
+        {/* Debug mode indicator */}
+        {debugMode && (
+          <span className="ml-auto px-2 py-0.5 rounded-full bg-[#7c5cd8]/80 text-white text-[10px] font-bold backdrop-blur-sm">
+            ⬤ DEBUG
+          </span>
+        )}
       </div>
+
+      {/* ── Debug info panel (bottom-left, semi-transparent) ── */}
+      {debugMode && (
+        <div className="absolute bottom-2 left-2 right-2 rounded-lg bg-black/70 backdrop-blur-sm text-white text-[10px] font-mono p-2 space-y-0.5 pointer-events-none">
+          <div className="text-[#7c5cd8] font-bold text-[11px] mb-1">🔍 Debug Info</div>
+          <div><span className="text-[#94a3b8]">detections:</span> {detections.length}</div>
+          <div><span className="text-[#94a3b8]">active:</span> {detections.filter(d => d.active).length}</div>
+          <div><span className="text-[#94a3b8]">staging:</span> {stagingRegions.length}</div>
+          <div><span className="text-[#94a3b8]">lastScan:</span> {lastScan?.value ?? '—'}</div>
+          <div><span className="text-[#94a3b8]">snapshot:</span> POSTing /api/debug/snapshot every 2 s</div>
+          <div className="text-[#57606a] mt-1">GET /api/debug/snapshot/&lt;picker-id&gt; for live view</div>
+        </div>
+      )}
     </div>
   );
 }

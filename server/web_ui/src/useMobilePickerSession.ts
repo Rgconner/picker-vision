@@ -31,6 +31,7 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
   const wsRef             = useRef<WebSocket | null>(null);
   const reconnectTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const heartbeatTimer    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastScanTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRef         = useRef(false);
   const pickerIdRef       = useRef<string | null>(null);
 
@@ -91,6 +92,9 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
             setValidationResult(msg as unknown as ValidationResult);
           } else {
             setPickerState(msg as unknown as PickerState);
+            // Server has the enriched data — drop the local purple ghost overlay
+            setLastScan(null);
+            if (lastScanTimer.current) clearTimeout(lastScanTimer.current);
           }
         } catch { /* ignore */ }
       };
@@ -111,12 +115,14 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
       clearInterval(heartbeatTimer.current!);
       clearTimeout(reconnectTimer.current!);
       clearTimeout(coalesceTimer.current!);
+      clearTimeout(lastScanTimer.current!);
       scanBufferRef.current = [];
       wsRef.current?.close();
       wsRef.current = null;
       setConnected(false);
       setPickerState(null);
       setValidationResult(null);
+      setLastScan(null);
     };
   }, [pickerId, register]);
 
@@ -153,6 +159,9 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
   const publish = useCallback((scan: ScanResult) => {
     if (!pickerIdRef.current) return;
     setLastScan(scan);
+    // Auto-expire the local ghost overlay after 1.5 s in case the server reply is slow
+    if (lastScanTimer.current) clearTimeout(lastScanTimer.current);
+    lastScanTimer.current = setTimeout(() => setLastScan(null), 1500);
 
     // Add to coalesce buffer
     scanBufferRef.current.push(scan);

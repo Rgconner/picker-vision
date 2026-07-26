@@ -158,16 +158,20 @@ app.add_middleware(
 )
 
 # API key middleware
-_API_KEY_EXEMPT = {"/health", "/pickers/register", "/api/logs", "/api/telemetry"}
+_API_KEY_EXEMPT_EXACT    = {"/health", "/pickers/register", "/api/logs", "/api/telemetry"}
+_API_KEY_EXEMPT_PREFIXES = ("/api/debug/",)
 
 
 @app.middleware("http")
 async def api_key_middleware(request: Request, call_next):
     _COUNTERS["http_requests"] += 1
-    if REQUIRE_API_KEY and request.url.path not in _API_KEY_EXEMPT:
-        key = request.headers.get("X-API-Key", "")
-        if not key or key != API_KEY:
-            return JSONResponse(status_code=401, content={"detail": "Invalid or missing API key"})
+    if REQUIRE_API_KEY:
+        path = request.url.path
+        exempt = path in _API_KEY_EXEMPT_EXACT or any(path.startswith(p) for p in _API_KEY_EXEMPT_PREFIXES)
+        if not exempt:
+            key = request.headers.get("X-API-Key", "")
+            if not key or key != API_KEY:
+                return JSONResponse(status_code=401, content={"detail": "Invalid or missing API key"})
     return await call_next(request)
 
 
@@ -456,3 +460,60 @@ async def state_picker(picker_id: str):
 @app.get("/state/supervisor")
 async def state_supervisor():
     return await _proxy("GET", f"{WEBSOCKET_HUB_URL}/state/supervisor")
+
+
+# ---------------------------------------------------------------------------
+# Debug snapshot — stores the latest composite camera+AR JPEG per picker so
+# that an external viewer (Bob, supervisor, developer) can see exactly what
+# the phone camera is showing, including AR overlay boxes.
+#
+# POST /api/debug/snapshot/{picker_id}   — phone posts a base64 JPEG snapshot
+# GET  /api/debug/snapshot/{picker_id}   — retrieve latest snapshot as image/jpeg
+# ---------------------------------------------------------------------------
+
+import base64 as _base64
+from fastapi.responses import Response as _Response
+
+_DEBUG_SNAPSHOT_TTL = 30  # seconds — expire if phone stops posting
+
+
+@app.post("/api/debug/snapshot/{picker_id}")
+async def debug_snapshot_post(picker_id: str, request: Request):
+    """Accept a base64-encoded JPEG snapshot from the mobile picker and store in Redis."""
+    body = await request.json()
+    b64: str = body.get("image", "")
+    if not b64:
+        return {"stored": False, "reason": "no image"}
+
+    # Strip the data URI prefix if present (data:image/jpeg;base64,...)
+    if "," in b64:
+        b64 = b64.split(",", 1)[1]
+
+    key = f"debug:snapshot:{picker_id}"
+    if _redis:
+        _redis.setex(key, _DEBUG_SNAPSHOT_TTL, b64)
+    else:
+        _memory_registry[key] = b64  # type: ignore[assignment]
+
+    return {"stored": True, "picker_id": picker_id}
+
+
+@app.get("/api/debug/snapshot/{picker_id}")
+async def debug_snapshot_get(picker_id: str):
+    """Return the latest snapshot for picker_id as a raw JPEG image."""
+    key = f"debug:snapshot:{picker_id}"
+    b64: str | None = None
+    if _redis:
+        b64 = _redis.get(key)
+    else:
+        b64 = _memory_registry.get(key)  # type: ignore[assignment]
+
+    if not b64:
+        raise HTTPException(status_code=404, detail=f"No snapshot available for picker {picker_id!r}")
+
+    try:
+        jpeg_bytes = _base64.b64decode(b64)
+    except Exception:
+        raise HTTPException(status_code=422, detail="Stored snapshot is not valid base64")
+
+    return _Response(content=jpeg_bytes, media_type="image/jpeg")

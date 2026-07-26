@@ -76,13 +76,19 @@ export function useMobileCamera(): MobileCameraState {
       return;
     }
 
-    // Build constraints: prefer environment-facing; allow explicit deviceId override
+    // Build constraints: prefer environment-facing; allow explicit deviceId override.
+    // Request portrait-optimised dimensions when the device is in portrait mode so
+    // the camera delivers more vertical scan area instead of a heavily-cropped landscape frame.
+    const isPortrait = typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
+    const idealW = isPortrait ? 720  : 1280;
+    const idealH = isPortrait ? 1280 : 720;
+
     let constraints: MediaStreamConstraints;
     if (deviceId) {
-      constraints = { video: { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } };
+      constraints = { video: { deviceId: { exact: deviceId }, width: { ideal: idealW }, height: { ideal: idealH } } };
     } else {
       // Try environment (rear) camera first
-      constraints = { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } };
+      constraints = { video: { facingMode: { ideal: 'environment' }, width: { ideal: idealW }, height: { ideal: idealH } } };
     }
 
     try {

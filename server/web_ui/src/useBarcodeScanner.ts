@@ -11,7 +11,7 @@
  * The caller controls scanning via the `scanning` flag.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface ScanResult {
   value: string;
@@ -105,7 +105,13 @@ export function useBarcodeScanner(
   const useNativeRef  = useRef<boolean | null>(null);
   const lastValueRef  = useRef<string>('');
   const lastTimeRef   = useRef<number>(0);
+  const inFlightRef   = useRef<boolean>(false);  // prevents concurrent native detect() calls
   const DEBOUNCE_MS   = 800; // same barcode must wait this long before re-firing
+
+  // Stable ref for onDetect — prevents ZXing continuous loop from re-registering
+  // every time the parent component re-renders and produces a new callback reference.
+  const onDetectRef = useRef(onDetect);
+  useEffect(() => { onDetectRef.current = onDetect; }, [onDetect]);
 
   const [engineReady, setEngineReady] = useState(false);
 
@@ -144,20 +150,21 @@ export function useBarcodeScanner(
           if (r.rawValue && (r.rawValue !== lastValueRef.current || now - lastTimeRef.current > DEBOUNCE_MS)) {
             lastValueRef.current = r.rawValue;
             lastTimeRef.current  = now;
-            onDetect(nativeResultToScan(r));
+            onDetectRef.current(nativeResultToScan(r));
           }
         }
       } else if (useNativeRef.current === false && _zxingReader) {
         // ZXing is continuous — the reader calls back on its own; no manual frame needed
       }
     } catch { /* ignore mid-scan errors */ }
-  }, [videoRef, onDetect]);
+  }, [videoRef]);
 
   // rAF scanning loop for native API; ZXing manages its own loop
   useEffect(() => {
     if (!scanning || !engineReady) return;
     if (useNativeRef.current === false) {
-      // ZXing continuous decode
+      // ZXing continuous decode — use onDetectRef so re-registration doesn't happen
+      // when the parent re-renders (the ref always points to the latest callback).
       const video = videoRef.current;
       if (!video || !_zxingReader) return;
       let stopped = false;
@@ -175,7 +182,7 @@ export function useBarcodeScanner(
               if (text && (text !== lastValueRef.current || now - lastTimeRef.current > DEBOUNCE_MS)) {
                 lastValueRef.current = text;
                 lastTimeRef.current  = now;
-                onDetect(zxingResultToScan(text, fmt));
+                onDetectRef.current(zxingResultToScan(text, fmt));
               }
             });
         } catch { /* ignore */ }
@@ -183,19 +190,24 @@ export function useBarcodeScanner(
       return () => { stopped = true; (_zxingReader as unknown as { reset?: () => void })?.reset?.(); };
     }
 
-    // Native rAF loop
+    // Native rAF loop — await scan() before scheduling the next frame so that
+    // overlapping detect() calls cannot race past the debounce check.
     let active = true;
-    function loop() {
+    async function loop() {
       if (!active) return;
-      scan();
-      rafRef.current = requestAnimationFrame(loop);
+      if (!inFlightRef.current) {
+        inFlightRef.current = true;
+        await scan();
+        inFlightRef.current = false;
+      }
+      if (active) rafRef.current = requestAnimationFrame(loop);
     }
     rafRef.current = requestAnimationFrame(loop);
     return () => {
       active = false;
       cancelAnimationFrame(rafRef.current);
     };
-  }, [scanning, engineReady, scan, videoRef, onDetect]);
+  }, [scanning, engineReady, scan, videoRef]);
 
   return { engineReady, useNative: useNativeRef.current };
 }

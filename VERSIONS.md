@@ -11,15 +11,37 @@ component **must** bump its `VERSION` file and add a row here.
 | Component         | Current | File                                        |
 |-------------------|---------|---------------------------------------------|
 | pi-node           | 1.2.0   | `pi-node/VERSION`                           |
-| api-gateway       | 1.2.0   | `server/api_gateway/VERSION`                |
+| api-gateway       | 1.3.0   | `server/api_gateway/VERSION`                |
 | event-processor   | 1.2.0   | `server/event_processor/VERSION`            |
 | websocket-hub     | 1.2.0   | `server/websocket_hub/VERSION`              |
 | order-service     | 1.2.0   | `server/order_service/VERSION`              |
-| web-ui            | 1.2.0   | `server/web_ui/VERSION`                     |
+| web-ui            | 1.3.0   | `server/web_ui/VERSION`                     |
 
 ---
 
 ## Changelog
+
+### 1.3.0
+
+**web-ui**
+- Portrait layout: replaced `h-screen` (`100vh`) with `height: 100dvh` on both landscape and portrait root containers — eliminates browser-toolbar overflow/clip on Chrome mobile.
+- Portrait layout: camera panel raised from `max-height: 42vh` to `max-height: 55dvh`, giving the primary scan surface the majority of vertical space.
+- Portrait layout: added `env(safe-area-inset-bottom/top)` padding to the portrait root — prevents home-indicator and notch overlap on iPhones.
+- Portrait layout: `MobileControls` now receives `compact={true}` automatically on phones under 430 px wide, recovering ~30 px for the camera.
+- Camera: `useMobileCamera` now requests portrait-optimised resolution (`720×1280`) when `innerHeight > innerWidth`, eliminating heavy frame cropping in portrait mode.
+- Ghosting fix: `lastScan` (purple local-scan overlay) now auto-expires after 1.5 s and is cleared immediately when the server WebSocket reply arrives. Also cleared on unmount.
+- Ghosting fix: native BarcodeDetector rAF loop now `await`s each `scan()` call before scheduling the next frame — prevents concurrent `detect()` promises from racing past the debounce check.
+- Ghosting fix: both scan engines (native + ZXing) now call through a stable `onDetectRef` so the ZXing continuous loop never re-registers on parent re-renders.
+- Debug snapshot: new `useDebugSnapshot` hook captures a composite JPEG (video + AR overlay) every 2 s when `?debug=1` is appended to the URL and POSTs it to `/api/debug/snapshot/{picker_id}`.
+- Debug snapshot: `MobileCameraView` accepts optional `canvasRef` prop (forwarded from parent for snapshot capture) and `debugMode` prop that renders a live stats overlay on the camera.
+- Debug snapshot: added new file `src/useDebugSnapshot.ts` with `captureSnapshot()` utility and `useDebugSnapshot()` hook.
+
+**api-gateway**
+- Debug snapshot: new `POST /api/debug/snapshot/{picker_id}` endpoint — accepts base64 JPEG from mobile client, stores in Redis with 30 s TTL.
+- Debug snapshot: new `GET /api/debug/snapshot/{picker_id}` endpoint — returns latest snapshot as `image/jpeg`.
+- API key middleware updated to use prefix-matching so `/api/debug/*` paths are exempt without exact-path enumeration.
+
+---
 
 ### 1.2.0
 

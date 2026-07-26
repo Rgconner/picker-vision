@@ -30,7 +30,7 @@
  *   └──────────────────────────────┘
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Order } from './types';
 import { useMobileCamera } from './useMobileCamera';
 import { useBarcodeScanner, type ScanResult } from './useBarcodeScanner';
@@ -38,6 +38,7 @@ import { useMobilePickerSession } from './useMobilePickerSession';
 import { MobileCameraView } from './MobileCameraView';
 import { MobilePickList } from './MobilePickList';
 import { MobileControls } from './MobileControls';
+import { useDebugSnapshot } from './useDebugSnapshot';
 
 // ── Picker ID persistence ──────────────────────────────────────────────────────
 const STORAGE_KEY = 'mobile_picker_id';
@@ -75,7 +76,14 @@ export function MobilePickerView() {
   const [localValidation, setLocalValidation] = useState<ReturnType<typeof useMobilePickerSession>['validationResult']>(null);
 
   const videoRef    = useRef<HTMLVideoElement>(null);
+  const canvasRef   = useRef<HTMLCanvasElement>(null);
   const isLandscape = useIsLandscape();
+
+  // Debug mode — activated by ?debug=1 in the URL
+  const debugMode = useMemo(
+    () => new URLSearchParams(window.location.search).get('debug') === '1',
+    [],
+  );
 
   // ── Camera ──────────────────────────────────────────────────────────────────
   const camera = useMobileCamera();
@@ -95,6 +103,14 @@ export function MobilePickerView() {
   }, [scanning, publish]);
 
   useBarcodeScanner(videoRef as React.RefObject<HTMLVideoElement | null>, scanning, handleDetect);
+
+  // Debug snapshot — posts composite JPEG every 2 s when ?debug=1
+  useDebugSnapshot(
+    debugMode ? (pickerId || null) : null,
+    videoRef as React.RefObject<HTMLVideoElement | null>,
+    canvasRef as React.RefObject<HTMLCanvasElement | null>,
+    debugMode && scanning,
+  );
 
   // ── Orders fetch ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -183,6 +199,8 @@ export function MobilePickerView() {
       stagingRegions={stagingRegions}
       lastScan={lastScan}
       videoRef={videoRef as React.RefObject<HTMLVideoElement | null>}
+      canvasRef={canvasRef as React.RefObject<HTMLCanvasElement | null>}
+      debugMode={debugMode}
     />
   );
 
@@ -226,7 +244,7 @@ export function MobilePickerView() {
   // ── LANDSCAPE layout ───────────────────────────────────────────────────────
   if (isLandscape) {
     return (
-      <div className="flex h-screen overflow-hidden bg-[#0f1117] text-[#e2e8f0]">
+      <div className="flex overflow-hidden bg-[#0f1117] text-[#e2e8f0]" style={{ height: '100dvh' }}>
 
         {/* Left column — camera + controls (55 %) */}
         <div className="flex flex-col overflow-hidden border-r border-[#2d3142]" style={{ width: '55%' }}>
@@ -251,16 +269,33 @@ export function MobilePickerView() {
   }
 
   // ── PORTRAIT layout (phone fallback) ───────────────────────────────────────
+  // h-[100dvh]: dynamic viewport height — shrinks with browser chrome on mobile
+  // Camera gets 55 dvh — the majority of screen since it is the primary surface
+  // Controls use compact mode on narrow phones to recover vertical space
+  const isCompact = window.innerWidth < 430;
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#0f1117] text-[#e2e8f0]">
+    <div
+      className="flex flex-col overflow-hidden bg-[#0f1117] text-[#e2e8f0]"
+      style={{ height: '100dvh', paddingBottom: 'env(safe-area-inset-bottom, 0px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
+    >
       {header}
-      {/* Camera capped at 42 vh so controls + list always fit */}
-      <div className="shrink-0 w-full overflow-hidden" style={{ maxHeight: '42vh' }}>
+      {/* Camera takes up to 55 dvh — leaves ~45 dvh for controls + pick list */}
+      <div className="shrink-0 w-full overflow-hidden" style={{ maxHeight: '55dvh' }}>
         {cameraPanel}
       </div>
       {scanStrip}
       <div className="shrink-0">
-        {controls}
+        <MobileControls
+          pickerId={pickerId}
+          scanning={scanning}
+          onStartStop={handleStartStop}
+          onValidate={() => sendAction('validate')}
+          validationResult={localValidation}
+          onClearValidation={() => setLocalValidation(null)}
+          lastScanValue={lastScan?.value ?? null}
+          connected={connected}
+          compact={isCompact}
+        />
       </div>
       {pickList}
     </div>
