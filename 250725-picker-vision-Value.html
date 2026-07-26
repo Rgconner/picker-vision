@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Picker Vision — Value Story</title>
+<!-- IBM Plex Sans — IBM Design Language typeface -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ── IBM Carbon Design System tokens (White theme) ─────────────────────── */
+:root {
+  /* Background */
+  --ui-background:   #ffffff;
+  --ui-01:           #f4f4f4;
+  --ui-02:           #ffffff;
+  --ui-03:           #e0e0e0;
+  --ui-04:           #8d8d8d;
+  --ui-05:           #161616;
+  /* Text */
+  --text-01:         #161616;
+  --text-02:         #525252;
+  --text-03:         #a8a8a8;
+  --text-04:         #ffffff;
+  --text-helper:     #6f6f6f;
+  /* Interactive */
+  --interactive-01:  #0f62fe;
+  --interactive-02:  #393939;
+  --interactive-03:  #0f62fe;
+  --interactive-04:  #0f62fe;
+  --hover-primary:   #0353e9;
+  --hover-row:       #e8e8e8;
+  /* Support */
+  --support-01:      #da1e28;
+  --support-02:      #198038;
+  --support-03:      #f1c21b;
+  --support-04:      #0043ce;
+  /* Focus */
+  --focus:           #0f62fe;
+  /* Notification tints */
+  --notification-info-bg:    #edf5ff;
+  --notification-success-bg: #defbe6;
+  --notification-warning-bg: #fdf6dd;
+  --notification-error-bg:   #fff1f1;
+  /* Spacing scale (Carbon 2px base) */
+  --spacing-01: 0.125rem;  /* 2px  */
+  --spacing-02: 0.25rem;   /* 4px  */
+  --spacing-03: 0.5rem;    /* 8px  */
+  --spacing-04: 0.75rem;   /* 12px */
+  --spacing-05: 1rem;      /* 16px */
+  --spacing-06: 1.5rem;    /* 24px */
+  --spacing-07: 2rem;      /* 32px */
+  --spacing-08: 2.5rem;    /* 40px */
+  --spacing-09: 3rem;      /* 48px */
+  --spacing-10: 4rem;      /* 64px */
+}
+
+/* ── Reset & base ───────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.875rem;     /* body-short-01: 14px */
+  line-height: 1.42857;
+  background: var(--ui-01);
+  color: var(--text-01);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--interactive-01); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Page shell ─────────────────────────────────────────────────────────── */
+.page-header {
+  background: var(--ui-05);
+  color: var(--text-04);
+  padding: var(--spacing-05) var(--spacing-07);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-05);
+  border-bottom: 1px solid #393939;
+}
+.ibm-logo {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-04);
+  flex-shrink: 0;
+}
+.page-header-title {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: #c6c6c6;
+  border-left: 1px solid #525252;
+  padding-left: var(--spacing-05);
+  margin-left: var(--spacing-03);
+}
+.content { max-width: 1056px; margin: 0 auto; padding: var(--spacing-07) var(--spacing-07) var(--spacing-10); }
+
+/* ── Page title ─────────────────────────────────────────────────────────── */
+.page-title {
+  font-size: 2rem;           /* productive-heading-04 */
+  font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: 0;
+  color: var(--text-01);
+  margin-bottom: var(--spacing-02);
+}
+.page-meta {
+  font-size: 0.75rem;       /* label-01 */
+  font-weight: 400;
+  line-height: 1.33333;
+  letter-spacing: 0.32px;
+  color: var(--text-02);
+  margin-bottom: var(--spacing-07);
+}
+
+/* ── Carbon tabs ────────────────────────────────────────────────────────── */
+.tab-bar {
+  display: flex;
+  border-bottom: 2px solid var(--ui-03);
+  margin-bottom: var(--spacing-07);
+  overflow-x: auto;
+  background: var(--ui-background);
+}
+.tab-btn {
+  padding: var(--spacing-04) var(--spacing-06);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.42857;
+  color: var(--text-02);
+  background: var(--ui-01);
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  white-space: nowrap;
+  transition: background 70ms, color 70ms;
+}
+.tab-btn:hover { background: var(--hover-row); color: var(--text-01); }
+.tab-btn.on {
+  color: var(--text-01);
+  background: var(--ui-background);
+  border-bottom-color: var(--interactive-01);
+  font-weight: 600;
+}
+.pane { display: none; }
+.pane.on { display: block; }
+
+/* ── Hero / expressive banner ───────────────────────────────────────────── */
+.hero {
+  background: var(--ui-05);
+  color: var(--text-04);
+  padding: var(--spacing-09) var(--spacing-08);
+  margin-bottom: var(--spacing-07);
+}
+.hero-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #a8a8a8;
+  margin-bottom: var(--spacing-04);
+}
+.hero-headline {
+  font-size: 3rem;           /* expressive-heading-06 */
+  font-weight: 300;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin-bottom: var(--spacing-06);
+}
+.hero-headline strong { font-weight: 700; }
+.hero-headline .accent { color: #78a9ff; }
+.hero-sup {
+  font-size: 1rem;
+  font-weight: 400;
+  vertical-align: super;
+  line-height: 0;
+  color: #78a9ff;
+}
+.hero-sup a { color: #78a9ff; text-decoration: underline; }
+.hero-body {
+  font-size: 1rem;           /* body-long-02 */
+  font-weight: 300;
+  line-height: 1.625;
+  color: #c6c6c6;
+  max-width: 720px;
+}
+
+/* ── Stat strip ─────────────────────────────────────────────────────────── */
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1px;
+  background: var(--ui-03);
+  border: 1px solid var(--ui-03);
+  margin-bottom: var(--spacing-07);
+}
+.stat {
+  background: var(--ui-background);
+  padding: var(--spacing-06) var(--spacing-05);
+  text-align: center;
+}
+.stat-val {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--interactive-01);
+  margin-bottom: var(--spacing-02);
+}
+.stat-val.green { color: var(--support-02); }
+.stat-lbl {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.32px;
+  color: var(--text-02);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.stat-sub { font-size: 0.75rem; color: var(--text-03); }
+
+/* ── Carbon data table ──────────────────────────────────────────────────── */
+.tbl-wrap { overflow-x: auto; margin-bottom: var(--spacing-06); }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  background: var(--ui-background);
+  border: 1px solid var(--ui-03);
+}
+thead tr { background: var(--ui-03); border-bottom: 1px solid var(--ui-04); }
+th {
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.32px;
+  text-transform: uppercase;
+  color: var(--text-01);
+  padding: var(--spacing-04) var(--spacing-05);
+  text-align: left;
+  white-space: nowrap;
+  border-right: 1px solid var(--ui-03);
+}
+td {
+  padding: var(--spacing-04) var(--spacing-05);
+  border-bottom: 1px solid var(--ui-03);
+  border-right: 1px solid var(--ui-03);
+  vertical-align: middle;
+  color: var(--text-01);
+}
+tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--hover-row); }
+.r { text-align: right; }
+.b { font-weight: 600; }
+.sub-row td { background: var(--ui-01); font-weight: 600; border-top: 1px solid var(--ui-03); }
+.grand-row td { background: #edf5ff; font-weight: 600; border-top: 2px solid var(--interactive-01); }
+
+/* ── Section heading (productive-heading-02) ────────────────────────────── */
+.sh {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.375;
+  letter-spacing: 0;
+  color: var(--text-01);
+  margin: var(--spacing-07) 0 var(--spacing-05);
+  padding-bottom: var(--spacing-03);
+  border-bottom: 1px solid var(--ui-03);
+}
+.sh-sm {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.32px;
+  text-transform: uppercase;
+  color: var(--text-02);
+  margin: var(--spacing-06) 0 var(--spacing-04);
+}
+
+/* ── Scenario selector ──────────────────────────────────────────────────── */
+.sc-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-05);
+  align-items: center;
+  background: var(--ui-background);
+  border: 1px solid var(--ui-03);
+  padding: var(--spacing-04) var(--spacing-05);
+  margin-bottom: var(--spacing-06);
+}
+.sc-bar label { font-size: 0.875rem; cursor: pointer; display: flex; align-items: center; gap: var(--spacing-03); }
+.sc-bar input[type=radio] { accent-color: var(--interactive-01); }
+
+/* ── Rate grid ──────────────────────────────────────────────────────────── */
+.rate-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(176px, 1fr));
+  gap: 1px;
+  background: var(--ui-03);
+  border: 1px solid var(--ui-03);
+  margin-bottom: var(--spacing-06);
+}
+.rg-item {
+  background: var(--ui-background);
+  padding: var(--spacing-04) var(--spacing-05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-04);
+}
+.rg-item label { font-size: 0.75rem; font-weight: 600; color: var(--text-02); letter-spacing: 0.32px; }
+.rg-item input {
+  width: 88px;
+  border: none;
+  border-bottom: 1px solid var(--ui-04);
+  padding: var(--spacing-02) var(--spacing-03);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: right;
+  background: transparent;
+  color: var(--text-01);
+}
+.rg-item input:focus { outline: 2px solid var(--focus); border-bottom-color: transparent; }
+
+/* ── Summary cards ──────────────────────────────────────────────────────── */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(152px, 1fr));
+  gap: 1px;
+  background: var(--ui-03);
+  border: 1px solid var(--ui-03);
+  margin-bottom: var(--spacing-07);
+}
+.card { background: var(--ui-background); padding: var(--spacing-05); }
+.card-lbl { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.32px; text-transform: uppercase; color: var(--text-02); }
+.card-val { font-size: 1.75rem; font-weight: 300; color: var(--text-01); margin: var(--spacing-02) 0; line-height: 1; }
+.card-val.mono { font-family: 'IBM Plex Mono', monospace; }
+.card-sub { font-size: 0.75rem; color: var(--text-03); }
+
+/* ── Carbon inline notifications ────────────────────────────────────────── */
+.notif {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-04);
+  padding: var(--spacing-04) var(--spacing-05);
+  margin-bottom: var(--spacing-06);
+  font-size: 0.875rem;
+  line-height: 1.42857;
+  border-left: 3px solid;
+}
+.notif-icon { flex-shrink: 0; font-size: 1rem; margin-top: 1px; }
+.notif.info    { background: var(--notification-info-bg);    border-color: var(--interactive-01); }
+.notif.success { background: var(--notification-success-bg); border-color: var(--support-02); }
+.notif.warning { background: var(--notification-warning-bg); border-color: var(--support-03); }
+.notif.error   { background: var(--notification-error-bg);   border-color: var(--support-01); }
+
+/* ── ROI inputs ─────────────────────────────────────────────────────────── */
+.roi-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(196px, 1fr));
+  gap: 1px;
+  background: var(--ui-03);
+  border: 1px solid var(--ui-03);
+  margin-bottom: var(--spacing-06);
+}
+.ri { background: var(--ui-background); padding: var(--spacing-05); }
+.ri label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.32px;
+  text-transform: uppercase;
+  color: var(--text-02);
+  margin-bottom: var(--spacing-03);
+}
+.ri input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--ui-04);
+  padding: var(--spacing-03) 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.125rem;
+  font-weight: 600;
+  background: transparent;
+  color: var(--text-01);
+}
+.ri input:focus { outline: 2px solid var(--focus); }
+
+/* ── Value multiplier tile ──────────────────────────────────────────────── */
+.mult-tile {
+  background: var(--ui-05);
+  color: var(--text-04);
+  padding: var(--spacing-09) var(--spacing-08);
+  text-align: center;
+  margin-bottom: var(--spacing-07);
+}
+.mult-n {
+  font-size: 5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #42be65;
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: -0.02em;
+}
+.mult-l { font-size: 1rem; font-weight: 300; color: #c6c6c6; margin-top: var(--spacing-04); }
+.mult-sub { font-size: 0.875rem; color: #a8a8a8; margin-top: var(--spacing-03); }
+
+/* ── Pipeline tile ──────────────────────────────────────────────────────── */
+.pipe-tile {
+  background: #fcf4d6;
+  border: 1px solid #f1c21b;
+  padding: var(--spacing-06);
+  margin-bottom: var(--spacing-07);
+}
+.pipe-tile h4 { font-size: 1rem; font-weight: 600; color: #5d4037; margin-bottom: var(--spacing-03); }
+.pipe-tile p  { font-size: 0.875rem; color: #5d4037; margin-bottom: var(--spacing-05); line-height: 1.5; }
+.pipe-input { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-05); margin-bottom: var(--spacing-05); }
+.pipe-input label { font-size: 0.875rem; font-weight: 600; color: #5d4037; }
+.pipe-input input {
+  border: 1px solid #f1c21b;
+  padding: var(--spacing-03) var(--spacing-04);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1rem;
+  font-weight: 600;
+  width: 180px;
+  background: #fdf6dd;
+  color: var(--text-01);
+}
+.pipe-input input:focus { outline: 2px solid var(--focus); }
+.pullquote {
+  background: #fff8d1;
+  padding: var(--spacing-05);
+  margin-top: var(--spacing-05);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #5d4037;
+  text-align: center;
+  border-left: 4px solid #f1c21b;
+  display: none;
+}
+
+/* ── Partnership table colours ──────────────────────────────────────────── */
+.yes-cell { color: var(--support-02); font-weight: 600; }
+.no-cell  { color: var(--support-01); }
+.part-cell{ color: #b45309; }
+
+/* ── Activity bar ───────────────────────────────────────────────────────── */
+.act-bar { display: flex; height: 40px; margin-bottom: var(--spacing-04); }
+.act-seg {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 600; color: #fff;
+  padding: 0 var(--spacing-03); text-align: center;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+/* ── Gantt ──────────────────────────────────────────────────────────────── */
+.gantt { margin-bottom: var(--spacing-06); }
+.g-row { display: flex; align-items: center; margin-bottom: var(--spacing-03); }
+.g-label { width: 112px; font-size: 0.75rem; font-weight: 600; color: var(--text-02); flex-shrink: 0; text-align: right; padding-right: var(--spacing-04); }
+.g-track { flex: 1; background: var(--ui-03); height: 28px; position: relative; }
+.g-bar { position: absolute; top: 0; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.6875rem; font-weight: 600; color: #fff; }
+.g-axis { display: flex; padding-left: 112px; margin-bottom: var(--spacing-03); }
+.g-tick { font-size: 0.6875rem; color: var(--text-03); text-align: center; }
+
+/* ── Partnership advantage cards ────────────────────────────────────────── */
+.adv-card {
+  background: var(--ui-background);
+  border: 1px solid var(--ui-03);
+  border-left: 4px solid var(--interactive-01);
+  padding: var(--spacing-05) var(--spacing-06);
+  margin-bottom: var(--spacing-05);
+}
+.adv-card h4 { font-size: 0.875rem; font-weight: 600; color: var(--text-01); margin-bottom: var(--spacing-03); }
+.adv-card p  { font-size: 0.875rem; color: var(--text-02); line-height: 1.5; margin-bottom: var(--spacing-03); }
+.adv-card p:last-child { margin-bottom: 0; }
+.contrast {
+  font-size: 0.8125rem;
+  color: var(--interactive-01);
+  background: var(--notification-info-bg);
+  padding: var(--spacing-03) var(--spacing-05);
+  border-left: 3px solid var(--interactive-01);
+  margin-top: var(--spacing-04);
+  line-height: 1.5;
+}
+
+/* ── Legend ─────────────────────────────────────────────────────────────── */
+.legend { display: flex; flex-wrap: wrap; gap: var(--spacing-06); margin-bottom: var(--spacing-06); }
+.leg-item { display: flex; align-items: center; gap: var(--spacing-03); font-size: 0.8125rem; }
+.leg-dot { width: 14px; height: 14px; flex-shrink: 0; }
+.note { font-size: 0.75rem; color: var(--text-02); margin-bottom: var(--spacing-05); }
+
+/* ── Divider ─────────────────────────────────────────────────────────────── */
+.divider { border: none; border-top: 1px solid var(--ui-03); margin: var(--spacing-07) 0; }
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+.page-footer {
+  background: var(--ui-05);
+  color: #6f6f6f;
+  font-size: 0.75rem;
+  padding: var(--spacing-05) var(--spacing-07);
+  margin-top: var(--spacing-10);
+  border-top: 1px solid #393939;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+
+<!-- IBM page header bar -->
+<header class="page-header">
+  <span class="ibm-logo">IBM</span>
+  <span class="page-header-title">Picker Vision &mdash; Value Story &nbsp;&middot;&nbsp; Internal</span>
+</header>
+
+<div class="content">
+
+  <h1 class="page-title">Picker Vision &mdash; Value Story</h1>
+  <p class="page-meta">Prepared 2026-07-25 &nbsp;&middot;&nbsp; 1 IBM Architect + Bob AI &nbsp;&middot;&nbsp; 34 deliverables audited &nbsp;&middot;&nbsp; Internal use &nbsp;&middot;&nbsp; &#177;25% confidence</p>
+
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <button class="tab-btn on" onclick="showTab(this,'valuestory')">The Value Story</button>
+    <button class="tab-btn"   onclick="showTab(this,'cost')">Cost</button>
+    <button class="tab-btn"   onclick="showTab(this,'devest')">Development Estimate</button>
+  </div>
+
+
+  <!-- ================================================================ -->
+  <!--  TAB 1 — THE VALUE STORY                                          -->
+  <!-- ================================================================ -->
+  <div id="valuestory" class="pane on">
+
+    <div class="hero">
+      <div class="hero-eyebrow">Art of the Possible &nbsp;&middot;&nbsp; IBM + AI Partnership</div>
+      <div class="hero-headline">
+        <strong>1 person</strong><sup class="hero-sup">&nbsp;<a href="https://www.ibm.com/watsonx" target="_blank" title="IBM watsonx — AI platform powering Bob">and Bob</a></sup><strong>.</strong><br>
+        <span class="accent">8.7 hours.</span><br>
+        $193,812 of professional value delivered.
+      </div>
+      <div class="hero-body">
+        You bring deep IBM product knowledge, industry expertise, and a precise vision of
+        what your client needs. Bob AI translates that vision into production&#8209;quality code,
+        demos, and documentation &mdash; at the speed of conversation. The IBM product narrative
+        stays native. The customer context never leaves the room. The vision never drifts
+        through a handoff chain. This is what becomes possible when a domain expert and AI
+        work as one.
+      </div>
+    </div>
+
+    <div class="sh">What This Partnership Unlocks</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Dimension</th>
+          <th class="yes-cell">1 Person + Bob AI</th>
+          <th>7-Person IBM Dev Team</th>
+        </tr></thead>
+        <tbody>
+          <tr><td><strong>Speed to working demo</strong></td><td class="yes-cell">2 days</td><td>5.8 weeks estimated</td></tr>
+          <tr><td><strong>Team size</strong></td><td class="yes-cell">1 person + AI</td><td>7 people</td></tr>
+          <tr><td><strong>Total investment</strong></td><td class="yes-cell">$2,279</td><td>$193,812</td></tr>
+          <tr><td><strong>Who holds the vision</strong></td><td class="yes-cell">You &mdash; directly translated, zero loss</td><td>PM/BA layer required; interpreted by others</td></tr>
+          <tr><td><strong>IBM product narrative</strong></td><td class="yes-cell">Native &mdash; you live it every day</td><td class="part-cell">Must be briefed; partial at best</td></tr>
+          <tr><td><strong>Customer context</strong></td><td class="yes-cell">Yours &mdash; stays in the room</td><td class="no-cell">Diluted at every handoff</td></tr>
+          <tr><td><strong>Iteration speed</strong></td><td class="yes-cell">Hours &mdash; ask, get code, ship</td><td>Sprint cycles &mdash; days to weeks per change</td></tr>
+          <tr><td><strong>Risk of vision drift</strong></td><td class="yes-cell">Minimal &mdash; you steer every turn</td><td class="no-cell">High &mdash; compounding handoff gaps</td></tr>
+          <tr><td><strong>Code quality</strong></td><td class="yes-cell">Production-ready</td><td class="yes-cell">Production-ready</td></tr>
+          <tr><td><strong>Best suited for</strong></td><td class="yes-cell">PoCs, demos, Art of the Possible</td><td>Production scaled delivery</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pipeline value -->
+    <div class="sh">Pipeline Value &mdash; Fill In After Your Customer Presentation</div>
+    <div class="pipe-tile">
+      <h4>How much pipeline did this demo influence?</h4>
+      <p>When you present Picker Vision to a customer and it contributes to a deal, enter the
+      influenced value below. This is where the real return on this investment gets calculated.</p>
+      <div class="pipe-input">
+        <label>Estimated pipeline value influenced ($):</label>
+        <input id="deal" type="number" placeholder="e.g. 500000" oninput="calcPipeline()">
+      </div>
+      <div class="tbl-wrap">
+        <table style="max-width:460px">
+          <thead><tr><th>Field</th><th class="r">Value</th></tr></thead>
+          <tbody>
+            <tr><td>Total investment in this demo</td><td class="r" id="pl-inv">$2,279</td></tr>
+            <tr><td>Pipeline value influenced</td><td class="r" id="pl-deal">&mdash;</td></tr>
+            <tr class="grand-row"><td><strong>Pipeline value multiplier</strong></td><td class="r" id="pl-mult"><strong>&mdash;</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pullquote" id="pq"></div>
+    </div>
+
+    <!-- Value multiplier -->
+    <div class="sh">Value Multiplier</div>
+    <div class="mult-tile">
+      <div class="mult-n" id="m-num">85&#215;</div>
+      <div class="mult-l">professional value delivered vs total investment</div>
+      <div class="mult-sub">Every $1 invested returned $<span id="m-dollar">85</span> of equivalent professional development value at IBM Blended rates</div>
+    </div>
+
+    <!-- Investment — editable -->
+    <div class="sh">Your Investment &mdash; Edit to Recalculate</div>
+    <div class="roi-inputs">
+      <div class="ri"><label>Your hourly rate ($/hr)</label><input id="i-rate" type="number" value="250" oninput="calcROI()"></div>
+      <div class="ri"><label>Your active hours</label><input id="i-hrs" type="number" value="8.7" step="0.1" oninput="calcROI()"></div>
+      <div class="ri"><label>Bob Coins / hr</label><input id="i-cph" type="number" value="24" oninput="calcROI()"></div>
+      <div class="ri"><label>Coin rate ($/coin)</label><input id="i-cr" type="number" value="0.50" step="0.01" oninput="calcROI()"></div>
+    </div>
+    <div class="tbl-wrap">
+      <table style="max-width:500px">
+        <thead><tr><th>Item</th><th class="r">Hrs</th><th class="r">Rate</th><th class="r">Value</th></tr></thead>
+        <tbody>
+          <tr><td>Your time (IBM Architect)</td><td class="r" id="ri-hrs">8.7</td><td class="r" id="ri-rate">$250/hr</td><td class="r" id="ri-time">$2,175</td></tr>
+          <tr><td>Bob AI usage (<span id="ri-coins">209</span> coins &#215; $<span id="ri-crate">0.50</span>)</td><td class="r">&mdash;</td><td class="r">&mdash;</td><td class="r" id="ri-coin">$104</td></tr>
+          <tr class="grand-row"><td colspan="3"><strong>Total investment</strong></td><td class="r" id="ri-total"><strong>$2,279</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Session summary -->
+    <div class="sh">How We Got Here &mdash; Session Summary</div>
+    <div class="tbl-wrap">
+      <table style="max-width:600px">
+        <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Active time (git-derived)</td><td><strong>8.7 hrs across 2 days</strong></td></tr>
+          <tr><td>Step-aways &amp; overnight excluded</td><td>18.9 hrs</td></tr>
+          <tr><td>Commits pushed</td><td>46 commits</td></tr>
+          <tr><td>Deliverables built</td><td>34 components &mdash; Pi vision node, 4 server services, web UI, mobile client, K8s, Dockerfiles</td></tr>
+          <tr><td>Equivalent team estimate</td><td>1,089 hrs &mdash; 7-person IBM team, 5.8 weeks</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Session time derived from git commit timestamps. Gaps &gt;60 min excluded as step-aways; overnight sleep excluded.</p>
+
+    <!-- Three-way comparison -->
+    <div class="sh">Three-Way Value Comparison</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Metric</th>
+          <th class="yes-cell">1 Person + Bob AI</th>
+          <th>IBM Dev Team (7-person Blended)</th>
+          <th>Industry Standard</th>
+        </tr></thead>
+        <tbody>
+          <tr><td>Total investment</td><td class="yes-cell" id="cmp-inv"><strong>$2,279</strong></td><td>$193,812</td><td>$167,910</td></tr>
+          <tr><td>Professional value delivered</td><td>$193,812</td><td>$193,812</td><td>$167,910</td></tr>
+          <tr><td>Active human time</td><td class="yes-cell">8.7 hrs</td><td>1,089 hrs</td><td>1,089 hrs</td></tr>
+          <tr><td>Calendar duration</td><td class="yes-cell">2 days</td><td>~5.8 weeks</td><td>~5.8 weeks</td></tr>
+          <tr class="grand-row"><td><strong>Value multiplier vs IBM Blended</strong></td><td id="cmp-bl"><strong>85&#215;</strong></td><td>1&#215;</td><td>&mdash;</td></tr>
+          <tr class="grand-row"><td><strong>Value multiplier vs Industry Std</strong></td><td id="cmp-is"><strong>74&#215;</strong></td><td>&mdash;</td><td>1&#215;</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- /valuestory -->
+
+
+  <!-- ================================================================ -->
+  <!--  TAB 2 — COST (internal)                                          -->
+  <!-- ================================================================ -->
+  <div id="cost" class="pane">
+
+    <div class="notif info">
+      <span class="notif-icon">&#9432;</span>
+      <span>These figures represent what a 7-person IBM development team would charge for equivalent work.
+      Your actual investment was <strong>$2,279</strong> &mdash; an <strong>85&#215; value multiplier</strong>.
+      See the <em>Value Story</em> tab for full context.</span>
+    </div>
+
+    <div class="sc-bar">
+      <strong style="font-size:0.875rem">Rate scenario:</strong>
+      <label><input type="radio" name="sc" value="bl" checked onchange="recalc()"> IBM Blended</label>
+      <label><input type="radio" name="sc" value="us" onchange="recalc()"> IBM US</label>
+      <label><input type="radio" name="sc" value="of" onchange="recalc()"> IBM Offshore</label>
+      <label><input type="radio" name="sc" value="is" onchange="recalc()"> Industry Standard</label>
+    </div>
+
+    <div class="cards">
+      <div class="card"><div class="card-lbl">Base Hours</div><div class="card-val mono">1,089</div><div class="card-sub">34 work items</div></div>
+      <div class="card"><div class="card-lbl">Adjusted Hours</div><div class="card-val mono">1,307</div><div class="card-sub">+20% contingency</div></div>
+      <div class="card"><div class="card-lbl">Base Cost</div><div class="card-val mono" id="c-base">$161,510</div><div class="card-sub" id="c-scen">IBM Blended</div></div>
+      <div class="card"><div class="card-lbl">Adjusted Total</div><div class="card-val mono" id="c-adj">$193,812</div><div class="card-sub">incl. 20% contingency</div></div>
+      <div class="card"><div class="card-lbl">Calendar</div><div class="card-val">5.8 wks</div><div class="card-sub">29.2 days &middot; 44.8 h/day</div></div>
+    </div>
+
+    <div class="sh">Rate Overrides</div>
+    <div class="rate-grid">
+      <div class="rg-item"><label>Manager (MGR &#215;1)</label><input id="rMGR" type="number" value="175" oninput="recalc()"></div>
+      <div class="rg-item"><label>Architect (ARC &#215;1)</label><input id="rARC" type="number" value="200" oninput="recalc()"></div>
+      <div class="rg-item"><label>UI Designer (DES &#215;1)</label><input id="rDES" type="number" value="140" oninput="recalc()"></div>
+      <div class="rg-item"><label>Senior Dev (SRD &#215;1)</label><input id="rSRD" type="number" value="180" oninput="recalc()"></div>
+      <div class="rg-item"><label>Mid Dev (MDD &#215;2)</label><input id="rMDD" type="number" value="140" oninput="recalc()"></div>
+      <div class="rg-item"><label>Junior Dev (JRD &#215;2)</label><input id="rJRD" type="number" value="100" oninput="recalc()"></div>
+    </div>
+
+    <div class="sh">Role Summary</div>
+    <div class="tbl-wrap">
+      <table style="max-width:560px">
+        <thead><tr><th>Role</th><th class="r">Count</th><th class="r">Total Hrs</th><th class="r">% Effort</th><th class="r">Cost</th></tr></thead>
+        <tbody id="role-body"></tbody>
+      </table>
+    </div>
+
+    <div class="sh">Scenario Comparison</div>
+    <div class="tbl-wrap">
+      <table style="max-width:580px">
+        <thead><tr><th>Scenario</th><th class="r">Base Cost</th><th class="r">+20% Cont.</th><th class="r">Adjusted Total</th></tr></thead>
+        <tbody id="scen-body"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /cost -->
+
+
+  <!-- ================================================================ -->
+  <!--  TAB 3 — DEVELOPMENT ESTIMATE                                     -->
+  <!-- ================================================================ -->
+  <div id="devest" class="pane">
+
+    <div class="sh" style="margin-top:0">What This Partnership Unlocks</div>
+    <div class="stat-strip">
+      <div class="stat"><div class="stat-val green">2 days</div><div class="stat-lbl">Actual build time</div><div class="stat-sub">vs ~5.8 wks equivalent</div></div>
+      <div class="stat"><div class="stat-val green">1 person</div><div class="stat-lbl">Team size</div><div class="stat-sub">vs 7-person dev team</div></div>
+      <div class="stat"><div class="stat-val green">$2,279</div><div class="stat-lbl">Total invested</div><div class="stat-sub">vs $193,812 equivalent</div></div>
+      <div class="stat"><div class="stat-val green">100%</div><div class="stat-lbl">Vision fidelity</div><div class="stat-sub">No handoff, no drift</div></div>
+      <div class="stat"><div class="stat-val green">Hours</div><div class="stat-lbl">Iteration speed</div><div class="stat-sub">Not sprint cycles</div></div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="sh">How We Actually Built This</div>
+    <p class="note">8.7 active hours across 2 days &nbsp;&middot;&nbsp; 46 commits &nbsp;&middot;&nbsp; classified from git commit message prefixes &nbsp;&middot;&nbsp; sized by Bob Effort Score</p>
+    <div class="sh-sm">Activity breakdown by Bob Effort Score (total: 2,092.5)</div>
+    <div class="act-bar">
+      <div class="act-seg" style="width:69%;background:#198038">Building &mdash; 11 feat commits (69%)</div>
+      <div class="act-seg" style="width:29%;background:#b45309">Iteration &amp; Fixes &mdash; 31 commits (29%)</div>
+      <div class="act-seg" style="width:2%;background:#0f62fe" title="Admin &amp; Docs — 4 commits (2%)"></div>
+    </div>
+    <div class="legend" style="margin-top:var(--spacing-04)">
+      <div class="leg-item"><div class="leg-dot" style="background:#198038"></div>Building &mdash; 11 feat commits &nbsp;(69% of Bob effort score)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#b45309"></div>Iteration &amp; Fixes &mdash; 31 fix/chore/ci commits &nbsp;(29%)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#0f62fe"></div>Admin &amp; Docs &mdash; 4 docs/planning commits &nbsp;(2%)</div>
+    </div>
+    <div class="notif success">
+      <span class="notif-icon">&#10003;</span>
+      <span><strong>The 29% iteration effort is a feature, not a bug.</strong> Rapid fix&#8209;test&#8209;commit loops
+      are how production&#8209;quality software gets built at this speed. A traditional team front&#8209;loads
+      that work into sprint planning, formal QA cycles, and regression suites &mdash; spending weeks to
+      reach the same working state we reached in hours.</span>
+    </div>
+
+    <hr class="divider">
+
+    <div class="sh">If a Full Development Team Built This</div>
+    <div class="notif warning">
+      <span class="notif-icon">&#9888;</span>
+      <span>The phase schedule and cost analysis below are a <strong>hypothetical comparison</strong> &mdash;
+      what it would have taken a traditional 7-person IBM team to deliver the same scope.
+      This is not our timeline. Ours was 2 days.</span>
+    </div>
+
+    <div class="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:#0f62fe"></div>Discovery (1d)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#8a3ffc"></div>Design (1d)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#ba4e00"></div>Build (22d)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#198038"></div>Test (4d)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#00539a"></div>Deploy (3d)</div>
+    </div>
+    <div class="gantt" id="gantt-wrap"></div>
+
+    <div class="tbl-wrap">
+      <table style="max-width:520px">
+        <thead><tr><th>Metric</th><th class="r">Hypothetical Dev Team</th></tr></thead>
+        <tbody>
+          <tr><td>Base hours</td><td class="r">1,089 hrs</td></tr>
+          <tr><td>+20% contingency</td><td class="r">+218 hrs</td></tr>
+          <tr><td>Adjusted hours</td><td class="r">1,307 hrs</td></tr>
+          <tr><td>Team capacity / day</td><td class="r">44.8 hrs (8 heads &#215; 7h &#215; 80%)</td></tr>
+          <tr><td>Calendar duration</td><td class="r">~29 days / 5.8 weeks</td></tr>
+          <tr class="grand-row"><td><strong>Adjusted cost (IBM Blended)</strong></td><td class="r"><strong>$193,812</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <hr class="divider">
+
+    <div class="sh">Partnership Advantages in Practice</div>
+    <div class="adv-card">
+      <h4>&#128640; Complex integrations shipped in hours, not sprints</h4>
+      <p>The Pi event publisher, vision service, and mobile AR canvas represent the hardest components
+      in the system &mdash; offline buffering on headless hardware, camera threading, and dual&#8209;engine
+      barcode scanning. A traditional team would allocate dedicated sprint capacity, hardware&#8209;in&#8209;the&#8209;loop
+      test rigs, and formal QA sign&#8209;off for each.</p>
+      <div class="contrast">With Bob AI: these were built, debugged, and committed within the same working session.
+      The iteration loop runs at conversation speed &mdash; issue spotted, fix proposed, code updated, next commit pushed.</div>
+    </div>
+    <div class="adv-card">
+      <h4>&#128200; No staffing bottleneck &mdash; capacity scales with the conversation</h4>
+      <p>In a traditional team, Mid&#8209;Level Developers carry 40.6% of effort (442 hrs) and Senior
+      Developers carry 20.2% (220 hrs) &mdash; together they are the critical path.</p>
+      <div class="contrast">With Bob AI: there is no bottleneck role. Bob absorbs MDD and SRD workload simultaneously.
+      The only constraint is your direction time, not team capacity.</div>
+    </div>
+    <div class="adv-card">
+      <h4>&#9889; Rework happens in the session, not in a follow&#8209;on sprint</h4>
+      <p>Traditional teams budget 20% contingency for rework that occurs weeks after the original build,
+      when context is cold and re&#8209;onboarding is required before the fix can begin.</p>
+      <div class="contrast">With Bob AI: rework happens in&#8209;session. The 29% iteration effort (31 commits) is already
+      inside the 8.7&#8209;hour total &mdash; the contingency was consumed and resolved the same day it was created.</div>
+    </div>
+    <div class="adv-card">
+      <h4>&#128221; The plan emerges from the build &mdash; verified after the fact</h4>
+      <p>Traditional teams require approved plans before build begins. In this project, plan documents
+      captured only 20% of delivered scope &mdash; not because planning was skipped, but because the
+      velocity of building outpaced formal documentation.</p>
+      <div class="contrast">With Bob AI: a full codebase audit produces a verified work breakdown after the fact,
+      capturing 100% of delivered scope with higher accuracy than any pre&#8209;build estimate could achieve.</div>
+    </div>
+
+  </div><!-- /devest -->
+
+</div><!-- /content -->
+
+<footer class="page-footer">
+  Picker Vision Value Story &nbsp;&middot;&nbsp; 1 IBM Architect + <a href="https://www.ibm.com/watsonx" target="_blank" style="color:#78a9ff">Bob AI (IBM watsonx)</a> &nbsp;&middot;&nbsp; Internal use only &nbsp;&middot;&nbsp; For planning purposes only
+</footer>
+
+<script>
+var SC={
+  bl:{label:"IBM Blended",  MGR:175,ARC:200,DES:140,SRD:180,MDD:140,JRD:100},
+  us:{label:"IBM US",       MGR:225,ARC:250,DES:175,SRD:225,MDD:175,JRD:125},
+  of:{label:"IBM Offshore", MGR:120,ARC:145,DES:95, SRD:130,MDD:95, JRD:65},
+  is:{label:"Industry Std", MGR:150,ARC:175,DES:120,SRD:160,MDD:120,JRD:85}
+};
+var WBS=[
+  {MGR:1,  ARC:1,  DES:0,SRD:4, MDD:8, JRD:4},{MGR:.5, ARC:.5, DES:0,SRD:1, MDD:2, JRD:0},
+  {MGR:1,  ARC:1,  DES:0,SRD:4, MDD:8, JRD:4},{MGR:2,  ARC:3,  DES:0,SRD:8, MDD:16,JRD:8},
+  {MGR:2,  ARC:3,  DES:0,SRD:8, MDD:16,JRD:8},{MGR:4,  ARC:8,  DES:8,SRD:16,MDD:32,JRD:16},
+  {MGR:1,  ARC:1,  DES:0,SRD:4, MDD:8, JRD:4},{MGR:2,  ARC:3,  DES:0,SRD:8, MDD:16,JRD:8},
+  {MGR:2,  ARC:3,  DES:0,SRD:8, MDD:16,JRD:8},{MGR:1,  ARC:1,  DES:0,SRD:4, MDD:8, JRD:4},
+  {MGR:1,  ARC:1,  DES:0,SRD:4, MDD:8, JRD:4},{MGR:.5, ARC:.5, DES:0,SRD:1, MDD:2, JRD:0},
+  {MGR:4,  ARC:8,  DES:0,SRD:16,MDD:32,JRD:16},{MGR:4, ARC:8,  DES:0,SRD:16,MDD:32,JRD:16},
+  {MGR:2,  ARC:3,  DES:0,SRD:8, MDD:16,JRD:8},{MGR:2,  ARC:3,  DES:0,SRD:8, MDD:16,JRD:8},
+  {MGR:2,  ARC:3,  DES:0,SRD:8, MDD:16,JRD:8},{MGR:2,  ARC:3,  DES:0,SRD:8, MDD:16,JRD:8},
+  {MGR:4,  ARC:8,  DES:0,SRD:16,MDD:32,JRD:16},{MGR:4, ARC:8,  DES:0,SRD:16,MDD:32,JRD:16},
+  {MGR:4,  ARC:8,  DES:0,SRD:16,MDD:32,JRD:16},{MGR:1, ARC:1,  DES:2,SRD:4, MDD:8, JRD:4},
+  {MGR:4,  ARC:8,  DES:8,SRD:16,MDD:32,JRD:16},{MGR:2, ARC:3,  DES:4,SRD:8, MDD:16,JRD:8},
+  {MGR:1,  ARC:1,  DES:2,SRD:4, MDD:8, JRD:4},{MGR:4,  ARC:8,  DES:8,SRD:16,MDD:32,JRD:16},
+  {MGR:1,  ARC:1,  DES:2,SRD:4, MDD:8, JRD:4},{MGR:2,  ARC:3,  DES:0,SRD:8, MDD:16,JRD:8},
+  {MGR:2,  ARC:3,  DES:0,SRD:8, MDD:16,JRD:8},{MGR:1,  ARC:1,  DES:2,SRD:4, MDD:8, JRD:4},
+  {MGR:4,  ARC:8,  DES:0,SRD:16,MDD:32,JRD:0},{MGR:1,  ARC:1,  DES:0,SRD:4, MDD:8, JRD:0},
+  {MGR:2,  ARC:3,  DES:0,SRD:8, MDD:16,JRD:4},{MGR:1,  ARC:1,  DES:0,SRD:4, MDD:8, JRD:0}
+];
+var ROLES=["MGR","ARC","DES","SRD","MDD","JRD"];
+var RNAMES={MGR:"Manager",ARC:"Architect",DES:"UI Designer",SRD:"Senior Dev",MDD:"Mid Dev",JRD:"Junior Dev"};
+var RCOUNT={MGR:1,ARC:1,DES:1,SRD:1,MDD:2,JRD:2};
+
+function fmtUSD(n){return '$'+Math.round(n).toLocaleString('en-US');}
+function iHrs(w){return w.MGR+w.ARC+w.DES+w.SRD+w.MDD+w.JRD;}
+function iCost(w,r){return w.MGR*r.MGR+w.ARC*r.ARC+w.DES*r.DES+w.SRD*r.SRD+w.MDD*r.MDD+w.JRD*r.JRD;}
+
+function showTab(btn,id){
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('on');});
+  document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('on');});
+  btn.classList.add('on');
+  document.getElementById(id).classList.add('on');
+}
+
+function recalc(){
+  var scKey='bl';
+  document.querySelectorAll('input[name="sc"]').forEach(function(r){if(r.checked)scKey=r.value;});
+  var sc=SC[scKey];
+  ROLES.forEach(function(r){document.getElementById('r'+r).value=sc[r];});
+  var rates={};
+  ROLES.forEach(function(r){rates[r]=parseFloat(document.getElementById('r'+r).value)||sc[r];});
+  var tot={hrs:0,cost:0,MGR:0,ARC:0,DES:0,SRD:0,MDD:0,JRD:0};
+  WBS.forEach(function(w){ROLES.forEach(function(r){tot[r]+=w[r];});tot.hrs+=iHrs(w);tot.cost+=iCost(w,rates);});
+  document.getElementById('c-base').textContent=fmtUSD(tot.cost);
+  document.getElementById('c-adj').textContent=fmtUSD(Math.round(tot.cost*1.2));
+  document.getElementById('c-scen').textContent=sc.label;
+  var rb=document.getElementById('role-body');rb.innerHTML='';
+  ROLES.forEach(function(r){
+    var rh=tot[r];var pct=(rh/tot.hrs*100).toFixed(1);var rc=rh*rates[r];
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td>'+RNAMES[r]+' ('+r+')</td><td class="r">'+RCOUNT[r]+'</td><td class="r">'+rh+'</td><td class="r">'+pct+'%</td><td class="r">'+fmtUSD(rc)+'</td>';
+    rb.appendChild(tr);
+  });
+  var totRow=document.createElement('tr');totRow.className='grand-row';
+  totRow.innerHTML='<td class="b">TOTAL</td><td class="r b">7</td><td class="r b">'+tot.hrs+'</td><td class="r b">100%</td><td class="r b">'+fmtUSD(tot.cost)+'</td>';
+  rb.appendChild(totRow);
+  var sb=document.getElementById('scen-body');sb.innerHTML='';
+  ['bl','us','of','is'].forEach(function(key){
+    var s=SC[key];var base2=0;
+    WBS.forEach(function(w){base2+=iCost(w,s);});
+    var cont=Math.round(base2*0.2);var adj=base2+cont;var isSel=(key===scKey);
+    var tr=document.createElement('tr');if(isSel)tr.className='sub-row';
+    tr.innerHTML='<td>'+(isSel?'<strong>':'')+s.label+(isSel?' \u2713</strong>':'')+'</td><td class="r">'+fmtUSD(base2)+'</td><td class="r">'+fmtUSD(cont)+'</td><td class="r b">'+fmtUSD(adj)+'</td>';
+    sb.appendChild(tr);
+  });
+}
+
+function buildGantt(){
+  var phases=[{n:"Discovery",d:1,c:"#0f62fe"},{n:"Design",d:1,c:"#8a3ffc"},{n:"Build",d:22,c:"#ba4e00"},{n:"Test",d:4,c:"#198038"},{n:"Deploy",d:3,c:"#00539a"}];
+  var total=31;var html='<div class="g-axis">';
+  var prev=0;[0,5,10,15,20,25,31].forEach(function(t){var pct=t/total*100;html+='<span class="g-tick" style="flex:'+(pct-prev)+'">Day '+t+'</span>';prev=pct;});
+  html+='</div>';var cum=0;
+  phases.forEach(function(p){
+    var lp=(cum/total*100).toFixed(2);var wp=(p.d/total*100).toFixed(2);
+    html+='<div class="g-row"><div class="g-label">'+p.n+'</div><div class="g-track"><div class="g-bar" style="left:'+lp+'%;width:'+wp+'%;background:'+p.c+'">'+p.d+'d</div></div></div>';
+    cum+=p.d;
+  });
+  document.getElementById('gantt-wrap').innerHTML=html;
+}
+
+function calcROI(){
+  var hrs=parseFloat(document.getElementById('i-hrs').value)||8.7;
+  var rate=parseFloat(document.getElementById('i-rate').value)||250;
+  var cph=parseFloat(document.getElementById('i-cph').value)||24;
+  var cr=parseFloat(document.getElementById('i-cr').value)||0.50;
+  var coins=Math.round(hrs*cph);var tCost=Math.round(hrs*rate);var cCost=Math.round(coins*cr);var total=tCost+cCost;
+  var mult=Math.round(193812/total);var multIS=Math.round(167910/total);
+  document.getElementById('ri-hrs').textContent=hrs;
+  document.getElementById('ri-rate').textContent='$'+rate+'/hr';
+  document.getElementById('ri-time').textContent=fmtUSD(tCost);
+  document.getElementById('ri-coins').textContent=coins;
+  document.getElementById('ri-crate').textContent=cr.toFixed(2);
+  document.getElementById('ri-coin').textContent=fmtUSD(cCost);
+  document.getElementById('ri-total').innerHTML='<strong>'+fmtUSD(total)+'</strong>';
+  document.getElementById('m-num').textContent=mult+'\u00d7';
+  document.getElementById('m-dollar').textContent=mult;
+  document.getElementById('cmp-inv').innerHTML='<strong>'+fmtUSD(total)+'</strong>';
+  document.getElementById('cmp-bl').innerHTML='<strong>'+mult+'\u00d7</strong>';
+  document.getElementById('cmp-is').innerHTML='<strong>'+multIS+'\u00d7</strong>';
+  document.getElementById('pl-inv').textContent=fmtUSD(total);
+  calcPipeline();
+}
+
+function calcPipeline(){
+  var deal=parseFloat(document.getElementById('deal').value)||0;
+  var total=parseInt((document.getElementById('pl-inv').textContent||'2279').replace(/[$,]/g,''))||2279;
+  if(deal>0){
+    var pm=Math.round(deal/total);
+    document.getElementById('pl-deal').textContent='$'+deal.toLocaleString('en-US');
+    document.getElementById('pl-mult').innerHTML='<strong>'+pm+'\u00d7</strong>';
+    var pq=document.getElementById('pq');pq.style.display='block';
+    pq.textContent='Every $1 invested in this demo created $'+pm+' of IBM pipeline value';
+  } else {
+    document.getElementById('pl-deal').textContent='\u2014';
+    document.getElementById('pl-mult').innerHTML='<strong>\u2014</strong>';
+    document.getElementById('pq').style.display='none';
+  }
+}
+
+recalc();
+buildGantt();
+</script>
+</body>
+</html>

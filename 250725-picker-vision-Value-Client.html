@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Picker Vision — IBM AI Partnership Value Story</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ui-background: #ffffff;
+  --ui-01:         #f4f4f4;
+  --ui-03:         #e0e0e0;
+  --ui-04:         #8d8d8d;
+  --ui-05:         #161616;
+  --text-01:       #161616;
+  --text-02:       #525252;
+  --text-03:       #a8a8a8;
+  --text-04:       #ffffff;
+  --interactive-01:#0f62fe;
+  --hover-row:     #e8e8e8;
+  --support-01:    #da1e28;
+  --support-02:    #198038;
+  --support-03:    #f1c21b;
+  --focus:         #0f62fe;
+  --notif-info:    #edf5ff;
+  --notif-success: #defbe6;
+  --notif-warn:    #fdf6dd;
+  --sp-02: 0.25rem; --sp-03: 0.5rem;  --sp-04: 0.75rem;
+  --sp-05: 1rem;    --sp-06: 1.5rem;  --sp-07: 2rem;
+  --sp-08: 2.5rem;  --sp-09: 3rem;    --sp-10: 4rem;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.42857;
+  background: var(--ui-01);
+  color: var(--text-01);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--interactive-01); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* header */
+.page-header {
+  background: var(--ui-05);
+  color: var(--text-04);
+  padding: var(--sp-05) var(--sp-07);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-05);
+  border-bottom: 1px solid #393939;
+}
+.ibm-logo { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text-04); flex-shrink: 0; }
+.page-header-title { font-size: 0.875rem; font-weight: 400; color: #c6c6c6; border-left: 1px solid #525252; padding-left: var(--sp-05); margin-left: var(--sp-03); }
+.content { max-width: 1056px; margin: 0 auto; padding: var(--sp-07) var(--sp-07) var(--sp-10); }
+.page-title { font-size: 2rem; font-weight: 400; line-height: 1.25; color: var(--text-01); margin-bottom: var(--sp-02); }
+.page-meta { font-size: 0.75rem; font-weight: 400; letter-spacing: 0.32px; color: var(--text-02); margin-bottom: var(--sp-07); }
+
+/* tabs */
+.tab-bar { display: flex; border-bottom: 2px solid var(--ui-03); margin-bottom: var(--sp-07); overflow-x: auto; background: var(--ui-background); }
+.tab-btn { padding: var(--sp-04) var(--sp-06); cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 0.875rem; font-weight: 400; color: var(--text-02); background: var(--ui-01); border: none; border-bottom: 2px solid transparent; margin-bottom: -2px; white-space: nowrap; transition: background 70ms; }
+.tab-btn:hover { background: var(--hover-row); color: var(--text-01); }
+.tab-btn.on { color: var(--text-01); background: var(--ui-background); border-bottom-color: var(--interactive-01); font-weight: 600; }
+.pane { display: none; }
+.pane.on { display: block; }
+
+/* hero */
+.hero { background: var(--ui-05); color: var(--text-04); padding: var(--sp-09) var(--sp-08); margin-bottom: var(--sp-07); }
+.hero-eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: #a8a8a8; margin-bottom: var(--sp-04); }
+.hero-headline { font-size: 3rem; font-weight: 300; line-height: 1.15; letter-spacing: -0.01em; margin-bottom: var(--sp-06); }
+.hero-headline strong { font-weight: 700; }
+.hero-headline .accent { color: #78a9ff; }
+.hero-sup { font-size: 1rem; font-weight: 400; vertical-align: super; line-height: 0; color: #78a9ff; }
+.hero-sup a { color: #78a9ff; text-decoration: underline; }
+.hero-body { font-size: 1rem; font-weight: 300; line-height: 1.625; color: #c6c6c6; max-width: 720px; }
+
+/* stat strip */
+.stat-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1px; background: var(--ui-03); border: 1px solid var(--ui-03); margin-bottom: var(--sp-07); }
+.stat { background: var(--ui-background); padding: var(--sp-06) var(--sp-05); text-align: center; }
+.stat-val { font-size: 2rem; font-weight: 600; line-height: 1; color: var(--interactive-01); margin-bottom: var(--sp-02); }
+.stat-val.green { color: var(--support-02); }
+.stat-lbl { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.32px; color: var(--text-02); text-transform: uppercase; margin-bottom: 2px; }
+.stat-sub { font-size: 0.75rem; color: var(--text-03); }
+
+/* tables */
+.tbl-wrap { overflow-x: auto; margin-bottom: var(--sp-06); }
+table { width: 100%; border-collapse: collapse; font-size: 0.875rem; background: var(--ui-background); border: 1px solid var(--ui-03); }
+thead tr { background: var(--ui-03); border-bottom: 1px solid var(--ui-04); }
+th { font-weight: 600; font-size: 0.75rem; letter-spacing: 0.32px; text-transform: uppercase; color: var(--text-01); padding: var(--sp-04) var(--sp-05); text-align: left; white-space: nowrap; border-right: 1px solid var(--ui-03); }
+td { padding: var(--sp-04) var(--sp-05); border-bottom: 1px solid var(--ui-03); border-right: 1px solid var(--ui-03); vertical-align: middle; color: var(--text-01); }
+tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--hover-row); }
+.r { text-align: right; } .b { font-weight: 600; }
+.grand-row td { background: #edf5ff; font-weight: 600; border-top: 2px solid var(--interactive-01); }
+
+/* section headings */
+.sh { font-size: 1rem; font-weight: 600; line-height: 1.375; color: var(--text-01); margin: var(--sp-07) 0 var(--sp-05); padding-bottom: var(--sp-03); border-bottom: 1px solid var(--ui-03); }
+.sh-sm { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.32px; text-transform: uppercase; color: var(--text-02); margin: var(--sp-06) 0 var(--sp-04); }
+
+/* multiplier */
+.mult-tile { background: var(--ui-05); color: var(--text-04); padding: var(--sp-09) var(--sp-08); text-align: center; margin-bottom: var(--sp-07); }
+.mult-n { font-size: 5rem; font-weight: 700; line-height: 1; color: #42be65; font-family: 'IBM Plex Mono', monospace; letter-spacing: -0.02em; }
+.mult-l { font-size: 1rem; font-weight: 300; color: #c6c6c6; margin-top: var(--sp-04); }
+.mult-sub { font-size: 0.875rem; color: #a8a8a8; margin-top: var(--sp-03); }
+
+/* notifications */
+.notif { display: flex; align-items: flex-start; gap: var(--sp-04); padding: var(--sp-04) var(--sp-05); margin-bottom: var(--sp-06); font-size: 0.875rem; line-height: 1.42857; border-left: 3px solid; }
+.notif-icon { flex-shrink: 0; font-size: 1rem; margin-top: 1px; }
+.notif.success { background: var(--notif-success); border-color: var(--support-02); }
+.notif.warning { background: var(--notif-warn); border-color: var(--support-03); }
+
+/* partnership table */
+.yes-cell { color: var(--support-02); font-weight: 600; }
+.no-cell  { color: var(--support-01); }
+.part-cell{ color: #b45309; }
+
+/* activity bar */
+.act-bar { display: flex; height: 40px; margin-bottom: var(--sp-04); }
+.act-seg { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; color: #fff; padding: 0 var(--sp-03); text-align: center; font-family: 'IBM Plex Sans', sans-serif; }
+
+/* gantt */
+.gantt { margin-bottom: var(--sp-06); }
+.g-row { display: flex; align-items: center; margin-bottom: var(--sp-03); }
+.g-label { width: 112px; font-size: 0.75rem; font-weight: 600; color: var(--text-02); flex-shrink: 0; text-align: right; padding-right: var(--sp-04); }
+.g-track { flex: 1; background: var(--ui-03); height: 28px; position: relative; }
+.g-bar { position: absolute; top: 0; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.6875rem; font-weight: 600; color: #fff; }
+.g-axis { display: flex; padding-left: 112px; margin-bottom: var(--sp-03); }
+.g-tick { font-size: 0.6875rem; color: var(--text-03); text-align: center; }
+
+/* advantage cards */
+.adv-card { background: var(--ui-background); border: 1px solid var(--ui-03); border-left: 4px solid var(--interactive-01); padding: var(--sp-05) var(--sp-06); margin-bottom: var(--sp-05); }
+.adv-card h4 { font-size: 0.875rem; font-weight: 600; color: var(--text-01); margin-bottom: var(--sp-03); }
+.adv-card p { font-size: 0.875rem; color: var(--text-02); line-height: 1.5; margin-bottom: var(--sp-03); }
+.adv-card p:last-child { margin-bottom: 0; }
+.contrast { font-size: 0.8125rem; color: var(--interactive-01); background: var(--notif-info); padding: var(--sp-03) var(--sp-05); border-left: 3px solid var(--interactive-01); margin-top: var(--sp-04); line-height: 1.5; }
+
+/* legend */
+.legend { display: flex; flex-wrap: wrap; gap: var(--sp-06); margin-bottom: var(--sp-06); }
+.leg-item { display: flex; align-items: center; gap: var(--sp-03); font-size: 0.8125rem; }
+.leg-dot { width: 14px; height: 14px; flex-shrink: 0; }
+.note { font-size: 0.75rem; color: var(--text-02); margin-bottom: var(--sp-05); }
+.divider { border: none; border-top: 1px solid var(--ui-03); margin: var(--sp-07) 0; }
+
+/* footer */
+.page-footer { background: var(--ui-05); color: #6f6f6f; font-size: 0.75rem; padding: var(--sp-05) var(--sp-07); margin-top: var(--sp-10); border-top: 1px solid #393939; text-align: center; }
+
+/* client badge — visible reminder this is client-facing */
+.client-badge { display: inline-block; background: var(--support-02); color: #fff; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; padding: 2px 8px; margin-left: 8px; vertical-align: middle; }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <span class="ibm-logo">IBM</span>
+  <span class="page-header-title">Picker Vision &mdash; AI Partnership Value Story <span class="client-badge">Client</span></span>
+</header>
+
+<div class="content">
+
+  <h1 class="page-title">Picker Vision &mdash; AI Partnership Value Story</h1>
+  <p class="page-meta">Prepared 2026-07-25 &nbsp;&middot;&nbsp; IBM Architect + <a href="https://www.ibm.com/watsonx" target="_blank">Bob AI (ibm.com/watsonx)</a> &nbsp;&middot;&nbsp; For discussion purposes</p>
+
+  <div class="tab-bar">
+    <button class="tab-btn on" onclick="showTab(this,'story')">The Value Story</button>
+    <button class="tab-btn"   onclick="showTab(this,'devest')">How It Was Built</button>
+  </div>
+
+
+  <!-- ============================================================ -->
+  <!--  TAB 1 — THE VALUE STORY                                      -->
+  <!-- ============================================================ -->
+  <div id="story" class="pane on">
+
+    <div class="hero">
+      <div class="hero-eyebrow">Art of the Possible &nbsp;&middot;&nbsp; IBM + AI Partnership</div>
+      <div class="hero-headline">
+        <strong>1 person</strong><sup class="hero-sup">&nbsp;<a href="https://www.ibm.com/watsonx" target="_blank" title="IBM watsonx">and Bob</a></sup><strong>.</strong><br>
+        <span class="accent">8.7 hours.</span><br>
+        A full production system, delivered.
+      </div>
+      <div class="hero-body">
+        This is a demonstration of what becomes possible when deep IBM product expertise and
+        AI work as one. The architect brings the domain knowledge, the industry context, and
+        the precise vision of what the client needs. Bob AI turns that vision into
+        production&#8209;quality code, documentation, and working demos &mdash; at the speed of
+        conversation. No handoff chain. No translation loss. No sprint cycles between idea
+        and working software.
+      </div>
+    </div>
+
+    <div class="sh">What This Partnership Delivers</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Dimension</th>
+          <th class="yes-cell">1 Person + Bob AI</th>
+          <th>Traditional Development Team</th>
+        </tr></thead>
+        <tbody>
+          <tr><td><strong>Speed to working demo</strong></td><td class="yes-cell">2 days</td><td>Weeks to months</td></tr>
+          <tr><td><strong>Team required</strong></td><td class="yes-cell">1 person + AI</td><td>Multiple roles &amp; specialists</td></tr>
+          <tr><td><strong>Who holds the vision</strong></td><td class="yes-cell">The architect &mdash; directly translated</td><td>PM/BA layer required; interpreted by others</td></tr>
+          <tr><td><strong>Domain &amp; customer context</strong></td><td class="yes-cell">Native &mdash; stays in the room</td><td class="no-cell">Diluted at every handoff</td></tr>
+          <tr><td><strong>Iteration speed</strong></td><td class="yes-cell">Hours &mdash; ask, get code, ship</td><td>Sprint cycles &mdash; days to weeks per change</td></tr>
+          <tr><td><strong>Risk of vision drift</strong></td><td class="yes-cell">Minimal &mdash; architect steers every turn</td><td class="no-cell">High &mdash; compounding handoff gaps</td></tr>
+          <tr><td><strong>Code quality</strong></td><td class="yes-cell">Production-ready</td><td class="yes-cell">Production-ready</td></tr>
+          <tr><td><strong>Best suited for</strong></td><td class="yes-cell">PoCs, demos, Art of the Possible</td><td>Large-scale production delivery</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Value multiplier — industry standard basis, no IBM internal rates -->
+    <div class="sh">Value Multiplier</div>
+    <div class="mult-tile">
+      <div class="mult-n">74&#215;</div>
+      <div class="mult-l">equivalent market value delivered vs total investment</div>
+      <div class="mult-sub">Based on industry&#8209;standard development rates &mdash; every $1 invested returned $74 of equivalent professional development value</div>
+    </div>
+
+    <!-- Comparison — no IBM internal rate data, relative only -->
+    <div class="sh">Value Delivered &mdash; Overview</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Metric</th>
+          <th class="yes-cell">1 Person + Bob AI</th>
+          <th>Traditional Development Team</th>
+        </tr></thead>
+        <tbody>
+          <tr><td>Equivalent market value delivered</td><td class="yes-cell">Full system scope</td><td>Full system scope</td></tr>
+          <tr><td>Active time invested</td><td class="yes-cell">8.7 hrs</td><td>Weeks of team time</td></tr>
+          <tr><td>Calendar duration</td><td class="yes-cell">2 days</td><td>~5.8 weeks estimated</td></tr>
+          <tr><td>Team size</td><td class="yes-cell">1 person + AI</td><td>Multiple roles</td></tr>
+          <tr><td>Domain expertise retained</td><td class="yes-cell">100% &mdash; architect holds it</td><td>Partial &mdash; must be briefed in</td></tr>
+          <tr class="grand-row"><td><strong>Value multiplier vs market rate</strong></td><td><strong>74&#215;</strong></td><td>1&#215;</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sh">What Was Built</div>
+    <div class="tbl-wrap">
+      <table style="max-width:680px">
+        <thead><tr><th>Component</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Pi Vision Node</strong></td><td>Raspberry Pi computer vision service: barcode detection (QR + 1D), staging detection, MJPEG stream, offline event buffering with heartbeat</td></tr>
+          <tr><td><strong>API Gateway</strong></td><td>Picker registry, proxy routing, WebSocket proxy, API&#8209;key middleware</td></tr>
+          <tr><td><strong>Event Processor</strong></td><td>Async enrichment pipeline with Redis pub/sub and order completion detection</td></tr>
+          <tr><td><strong>Order Service</strong></td><td>FastAPI CRUD with ORM models, SAP adapter stub, and seed data</td></tr>
+          <tr><td><strong>WebSocket Hub</strong></td><td>Real&#8209;time operator and supervisor feeds with keepalive</td></tr>
+          <tr><td><strong>Desktop Web UI</strong></td><td>Operator view with live video + SVG overlay, supervisor dashboard, system health view with telemetry</td></tr>
+          <tr><td><strong>Mobile Web Client</strong></td><td>AR camera overlay, dual&#8209;engine barcode scanning, live pick list with validation</td></tr>
+          <tr><td><strong>Kubernetes Deployment</strong></td><td>9 manifests, MetalLB load balancer, nginx proxy, test namespace overlay</td></tr>
+          <tr><td><strong>Documentation</strong></td><td>OpenAPI spec, README, versioning system, log ring buffers across all services</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- /story -->
+
+
+  <!-- ============================================================ -->
+  <!--  TAB 2 — HOW IT WAS BUILT                                     -->
+  <!-- ============================================================ -->
+  <div id="devest" class="pane">
+
+    <div class="sh" style="margin-top:0">What This Approach Unlocks</div>
+    <div class="stat-strip">
+      <div class="stat"><div class="stat-val green">2 days</div><div class="stat-lbl">Actual build time</div><div class="stat-sub">vs weeks for a team</div></div>
+      <div class="stat"><div class="stat-val green">1 person</div><div class="stat-lbl">Team required</div><div class="stat-sub">Not a multi&#8209;role team</div></div>
+      <div class="stat"><div class="stat-val green">74&#215;</div><div class="stat-lbl">Value multiplier</div><div class="stat-sub">vs market rate</div></div>
+      <div class="stat"><div class="stat-val green">100%</div><div class="stat-lbl">Vision fidelity</div><div class="stat-sub">No handoff, no drift</div></div>
+      <div class="stat"><div class="stat-val green">Hours</div><div class="stat-lbl">Iteration speed</div><div class="stat-sub">Not sprint cycles</div></div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="sh">How It Was Actually Built</div>
+    <p class="note">8.7 active hours across 2 days &nbsp;&middot;&nbsp; 46 commits &nbsp;&middot;&nbsp; classified from commit records &nbsp;&middot;&nbsp; sized by effort score</p>
+    <div class="sh-sm">Activity breakdown by Bob Effort Score</div>
+    <div class="act-bar">
+      <div class="act-seg" style="width:69%;background:#198038">Building &mdash; 11 feat commits (69%)</div>
+      <div class="act-seg" style="width:29%;background:#b45309">Iteration &amp; Fixes &mdash; 31 commits (29%)</div>
+      <div class="act-seg" style="width:2%;background:#0f62fe" title="Admin &amp; Docs — 4 commits (2%)"></div>
+    </div>
+    <div class="legend" style="margin-top:var(--sp-04)">
+      <div class="leg-item"><div class="leg-dot" style="background:#198038"></div>Building &mdash; 11 feat commits &nbsp;(69% of effort)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#b45309"></div>Iteration &amp; Fixes &mdash; 31 fix/chore/ci commits &nbsp;(29%)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#0f62fe"></div>Admin &amp; Docs &mdash; 4 docs/planning commits &nbsp;(2%)</div>
+    </div>
+    <div class="notif success">
+      <span class="notif-icon">&#10003;</span>
+      <span><strong>The 29% iteration effort is a feature, not a bug.</strong> Rapid fix&#8209;test&#8209;commit cycles are
+      how production&#8209;quality software gets built at this speed. A traditional team front&#8209;loads that same
+      work into formal sprint planning, QA cycles, and regression suites &mdash; taking weeks to reach the same
+      working state we reached in hours.</span>
+    </div>
+
+    <hr class="divider">
+
+    <div class="sh">Equivalent Traditional Team Timeline</div>
+    <div class="notif warning">
+      <span class="notif-icon">&#9888;</span>
+      <span>The phase schedule below is a <strong>hypothetical comparison</strong> showing how long a
+      traditional development team would take to deliver the same scope. This was not our timeline.
+      Ours was 2 days.</span>
+    </div>
+
+    <div class="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:#0f62fe"></div>Discovery (1d)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#8a3ffc"></div>Design (1d)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#ba4e00"></div>Build (22d)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#198038"></div>Test (4d)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#00539a"></div>Deploy (3d)</div>
+    </div>
+    <div class="gantt" id="gantt-wrap"></div>
+
+    <div class="tbl-wrap">
+      <table style="max-width:480px">
+        <thead><tr><th>Metric</th><th class="r">Traditional Team</th></tr></thead>
+        <tbody>
+          <tr><td>Estimated work hours</td><td class="r">1,089+ hrs</td></tr>
+          <tr><td>Calendar duration</td><td class="r">~5.8 weeks</td></tr>
+          <tr><td>Team size</td><td class="r">Multiple roles</td></tr>
+          <tr class="grand-row"><td><strong>Value multiplier vs our approach</strong></td><td class="r"><strong>Fraction of equivalent output</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <hr class="divider">
+
+    <div class="sh">Partnership Advantages in Practice</div>
+    <div class="adv-card">
+      <h4>&#128640; Complex integrations shipped in hours, not sprints</h4>
+      <p>Computer vision, real&#8209;time WebSocket feeds, mobile AR barcode scanning, and Kubernetes
+      deployment &mdash; the hardest components in the system. A traditional team would allocate
+      dedicated sprint capacity and formal QA sign&#8209;off cycles for each.</p>
+      <div class="contrast">With Bob AI: these were built, debugged, and committed within the same working session.
+      The iteration loop runs at conversation speed.</div>
+    </div>
+    <div class="adv-card">
+      <h4>&#128200; One person, no bottleneck, full output</h4>
+      <p>A traditional team distributes this work across architects, developers, designers, and
+      managers. Each role is a dependency. Delays in one cascade across the whole schedule.</p>
+      <div class="contrast">With Bob AI: there is no bottleneck. The architect directs; Bob delivers. Capacity scales with the conversation.</div>
+    </div>
+    <div class="adv-card">
+      <h4>&#9889; Rework in the session, not in the next sprint</h4>
+      <p>Traditional teams build in contingency for rework that happens weeks after the original
+      build, when context is cold and re&#8209;onboarding is needed before a fix can begin.</p>
+      <div class="contrast">With Bob AI: iteration is built into the same session. The fix happens in the same conversation that created the original code.</div>
+    </div>
+    <div class="adv-card">
+      <h4>&#128221; Vision stays intact from idea to deployment</h4>
+      <p>Every handoff in a traditional project is an opportunity for the original vision to be
+      reinterpreted, simplified, or lost. Brief &rarr; PM &rarr; architect &rarr; developer &rarr; QA means the
+      final product often diverges from the original intent.</p>
+      <div class="contrast">With Bob AI: the same person who holds the vision writes the instructions. Zero translation loss. What you described is what gets built.</div>
+    </div>
+
+  </div><!-- /devest -->
+
+</div><!-- /content -->
+
+<footer class="page-footer">
+  Picker Vision &mdash; IBM AI Partnership Value Story &nbsp;&middot;&nbsp;
+  <a href="https://www.ibm.com/watsonx" target="_blank" style="color:#78a9ff">Bob AI powered by IBM watsonx</a>
+  &nbsp;&middot;&nbsp; For discussion purposes
+</footer>
+
+<script>
+function showTab(btn,id){
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('on');});
+  document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('on');});
+  btn.classList.add('on');
+  document.getElementById(id).classList.add('on');
+}
+
+function buildGantt(){
+  var phases=[{n:"Discovery",d:1,c:"#0f62fe"},{n:"Design",d:1,c:"#8a3ffc"},{n:"Build",d:22,c:"#ba4e00"},{n:"Test",d:4,c:"#198038"},{n:"Deploy",d:3,c:"#00539a"}];
+  var total=31;var html='<div class="g-axis">';
+  var prev=0;[0,5,10,15,20,25,31].forEach(function(t){var pct=t/total*100;html+='<span class="g-tick" style="flex:'+(pct-prev)+'">Day '+t+'</span>';prev=pct;});
+  html+='</div>';var cum=0;
+  phases.forEach(function(p){
+    var lp=(cum/total*100).toFixed(2);var wp=(p.d/total*100).toFixed(2);
+    html+='<div class="g-row"><div class="g-label">'+p.n+'</div><div class="g-track"><div class="g-bar" style="left:'+lp+'%;width:'+wp+'%;background:'+p.c+'">'+p.d+'d</div></div></div>';
+    cum+=p.d;
+  });
+  document.getElementById('gantt-wrap').innerHTML=html;
+}
+buildGantt();
+</script>
+</body>
+</html>
