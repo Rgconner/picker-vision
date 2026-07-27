@@ -124,13 +124,19 @@ export function useBarcodeScanner(
           const want = ['qr_code', 'code_128', 'ean_13', 'data_matrix', 'code_39', 'ean_8'].filter(
             (f) => formats.includes(f),
           );
-          nativeRef.current = new BarcodeDetector({ formats: want.length ? want : ['qr_code', 'code_128'] });
-          useNativeRef.current = true;
-          setEngineReady(true);
-          return;
+          // Only use native BarcodeDetector if it supports data_matrix —
+          // otherwise fall through to ZXing which handles it everywhere.
+          if (want.includes('data_matrix')) {
+            nativeRef.current = new BarcodeDetector({ formats: want });
+            useNativeRef.current = true;
+            setEngineReady(true);
+            return;
+          }
+          // data_matrix not supported natively — log for diagnostics and fall through
+          console.info('[BarcodeDetector] data_matrix not in supported formats:', formats, '— falling back to ZXing');
         } catch { /* fall through */ }
       }
-      // ZXing fallback
+      // ZXing fallback — handles data_matrix on all browsers including iOS Safari
       const reader = await loadZXing();
       useNativeRef.current = reader !== null ? false : null;
       setEngineReady(reader !== null);
