@@ -207,6 +207,19 @@ jobs:
           & "C:\Users\RussConner\kubectl.exe" apply -k k8s/overlays/bobs-tiny-treasures/
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # BTT uses a branch tag (feature-bobs-tiny-treasures) not a SHA tag, so
+      # kubectl apply sees no image change and skips the rollout.
+      # Force a restart on all deployments so nodes re-pull the updated image.
+      - name: Force rollout restart — Bob's Tiny Treasures
+        if: github.ref_name == 'feature/bobs-tiny-treasures'
+        shell: powershell
+        run: |
+          $ns = "picker-vision-btt"
+          foreach ($svc in @("api-gateway","order-service","event-processor","websocket-hub","web-ui")) {
+            & "C:\Users\RussConner\kubectl.exe" rollout restart deployment/$svc -n $ns
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
       - name: Wait for Bob's Tiny Treasures rollout
         if: github.ref_name == 'feature/bobs-tiny-treasures'
         shell: powershell
