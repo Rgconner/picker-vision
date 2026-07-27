@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bob's Tiny Treasures — Print Labels</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'IBM Plex Sans','Segoe UI',sans-serif;background:#e8e8e8;color:#161616;font-size:12px}
+  .screen-bar{background:#161616;color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .screen-bar h1{font-size:15px;font-weight:600}
+  .screen-bar p{font-size:12px;color:#a8b2c1}
+  .print-btn{background:#0f62fe;color:#fff;border:none;padding:8px 20px;font-size:13px;font-weight:600;border-radius:3px;cursor:pointer;font-family:inherit}
+  .print-btn:hover{background:#0353e9}
+  .screen-note{background:#f4f4f4;border-bottom:1px solid #e0e0e0;padding:10px 24px;font-size:12px;color:#525252}
+  .sheet{width:8.5in;min-height:11in;background:#fff;margin:24px auto;padding:0.4in;position:relative;page-break-after:always}
+  .sheet:last-child{page-break-after:auto}
+  .sheet-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8d8d8d;text-align:center;margin-bottom:0.15in;border-bottom:0.5pt solid #e0e0e0;padding-bottom:6px}
+  .product-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.15in}
+  .prod-label{border:1.5pt solid #161616;border-radius:4pt;padding:0.12in 0.1in 0.1in;display:flex;flex-direction:column;align-items:center;gap:4pt;background:#fff;break-inside:avoid}
+  .prod-label-header{display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:2pt}
+  .prod-sku{font-size:8pt;font-weight:700;font-family:'IBM Plex Mono','Courier New',monospace;color:#161616}
+  .prod-size{font-size:7pt;font-weight:700;padding:1pt 4pt;border-radius:2pt;color:#fff;text-transform:uppercase}
+  .size-S{background:#0e6027}.size-M{background:#0043ce}.size-L{background:#a2191f}
+  .prod-qr{width:1.2in;height:1.2in}
+  .prod-name{font-size:7pt;font-weight:600;text-align:center;line-height:1.3;color:#161616;max-width:1.8in}
+  .prod-barcode-text{font-size:7pt;font-family:'IBM Plex Mono','Courier New',monospace;color:#525252;margin-top:1pt}
+  .prod-meta{display:flex;gap:8pt;margin-top:2pt}
+  .prod-meta span{font-size:6.5pt;color:#525252}
+  .prod-meta strong{color:#161616}
+  .prod-url{font-size:5.5pt;color:#8d8d8d;margin-top:1pt}
+  .tote-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0.1in}
+  .tote-label{border:1.5pt solid #161616;border-radius:4pt;padding:0.08in 0.07in;display:flex;flex-direction:column;align-items:center;gap:3pt;background:#fff;break-inside:avoid}
+  .tote-qr{width:0.8in;height:0.8in}
+  .tote-code{font-size:16pt;font-weight:700;font-family:'IBM Plex Mono','Courier New',monospace;color:#161616;letter-spacing:1pt}
+  .tote-label-text{font-size:6pt;font-weight:700;text-transform:uppercase;letter-spacing:0.5pt;color:#525252}
+  .tote-brand{font-size:5.5pt;color:#8d8d8d}
+  @media print{
+    body{background:#fff}
+    .screen-bar,.screen-note{display:none}
+    .sheet{margin:0;box-shadow:none;page-break-after:always}
+    .sheet:last-child{page-break-after:auto}
+  }
+  @page{size:letter;margin:0}
+</style>
+</head>
+<body>
+<div class="screen-bar">
+  <div>
+    <h1>Bob's Tiny Treasures — Print Labels</h1>
+    <p>Sheet 1: 9 Product QR Labels &nbsp;·&nbsp; Sheet 2: 36 Tiny Tote Labels (0001–0036)</p>
+  </div>
+  <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+</div>
+<div class="screen-note">
+  Print settings: Letter · Portrait · No scaling (100%) · Include background graphics ✓ &nbsp;|&nbsp; QR codes encode the product barcode (e.g. BTT-00101) and tote IDs (TOTE:0001). Scan with any QR reader.
+</div>
+
+<div class="sheet">
+  <div class="sheet-title">Bob's Tiny Treasures — Product Labels · bobstinytreasures.snwbd.com</div>
+  <div class="product-grid" id="product-grid"></div>
+</div>
+
+<div class="sheet">
+  <div class="sheet-title">Bob's Tiny Treasures — Tiny Tote Labels · bobstinytreasures.snwbd.com</div>
+  <div class="tote-grid" id="tote-grid"></div>
+</div>
+
+<script>
+"use strict";
+var EXP=[],LOG=[];
+(function(){var x=1;for(var i=0;i<256;i++){EXP[i]=x;LOG[x]=i;x=x*2;if(x>=256)x^=285;}})();
+function gmul(a,b){if(a===0||b===0)return 0;return EXP[(LOG[a]+LOG[b])%255];}
+function rsGenPoly(n){var p=[1];for(var i=0;i<n;i++){var t=[1,EXP[i]];var r=new Array(p.length+t.length-1).fill(0);for(var j=0;j<p.length;j++)for(var k=0;k<t.length;k++)r[j+k]^=gmul(p[j],t[k]);p=r;}return p;}
+function rsEncode(data,n){var gen=rsGenPoly(n);var msg=data.concat(new Array(n).fill(0));for(var i=0;i<data.length;i++){var c=msg[i];if(c!==0)for(var j=0;j<gen.length;j++)msg[i+j]^=gmul(gen[j],c);}return msg.slice(data.length);}
+var CHAR_CAP=[[17,14,11,7],[32,26,20,14],[53,42,32,24],[78,62,46,34]];
+var EC_WORDS=[[7,10,13,17],[10,16,22,28],[15,26,18,22],[20,18,26,16]];
+var ALIGN=[[],[],[6,18],[6,22]];
+var FORMAT_INFO={'L':[0x77C4,0x72F3,0x7DAA,0x789D,0x662F,0x6318,0x6C41,0x6976],'M':[0x5412,0x5125,0x5E7C,0x5B4B,0x45F9,0x40CE,0x4F97,0x4AA0],'Q':[0x355F,0x3068,0x3F31,0x3A06,0x24B4,0x2183,0x2EDA,0x2BED],'H':[0x1689,0x13BE,0x1CE7,0x19D0,0x0762,0x0255,0x0D0C,0x083B]};
+function makeQR(text){
+  var bytes=[];for(var i=0;i<text.length;i++){var c=text.charCodeAt(i);bytes.push(c>127?63:c);}
+  var ver=1;for(var v=1;v<=4;v++){if(bytes.length<=CHAR_CAP[v-1][1]){ver=v;break;}}
+  var size=ver*4+17;var totalDC=CHAR_CAP[ver-1][1];var ecCount=EC_WORDS[ver-1][1];
+  var bits=[];
+  bits.push(0,1,0,0);
+  for(var i=7;i>=0;i--)bits.push((bytes.length>>i)&1);
+  for(var i=0;i<bytes.length;i++)for(var j=7;j>=0;j--)bits.push((bytes[i]>>j)&1);
+  for(var i=0;i<4&&bits.length<totalDC*8;i++)bits.push(0);
+  while(bits.length%8!==0)bits.push(0);
+  var padB=[0xEC,0x11];var pi=0;while(bits.length<totalDC*8){for(var j=7;j>=0;j--)bits.push((padB[pi%2]>>j)&1);pi++;}
+  var dc=[];for(var i=0;i<totalDC;i++){var b=0;for(var j=0;j<8;j++)b=(b<<1)|bits[i*8+j];dc.push(b);}
+  var ec=rsEncode(dc,ecCount);
+  var all=dc.concat(ec);
+  var allBits=[];for(var i=0;i<all.length;i++)for(var j=7;j>=0;j--)allBits.push((all[i]>>j)&1);
+  var rem=[0,7,7,7];for(var i=0;i<rem[ver-1];i++)allBits.push(0);
+  var mat=[];for(var i=0;i<size;i++)mat.push(new Array(size).fill(-1));
+  var res=[];for(var i=0;i<size;i++)res.push(new Array(size).fill(false));
+  function sm(r,c,v){mat[r][c]=v;res[r][c]=true;}
+  function finder(tr,tc){for(var r=0;r<7;r++)for(var c=0;c<7;c++){var v=(r===0||r===6||c===0||c===6)?1:(r>=2&&r<=4&&c>=2&&c<=4)?1:0;sm(tr+r,tc+c,v);}}
+  finder(0,0);finder(0,size-7);finder(size-7,0);
+  // separators
+  for(var i=0;i<8;i++){sm(7,i,0);sm(i,7,0);sm(7,size-8+i,0);sm(i,size-8,0);sm(size-8,i,0);sm(size-8+i,7,0);}
+  // reserve format area
+  for(var i=0;i<=8;i++){res[8][i]=true;res[i][8]=true;}res[8][size-8]=true;
+  for(var i=size-7;i<size;i++){res[8][i]=true;res[i][8]=true;}mat[size-8][8]=1;
+  // timing
+  for(var i=8;i<size-8;i++){if(!res[6][i])sm(6,i,i%2===0?1:0);if(!res[i][6])sm(i,6,i%2===0?1:0);}
+  // alignment
+  if(ver>=2){var ap=ALIGN[ver-1];for(var ai=0;ai<ap.length;ai++)for(var aj=0;aj<ap.length;aj++){var ar=ap[ai],ac=ap[aj];if(res[ar][ac])continue;for(var r=-2;r<=2;r++)for(var c=-2;c<=2;c++){var v=(Math.abs(r)===2||Math.abs(c)===2)?1:(r===0&&c===0)?1:0;sm(ar+r,ac+c,v);}}}
+  // data placement
+  var bi=0;var up=true;var col=size-1;
+  while(col>0){if(col===6)col--;for(var delta=0;delta<size;delta++){var row=up?(size-1-delta):delta;for(var dc2=0;dc2<=1;dc2++){var cc=col-dc2;if(!res[row][cc]){var bit=bi<allBits.length?allBits[bi++]:0;mat[row][cc]=bit;}}}up=!up;col-=2;}
+  // mask 2
+  for(var r=0;r<size;r++)for(var c=0;c<size;c++){if(!res[r][c]&&mat[r][c]!==-1){if(Math.floor(r/2+c/3)%2===0)mat[r][c]^=1;}}
+  // format info ECC M mask 2
+  var fi=FORMAT_INFO['M'][2];var fiBits=[];for(var i=14;i>=0;i--)fiBits.push((fi>>i)&1);
+  var fpos=[[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
+  for(var i=0;i<15;i++)mat[fpos[i][0]][fpos[i][1]]=fiBits[i];
+  for(var i=0;i<7;i++)mat[size-1-i][8]=fiBits[i];mat[size-8][8]=1;
+  for(var i=7;i<15;i++)mat[8][size-15+i]=fiBits[i];
+  return{mat:mat,size:size};
+}
+function qrSVG(text,px){
+  var q=makeQR(text);var n=q.size;var cell=px/n;
+  var p=['<svg xmlns="http://www.w3.org/2000/svg" width="',px,'" height="',px,'" viewBox="0 0 ',px,' ',px,'"><rect width="',px,'" height="',px,'" fill="#fff"/>'];
+  for(var r=0;r<n;r++)for(var c=0;c<n;c++)if(q.mat[r][c]===1){var x=(c*cell).toFixed(2),y=(r*cell).toFixed(2),w=cell.toFixed(2);p.push('<rect x="',x,'" y="',y,'" width="',w,'" height="',w,'" fill="#000"/>');}
+  p.push('</svg>');return p.join('');
+}
+
+var PRODUCTS=[
+  {barcode:'BTT-00101',sku:'BTT-S-001',name:'Glittering Goblin Gem',desc:'Tiny Green Cube',size:'S',weight:'8 g',dims:'1×1 in'},
+  {barcode:'BTT-00102',sku:'BTT-S-002',name:'Shimmering Sapphire Sprite',desc:'Tiny Blue Cube',size:'S',weight:'12 g',dims:'1×1 in'},
+  {barcode:'BTT-00103',sku:'BTT-S-003',name:'Rosy Rascal Ruby',desc:'Tiny Red Cube',size:'S',weight:'10 g',dims:'1×1 in'},
+  {barcode:'BTT-00201',sku:'BTT-M-001',name:'Peculiar Purple Prism',desc:'Oblong Mystery Block',size:'M',weight:'22 g',dims:'2×1 in'},
+  {barcode:'BTT-00202',sku:'BTT-M-002',name:'Tangerine Trickster Token',desc:'Orange Oblong',size:'M',weight:'18 g',dims:'2×1 in'},
+  {barcode:'BTT-00203',sku:'BTT-M-003',name:"Cobalt Captain's Cube",desc:'Rectangular Blue Brick',size:'M',weight:'25 g',dims:'2×1 in'},
+  {barcode:'BTT-00301',sku:'BTT-L-001',name:'Magnificent Magenta Monolith',desc:'Big Pink Slab',size:'L',weight:'45 g',dims:'2×2 in'},
+  {barcode:'BTT-00302',sku:'BTT-L-002',name:'Whimsical White Whopper',desc:'Giant Pale Cube',size:'L',weight:'38 g',dims:'2×2 in'},
+  {barcode:'BTT-00303',sku:'BTT-L-003',name:'Dazzling Diamond Dynamo',desc:'Heavyweight Black Block',size:'L',weight:'50 g',dims:'2×2 in'},
+];
+
+var pg=document.getElementById('product-grid');
+PRODUCTS.forEach(function(p){
+  var card=document.createElement('div');card.className='prod-label';
+  card.innerHTML='<div class="prod-label-header"><span class="prod-sku">'+p.sku+'</span><span class="prod-size size-'+p.size+'">'+p.size+'</span></div>'+
+    '<div class="prod-qr">'+qrSVG(p.barcode,115)+'</div>'+
+    '<div class="prod-name">'+p.name+'</div>'+
+    '<div style="font-size:7pt;color:#525252;font-style:italic">'+p.desc+'</div>'+
+    '<div class="prod-barcode-text">'+p.barcode+'</div>'+
+    '<div class="prod-meta"><span><strong>'+p.weight+'</strong></span><span>·</span><span>'+p.dims+'</span></div>'+
+    '<div class="prod-url">bobstinytreasures.snwbd.com</div>';
+  pg.appendChild(card);
+});
+
+var tg=document.getElementById('tote-grid');
+for(var n=1;n<=36;n++){
+  var code=String(n).padStart(4,'0');
+  var label=document.createElement('div');label.className='tote-label';
+  label.innerHTML='<div class="tote-label-text">Tiny Tote</div>'+
+    '<div class="tote-qr">'+qrSVG('TOTE:'+code,78)+'</div>'+
+    '<div class="tote-code">'+code+'</div>'+
+    '<div class="tote-brand">bobstinytreasures.snwbd.com</div>';
+  tg.appendChild(label);
+}
+</script>
+</body>
+</html>
