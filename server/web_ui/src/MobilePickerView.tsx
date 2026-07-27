@@ -40,6 +40,34 @@ import { MobilePickList } from './MobilePickList';
 import { MobileControls } from './MobileControls';
 import { useDebugSnapshot } from './useDebugSnapshot';
 
+// ── Next-item banner — shown above camera in the new scan-from-screen workflow ─
+function NextItemBanner({ orders }: { orders: Order[] }) {
+  const nextLine = useMemo(() => {
+    const active = orders.find((o) => o.status === 'picking' || o.status === 'pending');
+    return active?.lines.find((l) => l.status !== 'picked') ?? null;
+  }, [orders]);
+
+  if (!nextLine) return null;
+  return (
+    <div className="shrink-0 flex items-center gap-3 px-3 py-2 border-b border-[#2d3142] bg-[#12151f]">
+      <div className="flex flex-col min-w-0 flex-1">
+        <span className="text-[#57606a] text-[10px] font-semibold uppercase tracking-wider">
+          Scan next
+        </span>
+        <span className="text-[#e2e8f0] text-sm font-bold truncate">
+          {nextLine.product_description ?? nextLine.product_barcode}
+        </span>
+        <span className="text-[#94a3b8] text-xs font-mono">{nextLine.product_barcode}</span>
+      </div>
+      {nextLine.staging_code && (
+        <span className="shrink-0 text-xs font-mono font-bold px-2 py-1 rounded-lg bg-[#0a1e2d] text-[#06b6d4] border border-[#06b6d4]/30">
+          {nextLine.staging_code}
+        </span>
+      )}
+    </div>
+  );
+}
+
 // ── Picker ID persistence ──────────────────────────────────────────────────────
 const STORAGE_KEY = 'mobile_picker_id';
 
@@ -315,6 +343,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
         <div className="flex flex-col overflow-hidden border-r border-[#2d3142]" style={{ width: '55%' }}>
           {header}
           {joinBanner}
+          <NextItemBanner orders={orders} />
           {/* Camera fills the remaining vertical space */}
           <div className="flex-1 min-h-0 overflow-hidden">
             {cameraPanel}
@@ -335,9 +364,6 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   }
 
   // ── PORTRAIT layout (phone fallback) ───────────────────────────────────────
-  // h-[100dvh]: dynamic viewport height — shrinks with browser chrome on mobile
-  // Camera gets 55 dvh — the majority of screen since it is the primary surface
-  // Controls use compact mode on narrow phones to recover vertical space
   const isCompact = window.innerWidth < 430;
   return (
     <div
@@ -346,6 +372,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     >
       {header}
       {joinBanner}
+      <NextItemBanner orders={orders} />
       {/* Camera takes up to 55 dvh — leaves ~45 dvh for controls + pick list */}
       <div className="shrink-0 w-full overflow-hidden" style={{ maxHeight: '55dvh' }}>
         {cameraPanel}

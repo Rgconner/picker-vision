@@ -13,7 +13,7 @@
 
 import React, { useEffect, useState } from 'react';
 import type { AuthState } from './useAuth';
-import { qrSvg } from './qrSvg';
+import { dmSvg } from './dmSvg';
 
 interface DemoSession {
   session_id:          string;
@@ -217,7 +217,7 @@ export function DemoControls({ auth }: Props) {
             <div
               className="rounded-lg overflow-hidden border-2 border-[#6929c4]/40"
               style={{ padding: '6px', background: '#fff', display: 'inline-block' }}
-              dangerouslySetInnerHTML={{ __html: qrSvg(nextLine.product_barcode, 160) }}
+              dangerouslySetInnerHTML={{ __html: dmSvg(nextLine.product_barcode, 160) }}
             />
             <span className="text-[#57606a] text-xs">Point your phone here →</span>
           </div>
@@ -251,7 +251,7 @@ export function DemoControls({ auth }: Props) {
                   <div
                     className="rounded-lg overflow-hidden border-2 border-[#f1c21b]/40"
                     style={{ padding: '6px', background: '#fff', display: 'inline-block' }}
-                    dangerouslySetInnerHTML={{ __html: qrSvg(joinUrl, 120) }}
+                    dangerouslySetInnerHTML={{ __html: dmSvg(joinUrl, 120) }}
                   />
                   <span className="text-[#f1c21b] text-xs text-center">Scan to join demo<br />on your phone</span>
                 </>

@@ -14,7 +14,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { OrderTote, PackPlan, ToteLayer } from './types';
-import { qrSvg } from './qrSvg';
+import { dmSvg } from './dmSvg';
 
 // ── API helpers ────────────────────────────────────────────────────────────────
 
@@ -356,7 +356,7 @@ export function PackWizard({ orderId, orderRef, onClose, onPacked }: Props) {
               <div
                 className="rounded overflow-hidden shrink-0"
                 style={{ background: '#fff', padding: '4px', display: 'inline-block' }}
-                dangerouslySetInnerHTML={{ __html: qrSvg(`STAGING:${tote.staging_code}`, 80) }}
+                dangerouslySetInnerHTML={{ __html: dmSvg(`STAGING:${tote.staging_code}`, 80) }}
               />
               <div>
                 <p className="text-[#94a3b8] text-xs font-semibold uppercase tracking-wider mb-0.5">
