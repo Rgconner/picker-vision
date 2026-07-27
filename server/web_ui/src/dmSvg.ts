@@ -10,7 +10,7 @@
  *   element.innerHTML = dmSvg('BTT-00101', 152);  // 152px ≈ 4 cm at 96 dpi
  */
 
-// ── GF(256) tables — primitive polynomial x^8+x^5+x^3+x^2+1 = 0x12D ──────────
+// ── GF(256) tables — primitive polynomial x^8+x^5+x^3+x^2+1 = 0x12D ── v2 ────
 const GF_EXP: number[] = new Array(512);
 const GF_LOG: number[] = new Array(256);
 (function () {
