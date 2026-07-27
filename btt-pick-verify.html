@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BTT — Pick &amp; Verify</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'IBM Plex Sans','Segoe UI',sans-serif;background:#161616;color:#f4f4f4;min-height:100vh;display:flex;flex-direction:column}
+
+/* ── top bar ── */
+.topbar{background:#000;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #393939}
+.topbar-left{display:flex;flex-direction:column;gap:2px}
+.topbar-title{font-size:13px;font-weight:700;color:#f4f4f4}
+.topbar-order{font-size:11px;color:#a8b2c1}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.picker-badge{background:#393939;border-radius:20px;padding:3px 10px;font-size:11px;color:#c6c6c6}
+.btn{border:none;border-radius:2px;cursor:pointer;font-family:inherit;font-weight:600}
+.btn-ghost{background:transparent;border:1px solid #525252;color:#c6c6c6;padding:5px 12px;font-size:11px}
+.btn-ghost:hover{background:#393939}
+
+/* ── progress strip ── */
+.progress-strip{background:#262626;padding:8px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #393939}
+.progress-label{font-size:11px;color:#8d8d8d;flex-shrink:0}
+.progress-bar-bg{flex:1;height:6px;background:#393939;border-radius:3px}
+.progress-bar-fill{height:6px;background:#42be65;border-radius:3px;transition:width .3s}
+.progress-count{font-size:11px;color:#8d8d8d;flex-shrink:0}
+
+/* ── main area ── */
+.main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:20px}
+
+/* ── item card ── */
+.item-card{background:#262626;border:1px solid #393939;border-radius:6px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;max-width:420px}
+.item-header{display:flex;align-items:center;gap:10px;width:100%}
+.size-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.dot-S{background:#42be65}.dot-M{background:#4589ff}.dot-L{background:#fa4d56}
+.item-name{font-size:16px;font-weight:700;color:#f4f4f4}
+.item-sku{font-size:11px;color:#8d8d8d;font-family:'Courier New',monospace}
+.item-qty{margin-left:auto;background:#393939;border-radius:12px;padding:3px 10px;font-size:12px;font-weight:700;color:#f4f4f4}
+/* DM code display — 4cm = ~152px at 96dpi */
+.dm-display{width:152px;height:152px;background:#fff;border-radius:4px;padding:6px;flex-shrink:0}
+.dm-display svg{width:140px;height:140px;display:block;image-rendering:pixelated}
+.item-barcode{font-size:11px;font-family:'Courier New',monospace;color:#8d8d8d;letter-spacing:.5px}
+
+/* ── scan status ── */
+.scan-status{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;max-width:420px}
+.status-pill{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600}
+.pill-scanning{background:#1c3a2a;color:#42be65;border:1px solid #42be65}
+.pill-singleshot{background:#3a2a00;color:#f1c21b;border:1px solid #f1c21b}
+.pill-verified{background:#1a2a3a;color:#4589ff;border:1px solid #4589ff}
+.pill-dot{width:8px;height:8px;border-radius:50%;background:currentColor;animation:pulse 1.2s ease-in-out infinite}
+.pill-dot.still{animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── camera viewfinder ── */
+.viewfinder-wrap{position:relative;width:100%;max-width:420px;border-radius:6px;overflow:hidden;background:#000;aspect-ratio:4/3}
+video{width:100%;height:100%;object-fit:cover;display:block}
+canvas.capture-canvas{display:none}
+.vf-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none}
+.vf-corner-box{width:100px;height:100px;position:relative}
+.vf-corner-box::before,.vf-corner-box::after,
+.vf-corner-box span::before,.vf-corner-box span::after{
+  content:'';position:absolute;width:20px;height:20px;border-color:#f1c21b;border-style:solid;
+}
+.vf-corner-box::before{top:0;left:0;border-width:3px 0 0 3px}
+.vf-corner-box::after{top:0;right:0;border-width:3px 3px 0 0}
+.vf-corner-box span::before{bottom:0;left:0;border-width:0 0 3px 3px}
+.vf-corner-box span::after{bottom:0;right:0;border-width:0 3px 3px 0}
+.vf-hint{color:#f1c21b;font-size:12px;font-weight:600;text-shadow:0 1px 3px #000;text-align:center;padding:0 20px}
+.vf-overlay.hidden{display:none}
+
+/* scan button (single-shot mode) */
+.btn-scan{background:#f1c21b;color:#161616;padding:12px 32px;font-size:14px;border-radius:4px;pointer-events:all}
+.btn-scan:hover{background:#d4a017}
+
+/* ── manual fallback ── */
+.manual-fallback{width:100%;max-width:420px;background:#262626;border:1px solid #393939;border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.fallback-label{font-size:12px;color:#8d8d8d;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.fallback-row{display:flex;gap:8px;align-items:center}
+select.fallback-select{flex:1;background:#393939;color:#f4f4f4;border:1px solid #525252;border-radius:2px;padding:8px 10px;font-size:13px;font-family:inherit}
+.btn-confirm{background:#0f62fe;color:#fff;padding:8px 16px;font-size:13px;border-radius:2px}
+.btn-confirm:hover{background:#0353e9}
+.btn-confirm:disabled{background:#393939;color:#525252;cursor:not-allowed}
+
+/* ── done screen ── */
+.done-screen{display:none;flex-direction:column;align-items:center;gap:20px;text-align:center;padding:40px 20px}
+.done-icon{font-size:56px;line-height:1}
+.done-title{font-size:22px;font-weight:700;color:#42be65}
+.done-sub{font-size:13px;color:#8d8d8d;max-width:320px}
+.done-summary{background:#262626;border:1px solid #393939;border-radius:6px;padding:16px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:6px}
+.done-row{display:flex;justify-content:space-between;font-size:12px}
+.done-row .k{color:#8d8d8d}.done-row .v{color:#f4f4f4;font-weight:600;font-family:'Courier New',monospace}
+.btn-next-order{background:#42be65;color:#161616;padding:12px 32px;font-size:14px;border-radius:4px}
+.btn-next-order:hover{background:#24a148}
+
+/* ── order selector ── */
+.order-selector{display:flex;flex-direction:column;align-items:center;gap:16px;padding:40px 20px;width:100%;max-width:420px}
+.order-selector h2{font-size:18px;font-weight:700}
+.order-selector p{font-size:12px;color:#8d8d8d;text-align:center}
+.order-list{display:flex;flex-direction:column;gap:8px;width:100%}
+.order-btn{background:#262626;border:1px solid #393939;border-radius:4px;padding:14px 16px;text-align:left;color:#f4f4f4;width:100%;cursor:pointer;font-family:inherit}
+.order-btn:hover{border-color:#525252;background:#333}
+.order-btn .ob-ref{font-size:13px;font-weight:700;font-family:'Courier New',monospace}
+.order-btn .ob-detail{font-size:11px;color:#8d8d8d;margin-top:3px}
+
+/* utils */
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-title">Bob's Tiny Treasures — Pick &amp; Verify</div>
+    <div class="topbar-order" id="order-label">No order assigned</div>
+  </div>
+  <div class="topbar-right">
+    <div class="picker-badge" id="picker-name">Picker</div>
+    <button class="btn btn-ghost" id="btn-end-order" onclick="endOrder()">End Order</button>
+  </div>
+</div>
+
+<!-- Progress strip -->
+<div class="progress-strip" id="progress-strip">
+  <div class="progress-label">Progress</div>
+  <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-fill" style="width:0%"></div></div>
+  <div class="progress-count" id="prog-count">0 / 0</div>
+</div>
+
+<!-- Main content -->
+<div class="main" id="main-area">
+
+  <!-- ORDER SELECTOR -->
+  <div class="order-selector" id="order-selector">
+    <h2>Assign Order</h2>
+    <p>Select the next order from the queue</p>
+    <div class="order-list" id="order-list"></div>
+  </div>
+
+  <!-- PICK FLOW (hidden until order assigned) -->
+  <div id="pick-flow" class="hidden" style="display:none;flex-direction:column;align-items:center;gap:16px;width:100%">
+
+    <!-- Item card -->
+    <div class="item-card" id="item-card">
+      <div class="item-header">
+        <div class="size-dot" id="item-dot"></div>
+        <div>
+          <div class="item-name" id="item-name"></div>
+          <div class="item-sku" id="item-sku"></div>
+        </div>
+        <div class="item-qty" id="item-qty"></div>
+      </div>
+      <div class="dm-display" id="dm-display"></div>
+      <div class="item-barcode" id="item-barcode"></div>
+    </div>
+
+    <!-- Scan status pill -->
+    <div class="scan-status">
+      <div class="status-pill pill-scanning" id="status-pill">
+        <div class="pill-dot" id="pill-dot"></div>
+        <span id="status-text">Scanning…</span>
+      </div>
+    </div>
+
+    <!-- Camera viewfinder -->
+    <div class="viewfinder-wrap" id="vf-wrap">
+      <video id="vf-video" autoplay playsinline muted></video>
+      <canvas id="vf-canvas"></canvas>
+      <!-- Single-shot overlay (hidden in continuous mode) -->
+      <div class="vf-overlay hidden" id="vf-overlay">
+        <div class="vf-corner-box"><span></span></div>
+        <div class="vf-hint">Center code in frame</div>
+        <button class="btn btn-scan" id="btn-scan" onclick="doSingleShot()">Tap to Scan</button>
+      </div>
+    </div>
+
+    <!-- Manual fallback -->
+    <div class="manual-fallback" id="manual-fallback">
+      <div class="fallback-label">Can't scan? Select manually</div>
+      <div class="fallback-row">
+        <select class="fallback-select" id="fallback-select"></select>
+        <button class="btn btn-confirm" id="btn-confirm" onclick="confirmManual()" disabled>Confirm</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DONE SCREEN -->
+  <div class="done-screen" id="done-screen">
+    <div class="done-icon">✓</div>
+    <div class="done-title">Order Complete</div>
+    <div class="done-sub" id="done-sub"></div>
+    <div class="done-summary" id="done-summary"></div>
+    <button class="btn btn-next-order" onclick="nextOrder()">Next Order</button>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+"use strict";
+/* ================================================================
+   Data Matrix ECC200 encoder — same engine as btt-print-labels
+   ================================================================ */
+var GF_EXP=new Array(512),GF_LOG=new Array(256);
+(function(){var x=1;for(var i=0;i<255;i++){GF_EXP[i]=x;GF_LOG[x]=i;x<<=1;if(x&256)x^=0x12D;}for(var i=255;i<512;i++)GF_EXP[i]=GF_EXP[i-255];})();
+function gmul(a,b){return(a&&b)?GF_EXP[GF_LOG[a]+GF_LOG[b]]:0;}
+function rsGenPoly(n){var g=[1];for(var i=0;i<n;i++){var t=[1,GF_EXP[i]],r=new Array(g.length+1).fill(0);for(var j=0;j<g.length;j++)for(var k=0;k<t.length;k++)r[j+k]^=gmul(g[j],t[k]);g=r;}return g;}
+function rsEncode(data,ec){var g=rsGenPoly(ec),msg=data.slice();for(var i=0;i<ec;i++)msg.push(0);for(var i=0;i<data.length;i++){var c=msg[i];if(c)for(var j=0;j<g.length;j++)msg[i+j]^=gmul(g[j],c);}return msg.slice(data.length);}
+var PARAMS=[[10,10,3,5],[12,12,5,7],[14,14,8,10],[16,16,12,12],[18,18,18,14],[20,20,22,18],[22,22,30,20],[24,24,36,24]];
+function dmEncode(t){var cw=[],i=0;while(i<t.length){var c=t.charCodeAt(i);if(c>=48&&c<=57&&i+1<t.length){var c2=t.charCodeAt(i+1);if(c2>=48&&c2<=57){cw.push((c-48)*10+(c2-48)+130);i+=2;continue;}}cw.push(c+1);i++;}return cw;}
+function pickParams(cw){for(var i=0;i<PARAMS.length;i++)if(cw.length<=PARAMS[i][2])return PARAMS[i];return PARAMS[PARAMS.length-1];}
+function padData(cw,cap){var o=cw.slice();if(o.length<cap)o.push(129);while(o.length<cap){o.push((((149*(o.length+1))%253)+130)%254);}return o;}
+function buildMatrix(rows,cols,data){
+  var mat=[];for(var r=0;r<rows;r++)mat.push(new Array(cols).fill(-1));
+  for(var i=0;i<rows;i++){mat[i][0]=1;mat[i][cols-1]=(i%2===0)?1:0;}
+  for(var j=0;j<cols;j++){mat[rows-1][j]=1;mat[0][j]=(j%2===0)?1:0;}
+  var used=[];for(var r=0;r<rows;r++)used.push(new Array(cols).fill(false));
+  for(var i=0;i<rows;i++){used[i][0]=true;used[i][cols-1]=true;}
+  for(var j=0;j<cols;j++){used[0][j]=true;used[rows-1][j]=true;}
+  function sm(r,c,b){if(r<0)r+=rows;if(c<0)c+=cols;if(r<0||r>=rows||c<0||c>=cols||used[r][c])return;used[r][c]=true;mat[r][c]=b;}
+  function utah(r,c,b){sm(r-2,c-2,(b>>7)&1);sm(r-2,c-1,(b>>6)&1);sm(r-1,c-2,(b>>5)&1);sm(r-1,c-1,(b>>4)&1);sm(r-1,c,(b>>3)&1);sm(r,c-2,(b>>2)&1);sm(r,c-1,(b>>1)&1);sm(r,c,(b>>0)&1);}
+  function c1(b){sm(rows-1,0,(b>>7)&1);sm(rows-1,1,(b>>6)&1);sm(rows-1,2,(b>>5)&1);sm(0,cols-2,(b>>4)&1);sm(0,cols-1,(b>>3)&1);sm(1,cols-1,(b>>2)&1);sm(2,cols-1,(b>>1)&1);sm(3,cols-1,(b>>0)&1);}
+  function c2(b){sm(rows-3,0,(b>>7)&1);sm(rows-2,0,(b>>6)&1);sm(rows-1,0,(b>>5)&1);sm(0,cols-4,(b>>4)&1);sm(0,cols-3,(b>>3)&1);sm(0,cols-2,(b>>2)&1);sm(0,cols-1,(b>>1)&1);sm(1,cols-1,(b>>0)&1);}
+  function c3(b){sm(rows-3,0,(b>>7)&1);sm(rows-2,0,(b>>6)&1);sm(rows-1,0,(b>>5)&1);sm(0,cols-2,(b>>4)&1);sm(0,cols-1,(b>>3)&1);sm(1,cols-1,(b>>2)&1);sm(2,cols-1,(b>>1)&1);sm(3,cols-1,(b>>0)&1);}
+  function c4(b){sm(rows-1,0,(b>>7)&1);sm(rows-1,cols-1,(b>>6)&1);sm(0,cols-3,(b>>5)&1);sm(0,cols-2,(b>>4)&1);sm(0,cols-1,(b>>3)&1);sm(1,cols-3,(b>>2)&1);sm(1,cols-2,(b>>1)&1);sm(1,cols-1,(b>>0)&1);}
+  var ci=0;function nb(){return ci<data.length?data[ci++]:0;}
+  var r=4,c=0;
+  do{
+    if(r===rows&&c===0)c1(nb());
+    if(r===rows-2&&c===0&&cols%4!==0)c2(nb());
+    if(r===rows-2&&c===0&&cols%8===4)c3(nb());
+    if(r===rows+4&&c===2&&cols%8===0)c4(nb());
+    do{if(r<rows&&c>=0&&!used[r][c])utah(r,c,nb());r-=2;c+=2;}while(r>=0&&c<cols);
+    r+=1;c+=3;
+    do{if(r>=0&&c<cols&&!used[r][c])utah(r,c,nb());r+=2;c-=2;}while(r<rows&&c>=0);
+    r+=3;c+=1;
+  }while(r<rows||c<cols);
+  for(var ri=1;ri<rows-1;ri++)for(var ci2=1;ci2<cols-1;ci2++)if(mat[ri][ci2]===-1)mat[ri][ci2]=0;
+  return mat;
+}
+function dmSVG(text,px){
+  var cw=dmEncode(text),par=pickParams(cw),rows=par[0],cols=par[1],dcap=par[2],ec=par[3];
+  var pad=padData(cw,dcap),mat=buildMatrix(rows,cols,pad.concat(rsEncode(pad,ec)));
+  var cell=px/rows,p=['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ',px,' ',px,'" width="',px,'" height="',px,'"><rect width="',px,'" height="',px,'" fill="#fff"/>'];
+  for(var r=0;r<rows;r++)for(var c=0;c<cols;c++)if(mat[r][c]===1)p.push('<rect x="',(c*cell).toFixed(2),'" y="',(r*cell).toFixed(2),'" width="',cell.toFixed(2),'" height="',cell.toFixed(2),'" fill="#000"/>');
+  p.push('</svg>');return p.join('');
+}
+
+/* ================================================================
+   Order data
+   ================================================================ */
+var PRODUCTS={
+  'BTT-00101':{name:'Goblin Gem',       sku:'BTT-S-001',sz:'S'},
+  'BTT-00102':{name:'Sapphire Sprite',  sku:'BTT-S-002',sz:'S'},
+  'BTT-00103':{name:'Rascal Ruby',      sku:'BTT-S-003',sz:'S'},
+  'BTT-00201':{name:'Purple Prism',     sku:'BTT-M-001',sz:'M'},
+  'BTT-00202':{name:'Trickster Token',  sku:'BTT-M-002',sz:'M'},
+  'BTT-00203':{name:"Captain's Cube",   sku:'BTT-M-003',sz:'M'},
+  'BTT-00301':{name:'Magenta Monolith', sku:'BTT-L-001',sz:'L'},
+  'BTT-00302':{name:'White Whopper',    sku:'BTT-L-002',sz:'L'},
+  'BTT-00303':{name:'Diamond Dynamo',   sku:'BTT-L-003',sz:'L'},
+};
+
+/* Each order line: {barcode, qty} */
+var ORDER_TEMPLATES=[
+  {ref:'BTT-2024-001',customer:'The Fairy Tale Shop',   zone:'TINY',
+   lines:[{b:'BTT-00101',qty:3},{b:'BTT-00201',qty:1}]},
+  {ref:'BTT-2024-002',customer:'Wonderland Wholesale',  zone:'WOND',
+   lines:[{b:'BTT-00202',qty:2},{b:'BTT-00102',qty:1}]},
+  {ref:'BTT-2024-003',customer:'Charm & Co.',           zone:'CHRM',
+   lines:[{b:'BTT-00301',qty:1},{b:'BTT-00103',qty:1}]},
+];
+
+/* Expand lines into individual pick items (one per unit) */
+function expandOrder(tpl){
+  var items=[];
+  tpl.lines.forEach(function(l){
+    for(var i=0;i<l.qty;i++) items.push({barcode:l.b, picked:false, method:null});
+  });
+  return {ref:tpl.ref, customer:tpl.customer, zone:tpl.zone, items:items};
+}
+
+/* ================================================================
+   State
+   ================================================================ */
+var orderQueue=ORDER_TEMPLATES.map(function(t){return{tpl:t,done:false};});
+var currentOrder=null;   /* expanded order */
+var currentIdx=0;        /* index into currentOrder.items */
+var scanMode='continuous'; /* 'continuous' | 'singleshot' */
+var failCount=0;
+var failTimer=null;
+var scanInterval=null;
+var stream=null;
+
+/* ================================================================
+   UI helpers
+   ================================================================ */
+var $ = function(id){return document.getElementById(id);};
+
+function showOrderSelector(){
+  $('order-selector').style.display='flex';
+  $('pick-flow').style.display='none';
+  $('done-screen').style.display='none';
+  $('btn-end-order').classList.add('hidden');
+  $('order-label').textContent='No order assigned';
+  renderOrderList();
+}
+
+function renderOrderList(){
+  var el=$('order-list'); el.innerHTML='';
+  var pending=orderQueue.filter(function(o){return!o.done;});
+  if(pending.length===0){
+    el.innerHTML='<div style="text-align:center;color:#8d8d8d;font-size:13px;padding:20px">No orders in queue.</div>';
+    return;
+  }
+  pending.forEach(function(o){
+    var btn=document.createElement('button');
+    btn.className='order-btn';
+    var total=o.tpl.lines.reduce(function(s,l){return s+l.qty;},0);
+    btn.innerHTML=
+      '<div class="ob-ref">'+o.tpl.ref+'</div>'+
+      '<div class="ob-detail">'+o.tpl.customer+' &nbsp;·&nbsp; '+total+' items &nbsp;·&nbsp; Zone: '+o.tpl.zone+'</div>';
+    btn.onclick=function(){assignOrder(o.tpl);};
+    el.appendChild(btn);
+  });
+}
+
+function assignOrder(tpl){
+  currentOrder=expandOrder(tpl);
+  currentIdx=0;
+  $('order-label').textContent=tpl.ref+' — '+tpl.customer;
+  $('picker-name').textContent='Picker';
+  $('btn-end-order').classList.remove('hidden');
+  $('order-selector').style.display='none';
+  $('pick-flow').style.display='flex';
+  showItem(currentIdx);
+  startCamera();
+}
+
+function showItem(idx){
+  var item=currentOrder.items[idx];
+  var prod=PRODUCTS[item.barcode];
+  $('item-dot').className='size-dot dot-'+prod.sz;
+  $('item-name').textContent=prod.name;
+  $('item-sku').textContent=prod.sku+' · '+item.barcode;
+  $('item-barcode').textContent=item.barcode;
+  var total=currentOrder.items.length;
+  var done=currentOrder.items.filter(function(i){return i.picked;}).length;
+  $('item-qty').textContent='Item '+(idx+1)+' of '+total;
+  updateProgress(done, total);
+  /* DM code at 4cm = 152px SVG, constrained by CSS to 140px inner */
+  $('dm-display').innerHTML=dmSVG(item.barcode,152);
+  /* Fallback dropdown */
+  rebuildFallback();
+  /* Reset scan mode */
+  setScanMode('continuous');
+  failCount=0;
+  clearTimeout(failTimer);
+  failTimer=null;
+}
+
+function updateProgress(done,total){
+  var pct=total>0?Math.round(done/total*100):0;
+  $('prog-fill').style.width=pct+'%';
+  $('prog-count').textContent=done+' / '+total;
+}
+
+function rebuildFallback(){
+  var sel=$('fallback-select');
+  sel.innerHTML='<option value="">— select item —</option>';
+  currentOrder.items.forEach(function(item,i){
+    if(item.picked) return;
+    var prod=PRODUCTS[item.barcode];
+    var opt=document.createElement('option');
+    opt.value=i;
+    opt.textContent='['+item.barcode+'] '+prod.name;
+    sel.appendChild(opt);
+  });
+  $('btn-confirm').disabled=true;
+  sel.onchange=function(){$('btn-confirm').disabled=!sel.value;};
+}
+
+function setScanMode(mode){
+  scanMode=mode;
+  if(mode==='continuous'){
+    $('status-pill').className='status-pill pill-scanning';
+    $('pill-dot').className='pill-dot';
+    $('status-text').textContent='Scanning…';
+    $('vf-overlay').classList.add('hidden');
+    startContinuous();
+  } else {
+    clearInterval(scanInterval); scanInterval=null;
+    $('status-pill').className='status-pill pill-singleshot';
+    $('pill-dot').className='pill-dot still';
+    $('status-text').textContent='Tap to scan manually';
+    $('vf-overlay').classList.remove('hidden');
+  }
+}
+
+/* ================================================================
+   Camera
+   ================================================================ */
+function startCamera(){
+  if(stream) return; /* already running */
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false})
+    .then(function(s){
+      stream=s;
+      var v=$('vf-video');
+      v.srcObject=s;
+      v.play();
+      setScanMode('continuous');
+    })
+    .catch(function(e){
+      console.warn('Camera unavailable:',e);
+      setScanMode('singleshot');
+      $('vf-wrap').style.display='none';
+    });
+}
+
+function stopCamera(){
+  clearInterval(scanInterval); scanInterval=null;
+  if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null;}
+}
+
+/* ── Continuous: grab 1 frame/sec, attempt decode ── */
+function startContinuous(){
+  clearInterval(scanInterval);
+  scanInterval=setInterval(function(){
+    if(scanMode!=='continuous') return;
+    var frame=captureFrame();
+    if(!frame) return;
+    attemptDecode(frame, function(result){
+      if(result){
+        onGoodScan(result,'scan');
+      } else {
+        failCount++;
+        if(failCount>=3) setScanMode('singleshot');
+      }
+    });
+  },1000);
+}
+
+/* ── Capture a video frame to ImageData ── */
+function captureFrame(){
+  var v=$('vf-video');
+  if(!v.videoWidth) return null;
+  var canvas=$('vf-canvas');
+  canvas.width=v.videoWidth; canvas.height=v.videoHeight;
+  var ctx=canvas.getContext('2d');
+  ctx.drawImage(v,0,0);
+  return ctx.getImageData(0,0,canvas.width,canvas.height);
+}
+
+/* ── Single-shot ── */
+function doSingleShot(){
+  var frame=captureFrame();
+  if(!frame){onBadScan();return;}
+  attemptDecode(frame,function(result){
+    if(result) onGoodScan(result,'scan');
+    else       onBadScan();
+  });
+}
+
+/* ================================================================
+   Decode — uses BarcodeDetector API if available, else heuristic
+   ================================================================ */
+function attemptDecode(imageData, cb){
+  /* BarcodeDetector (Chrome/Android) */
+  if(window.BarcodeDetector){
+    var blob=imageDataToBlob(imageData,function(blob){
+      var img=new Image();
+      img.onload=function(){
+        var det=new window.BarcodeDetector({formats:['data_matrix','qr_code']});
+        det.detect(img).then(function(results){
+          URL.revokeObjectURL(img.src);
+          if(results&&results.length>0) cb(results[0].rawValue);
+          else cb(null);
+        }).catch(function(){cb(null);});
+      };
+      img.src=URL.createObjectURL(blob);
+    });
+    return;
+  }
+  /* Fallback: no decode possible without library — treat as failure */
+  cb(null);
+}
+
+function imageDataToBlob(imageData, cb){
+  var canvas=document.createElement('canvas');
+  canvas.width=imageData.width; canvas.height=imageData.height;
+  canvas.getContext('2d').putImageData(imageData,0,0);
+  canvas.toBlob(cb,'image/png');
+}
+
+/* ================================================================
+   Scan outcomes
+   ================================================================ */
+function onGoodScan(value, method){
+  var expected=currentOrder.items[currentIdx].barcode;
+  if(value!==expected){
+    /* Wrong item scanned — flash warning but don't advance */
+    flashStatus('Wrong item: '+value,'#fa4d56');
+    return;
+  }
+  clearInterval(scanInterval); scanInterval=null;
+  clearTimeout(failTimer);
+  currentOrder.items[currentIdx].picked=true;
+  currentOrder.items[currentIdx].method=method;
+  failCount=0;
+  /* Brief visual confirmation */
+  $('status-pill').className='status-pill pill-verified';
+  $('pill-dot').className='pill-dot still';
+  $('status-text').textContent='✓ Scanned';
+  setTimeout(function(){ advance(); }, 600);
+}
+
+function onBadScan(){
+  flashStatus('No code found — try again','#f1c21b');
+}
+
+function flashStatus(msg, color){
+  var pill=$('status-pill');
+  var prev=pill.className;
+  var prevTxt=$('status-text').textContent;
+  pill.style.borderColor=color;
+  $('status-text').textContent=msg;
+  setTimeout(function(){
+    pill.style.borderColor='';
+    $('status-text').textContent=prevTxt;
+  },1500);
+}
+
+function advance(){
+  currentIdx++;
+  if(currentIdx>=currentOrder.items.length){
+    showDone();
+  } else {
+    showItem(currentIdx);
+  }
+}
+
+/* ── Manual confirm ── */
+function confirmManual(){
+  var sel=$('fallback-select');
+  var idx=parseInt(sel.value,10);
+  if(isNaN(idx)) return;
+  currentOrder.items[idx].picked=true;
+  currentOrder.items[idx].method='manual';
+  /* If the manually confirmed item is the current one, advance normally */
+  if(idx===currentIdx){
+    clearInterval(scanInterval); scanInterval=null;
+    $('status-pill').className='status-pill pill-verified';
+    $('pill-dot').className='pill-dot still';
+    $('status-text').textContent='✓ Verified manually';
+    setTimeout(function(){ advance(); },600);
+  } else {
+    /* Item confirmed out of sequence — just refresh fallback */
+    rebuildFallback();
+    /* Advance past any items already picked */
+    while(currentIdx<currentOrder.items.length && currentOrder.items[currentIdx].picked) currentIdx++;
+    if(currentIdx>=currentOrder.items.length){ showDone(); return; }
+    showItem(currentIdx);
+  }
+}
+
+/* ================================================================
+   Done screen
+   ================================================================ */
+function showDone(){
+  stopCamera();
+  var scanned=currentOrder.items.filter(function(i){return i.method==='scan';}).length;
+  var manual=currentOrder.items.filter(function(i){return i.method==='manual';}).length;
+  var total=currentOrder.items.length;
+  $('pick-flow').style.display='none';
+  $('done-screen').style.display='flex';
+  $('done-sub').textContent=currentOrder.ref+' · '+currentOrder.customer;
+  $('done-summary').innerHTML=
+    row('Total items',total)+
+    row('Scanned',scanned)+
+    row('Manually verified',manual)+
+    row('Zone',currentOrder.zone);
+  updateProgress(total,total);
+  /* Mark order done in queue */
+  orderQueue.forEach(function(o){if(o.tpl.ref===currentOrder.ref)o.done=true;});
+}
+
+function row(k,v){
+  return '<div class="done-row"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>';
+}
+
+function nextOrder(){
+  currentOrder=null; currentIdx=0;
+  $('done-screen').style.display='none';
+  showOrderSelector();
+}
+
+function endOrder(){
+  stopCamera();
+  currentOrder=null; currentIdx=0;
+  showOrderSelector();
+}
+
+/* ================================================================
+   Boot
+   ================================================================ */
+showOrderSelector();
+</script>
+</body>
+</html>

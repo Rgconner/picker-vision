@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Data Matrix — Scan Test</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',sans-serif;background:#e8e8e8;padding:20px;color:#161616}
+  h1{font-size:15px;font-weight:700;margin-bottom:4px}
+  p.sub{font-size:11px;color:#555;margin-bottom:20px}
+  .row{display:flex;flex-wrap:wrap;gap:20px;margin-bottom:32px}
+  .card{background:#fff;border:1px solid #ccc;border-radius:4px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:6px}
+  .card svg{display:block;image-rendering:pixelated}
+  .label{font-size:10px;font-family:'Courier New',monospace;color:#333;text-align:center}
+  .dim{font-size:9px;color:#888;text-align:center}
+  h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#555;margin-bottom:8px}
+</style>
+</head>
+<body>
+<h1>Data Matrix ECC200 — Scan Test</h1>
+<p class="sub">Print this page at 100% scale, then scan each symbol with your phone camera app. Sizes shown are rendered CSS size.</p>
+
+<h2>Product codes — 1 × 1 cm</h2>
+<div class="row" id="prod"></div>
+
+<h2>Product codes — 1.5 × 1.5 cm</h2>
+<div class="row" id="prod15"></div>
+
+<h2>Tote codes — 2 × 2 cm</h2>
+<div class="row" id="tote"></div>
+
+<script>
+"use strict";
+/* ================================================================
+   Data Matrix ECC200 encoder — ISO/IEC 16022
+   Supports: 10×10, 12×12, 14×14, 16×16, 18×18, 20×20 symbol sizes
+   Encoding: ASCII mode only (covers all BTT payload strings)
+   ================================================================ */
+
+/* GF(256) with DM primitive polynomial x^8+x^5+x^3+x^2+1 = 0x12D */
+var GF_EXP = new Array(512);
+var GF_LOG  = new Array(256);
+(function(){
+  var x=1;
+  for(var i=0;i<255;i++){
+    GF_EXP[i]=x; GF_LOG[x]=i;
+    x<<=1; if(x&256) x^=0x12D;
+  }
+  for(var i=255;i<512;i++) GF_EXP[i]=GF_EXP[i-255];
+})();
+function gmul(a,b){ return(a&&b)?GF_EXP[GF_LOG[a]+GF_LOG[b]]:0; }
+
+/* RS generator polynomial coefficients for given # EC codewords */
+function rsGenPoly(n){
+  var g=[1];
+  for(var i=0;i<n;i++){
+    var t=[1, GF_EXP[i]];
+    var r=new Array(g.length+1).fill(0);
+    for(var j=0;j<g.length;j++)
+      for(var k=0;k<t.length;k++)
+        r[j+k]^=gmul(g[j],t[k]);
+    g=r;
+  }
+  return g;
+}
+
+function rsEncode(data, ecCount){
+  var g=rsGenPoly(ecCount);
+  var msg=data.slice();
+  for(var i=0;i<ecCount;i++) msg.push(0);
+  for(var i=0;i<data.length;i++){
+    var c=msg[i];
+    if(c) for(var j=0;j<g.length;j++) msg[i+j]^=gmul(g[j],c);
+  }
+  return msg.slice(data.length);
+}
+
+/* Symbol parameters: [rows, cols, datawords, ecwords] */
+var PARAMS = [
+  [10,10, 3, 5],
+  [12,12, 5, 7],
+  [14,14, 8,10],
+  [16,16,12,12],
+  [18,18,18,14],
+  [20,20,22,18],
+  [22,22,30,20],
+  [24,24,36,24],
+];
+
+/* ASCII encode: returns array of codeword bytes */
+function dmEncode(text){
+  var cw=[];
+  var i=0;
+  while(i<text.length){
+    var c=text.charCodeAt(i);
+    if(c>=48&&c<=57 && i+1<text.length){
+      var c2=text.charCodeAt(i+1);
+      if(c2>=48&&c2<=57){
+        /* double-digit */
+        cw.push((c-48)*10+(c2-48)+130);
+        i+=2; continue;
+      }
+    }
+    /* ASCII value +1 */
+    cw.push(c+1);
+    i++;
+  }
+  return cw;
+}
+
+/* Pick smallest symbol that fits */
+function pickParams(cw){
+  for(var i=0;i<PARAMS.length;i++){
+    if(cw.length <= PARAMS[i][2]) return PARAMS[i];
+  }
+  return PARAMS[PARAMS.length-1];
+}
+
+/* Pad data codewords to capacity */
+function padData(cw, capacity){
+  var out=cw.slice();
+  if(out.length<capacity) out.push(129); /* end-of-message */
+  var r=0;
+  while(out.length<capacity){
+    r=(((149*(out.length+1))%253)+130)%254;
+    out.push(r);
+  }
+  return out;
+}
+
+/* ── Data placement ──────────────────────────────────────────── */
+/* Utah shape placement — places 8 bits of one codeword */
+function place(mat,r,c,nr,nc,v){
+  /* wrap negative coords */
+  if(r<0){r+=nr;c+=nc;}
+  if(c<0){r+=nr;c+=nc;}  /* actually c+=nc for row wrap */
+  /* re-check after wrap */
+  if(r<0){r+=nr;}
+  if(c<0){c+=nc;}
+  mat[r][c]=((v>>7)&1)+2;
+  if(c+1<nc) mat[r][c+1]=((v>>6)&1)+2;
+  else        mat[r-2<0?r-2+nr:r-2][nc-1]=((v>>6)&1)+2; /* right edge */
+  /* — The full Utah placement is complex; use the standard 8-cell shapes — */
+}
+
+/* Standard DM ECC200 module placement per ISO 16022 Annex M */
+function buildMatrix(rows,cols,data){
+  /* -1=unused, 0=light, 1=dark, 2/3=data light/dark */
+  var mat=[];
+  for(var r=0;r<rows;r++){mat.push(new Array(cols).fill(-1));}
+
+  /* Finder — bottom L-shape and alternating top/right borders */
+  for(var i=0;i<rows;i++){
+    mat[i][0]      = 1;               /* left solid column */
+    mat[i][cols-1] = (i%2===0)?1:0;  /* right alternating */
+  }
+  for(var j=0;j<cols;j++){
+    mat[rows-1][j] = 1;               /* bottom solid row */
+    mat[0][j]      = (j%2===0)?1:0;  /* top alternating */
+  }
+
+  /* Mark finder as reserved (use value 0/1, already set) */
+  /* Data region: rows 1..rows-2, cols 1..cols-2 */
+  var nr=rows-2, nc=cols-2; /* interior size */
+
+  /* Place data bits using the standard ECC200 "utah" walk */
+  /* We'll use the reference algorithm: column pairs right-to-left */
+  var used=[];
+  for(var r=0;r<rows;r++) used.push(new Array(cols).fill(false));
+  /* mark border as used */
+  for(var i=0;i<rows;i++){used[i][0]=true;used[i][cols-1]=true;}
+  for(var j=0;j<cols;j++){used[0][j]=true;used[rows-1][j]=true;}
+
+  /* ECC200 placement algorithm — place() shapes */
+  var idx=0; /* codeword index */
+  var bits=[];
+  for(var i=0;i<data.length;i++)
+    for(var b=7;b>=0;b--) bits.push((data[i]>>b)&1);
+
+  function setModule(r,c,bit){
+    if(r<0) r+=rows; if(c<0) c+=cols;
+    if(r>=rows||c>=cols||r<0||c<0) return;
+    if(used[r][c]) return;
+    used[r][c]=true;
+    mat[r][c]=bit;
+  }
+
+  /* The 8 standard Utah patterns (offsets from anchor) */
+  /* anchor = bottom-right of the 4×2 utah region */
+  function utah(r,c,byte_){
+    var b=byte_;
+    setModule(r-2,c-2,(b>>7)&1);
+    setModule(r-2,c-1,(b>>6)&1);
+    setModule(r-1,c-2,(b>>5)&1);
+    setModule(r-1,c-1,(b>>4)&1);
+    setModule(r-1,c,  (b>>3)&1);
+    setModule(r,  c-2,(b>>2)&1);
+    setModule(r,  c-1,(b>>1)&1);
+    setModule(r,  c,  (b>>0)&1);
+  }
+
+  /* Corner patterns for when utah would fall outside */
+  function corner1(r,c,byte_){
+    var b=byte_;
+    setModule(rows-1,0,(b>>7)&1);
+    setModule(rows-1,1,(b>>6)&1);
+    setModule(rows-1,2,(b>>5)&1);
+    setModule(0,cols-2,(b>>4)&1);
+    setModule(0,cols-1,(b>>3)&1);
+    setModule(1,cols-1,(b>>2)&1);
+    setModule(2,cols-1,(b>>1)&1);
+    setModule(3,cols-1,(b>>0)&1);
+  }
+  function corner2(r,c,byte_){
+    var b=byte_;
+    setModule(rows-3,0,(b>>7)&1);
+    setModule(rows-2,0,(b>>6)&1);
+    setModule(rows-1,0,(b>>5)&1);
+    setModule(0,cols-4,(b>>4)&1);
+    setModule(0,cols-3,(b>>3)&1);
+    setModule(0,cols-2,(b>>2)&1);
+    setModule(0,cols-1,(b>>1)&1);
+    setModule(1,cols-1,(b>>0)&1);
+  }
+  function corner3(r,c,byte_){
+    var b=byte_;
+    setModule(rows-3,0,(b>>7)&1);
+    setModule(rows-2,0,(b>>6)&1);
+    setModule(rows-1,0,(b>>5)&1);
+    setModule(0,cols-2,(b>>4)&1);
+    setModule(0,cols-1,(b>>3)&1);
+    setModule(1,cols-1,(b>>2)&1);
+    setModule(2,cols-1,(b>>1)&1);
+    setModule(3,cols-1,(b>>0)&1);
+  }
+  function corner4(r,c,byte_){
+    var b=byte_;
+    setModule(rows-1,0,(b>>7)&1);
+    setModule(rows-1,cols-1,(b>>6)&1);
+    setModule(0,cols-3,(b>>5)&1);
+    setModule(0,cols-2,(b>>4)&1);
+    setModule(0,cols-1,(b>>3)&1);
+    setModule(1,cols-3,(b>>2)&1);
+    setModule(1,cols-2,(b>>1)&1);
+    setModule(1,cols-1,(b>>0)&1);
+  }
+
+  var cwIdx=0;
+  function nextByte(){ return cwIdx<data.length?data[cwIdx++]:0; }
+
+  var r=4, c=0;
+  do {
+    if(r===rows&&c===0){ corner1(r,c,nextByte()); }
+    if(r===rows-2&&c===0&&cols%4!==0){ corner2(r,c,nextByte()); }
+    if(r===rows-2&&c===0&&cols%8===4){ corner3(r,c,nextByte()); }
+    if(r===rows+4&&c===2&&cols%8===0){ corner4(r,c,nextByte()); }
+    do {
+      if(r<rows&&c>=0&&!used[r][c]) utah(r,c,nextByte());
+      r-=2; c+=2;
+    } while(r>=0&&c<cols);
+    r+=1; c+=3;
+    do {
+      if(r>=0&&c<cols&&!used[r][c]) utah(r,c,nextByte());
+      r+=2; c-=2;
+    } while(r<rows&&c>=0);
+    r+=3; c+=1;
+  } while(r<rows||c<cols);
+
+  /* Fill unused interior cells (shouldn't happen with correct sizing) */
+  for(var ri=1;ri<rows-1;ri++)
+    for(var ci=1;ci<cols-1;ci++)
+      if(mat[ri][ci]===-1) mat[ri][ci]=0;
+
+  return mat;
+}
+
+/* ── Public: encode text → SVG ── */
+function dmSVG(text, cssSize){
+  var cw   = dmEncode(text);
+  var par  = pickParams(cw);
+  var rows = par[0], cols = par[1], dcap = par[2], eccap = par[3];
+  var padded = padData(cw, dcap);
+  var ec   = rsEncode(padded, eccap);
+  var full = padded.concat(ec);
+  var mat  = buildMatrix(rows, cols, full);
+
+  var n    = rows; /* square symbols only in our table */
+  var cell = cssSize / n;
+  var parts = [
+    '<svg xmlns="http://www.w3.org/2000/svg"',
+    ' viewBox="0 0 ',cssSize,' ',cssSize,'"',
+    ' width="',cssSize,'" height="',cssSize,'"',
+    ' style="image-rendering:pixelated">',
+    '<rect width="',cssSize,'" height="',cssSize,'" fill="#fff"/>',
+  ];
+  for(var r=0;r<rows;r++){
+    for(var c=0;c<cols;c++){
+      if(mat[r][c]===1){
+        parts.push(
+          '<rect x="',(c*cell).toFixed(2),'" y="',(r*cell).toFixed(2),
+          '" width="',cell.toFixed(2),'" height="',cell.toFixed(2),'" fill="#000"/>'
+        );
+      }
+    }
+  }
+  parts.push('</svg>');
+  return {svg:parts.join(''), rows:rows, cols:cols};
+}
+
+/* ── Build test cards ── */
+var PROD_CODES = ['BTT-00101','BTT-00102','BTT-00201','BTT-00301'];
+var TOTE_CODES = ['TOTE:0001','TOTE:0036','TOTE:0072'];
+
+function makeCard(text, cssSize, dimLabel){
+  var res = dmSVG(text, cssSize);
+  var card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML =
+    res.svg +
+    '<div class="label">'+text+'</div>'+
+    '<div class="dim">'+dimLabel+' · '+res.rows+'×'+res.cols+' matrix</div>';
+  return card;
+}
+
+var prodEl   = document.getElementById('prod');
+var prod15El = document.getElementById('prod15');
+var toteEl   = document.getElementById('tote');
+
+/* 1×1 cm ≈ 38px at 96dpi */
+PROD_CODES.forEach(function(c){ prodEl.appendChild(makeCard(c, 38, '1×1 cm')); });
+/* 1.5×1.5 cm ≈ 57px */
+PROD_CODES.forEach(function(c){ prod15El.appendChild(makeCard(c, 57, '1.5×1.5 cm')); });
+/* 2×2 cm ≈ 76px */
+TOTE_CODES.forEach(function(c){ toteEl.appendChild(makeCard(c, 76, '2×2 cm')); });
+
+</script>
+</body>
+</html>

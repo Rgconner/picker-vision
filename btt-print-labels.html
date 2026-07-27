@@ -20,38 +20,44 @@
   .sheet-hdr{font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#aaa;text-align:center;margin-bottom:8pt;padding-bottom:5pt;border-bottom:0.5pt solid #e0e0e0}
 
   /* ── PRODUCT LABELS
-       QR = 1×1 cm = ~28.35pt
-       Label cell = QR + text below, dashed cut border
-       Grid: auto-fill columns of 2.2cm ─────────────────── */
+       Data Matrix symbol sizes:
+         S (1×1 in product) → 1×1 cm symbol
+         M (2×1 in product) → 1.5×1.5 cm symbol  (≥1.5 cm on every side)
+         L (2×2 in product) → 1.5×1.5 cm symbol
+       Cell contains: size dot · DM symbol · barcode text · short name ── */
   .prod-grid{display:flex;flex-wrap:wrap;gap:6pt}
+
   .prod-cell{
     display:inline-flex;flex-direction:column;align-items:center;
     border:1pt dashed #999;border-radius:2pt;
-    padding:3pt 3pt 3pt;
-    gap:2pt;
-    /* fixed width to accommodate QR + padding + text */
-    width:2.2cm;
+    padding:3pt;gap:2pt;
+    width:min-content;
   }
-  .prod-qr{width:1cm;height:1cm;flex-shrink:0}
-  .prod-qr svg{width:1cm;height:1cm;display:block}
+  /* S: 1×1 cm symbol */
+  .prod-cell.sz-S .prod-dm{width:1cm;height:1cm;flex-shrink:0}
+  .prod-cell.sz-S .prod-dm svg{width:1cm;height:1cm;display:block;image-rendering:pixelated}
+  /* M & L: 1.5×1.5 cm symbol */
+  .prod-cell.sz-M .prod-dm,
+  .prod-cell.sz-L .prod-dm{width:1.5cm;height:1.5cm;flex-shrink:0}
+  .prod-cell.sz-M .prod-dm svg,
+  .prod-cell.sz-L .prod-dm svg{width:1.5cm;height:1.5cm;display:block;image-rendering:pixelated}
+
   .prod-sku{font-size:5pt;font-weight:700;font-family:'Courier New',monospace;color:#161616;text-align:center;line-height:1.2;word-break:break-all}
   .prod-name-short{font-size:4.5pt;color:#444;text-align:center;line-height:1.2}
   .prod-size-dot{width:5pt;height:5pt;border-radius:50%;flex-shrink:0}
   .dot-S{background:#0e6027}.dot-M{background:#0043ce}.dot-L{background:#a2191f}
 
   /* ── TOTE LABELS
-       QR = 2×2 cm = ~56.7pt
-       Label cell = QR + code below, dashed cut border ─── */
+       Data Matrix 2×2 cm symbol ─── */
   .tote-grid{display:flex;flex-wrap:wrap;gap:6pt}
   .tote-cell{
     display:inline-flex;flex-direction:column;align-items:center;
     border:1pt dashed #999;border-radius:2pt;
-    padding:4pt 4pt 4pt;
-    gap:3pt;
-    width:3.2cm;
+    padding:4pt;gap:3pt;
+    width:min-content;
   }
-  .tote-qr{width:2cm;height:2cm;flex-shrink:0}
-  .tote-qr svg{width:2cm;height:2cm;display:block}
+  .tote-dm{width:2cm;height:2cm;flex-shrink:0}
+  .tote-dm svg{width:2cm;height:2cm;display:block;image-rendering:pixelated}
   .tote-code{font-size:10pt;font-weight:700;font-family:'Courier New',monospace;color:#161616;letter-spacing:1pt}
   .tote-word{font-size:4.5pt;text-transform:uppercase;letter-spacing:.5pt;color:#888;font-weight:700}
 
@@ -73,7 +79,7 @@
 </div>
 <div class="note">
   Print: Letter · Portrait · 100% scale · Include backgrounds ✓ &nbsp;·&nbsp;
-  Product QR = 1×1 cm (encodes BTT-00101 etc.) &nbsp;·&nbsp; Tote QR = 2×2 cm (encodes TOTE:0001 etc.) &nbsp;·&nbsp; Cut on dashed lines
+  Data Matrix ECC200 · S products = 1×1 cm · M/L products = 1.5×1.5 cm · Totes = 2×2 cm &nbsp;·&nbsp; Cut on dashed lines
 </div>
 
 <!-- Sheet 1: products set 1 -->
@@ -102,96 +108,227 @@
 
 <script>
 "use strict";
-/* ── GF(256) ── */
-var EXP=[],LOG=[];
-(function(){var x=1;for(var i=0;i<256;i++){EXP[i]=x;LOG[x]=i;x*=2;if(x>=256)x^=285;}})();
-function gm(a,b){return(a&&b)?EXP[(LOG[a]+LOG[b])%255]:0;}
-function rsGen(n){var p=[1];for(var i=0;i<n;i++){var t=[1,EXP[i]],r=new Array(p.length+t.length-1).fill(0);for(var j=0;j<p.length;j++)for(var k=0;k<t.length;k++)r[j+k]^=gm(p[j],t[k]);p=r;}return p;}
-function rsEnc(d,n){var g=rsGen(n),m=d.concat(new Array(n).fill(0));for(var i=0;i<d.length;i++){var c=m[i];if(c)for(var j=0;j<g.length;j++)m[i+j]^=gm(g[j],c);}return m.slice(d.length);}
+/* ================================================================
+   Data Matrix ECC200 encoder — ISO/IEC 16022
+   GF(256) primitive polynomial: x^8+x^5+x^3+x^2+1 = 0x12D
+   Encoding: ASCII mode (handles all BTT/TOTE payloads)
+   Symbol sizes: 10×10 through 24×24 (square ECC200 symbols)
+   ================================================================ */
 
-/* ── QR tables ── */
-var DCAP=[[17,14,11,7],[32,26,20,14],[53,42,32,24],[78,62,46,34]];
-var ECWDS=[[7,10,13,17],[10,16,22,28],[15,26,18,22],[20,18,26,16]];
-var ALIGN=[[],[],[6,18],[6,22]];
-var FMT={'M':[0x5412,0x5125,0x5E7C,0x5B4B,0x45F9,0x40CE,0x4F97,0x4AA0]};
+/* ── GF(256) tables ── */
+var GF_EXP=new Array(512), GF_LOG=new Array(256);
+(function(){
+  var x=1;
+  for(var i=0;i<255;i++){
+    GF_EXP[i]=x; GF_LOG[x]=i;
+    x<<=1; if(x&256) x^=0x12D;
+  }
+  for(var i=255;i<512;i++) GF_EXP[i]=GF_EXP[i-255];
+})();
+function gmul(a,b){ return(a&&b)?GF_EXP[GF_LOG[a]+GF_LOG[b]]:0; }
 
-function makeQR(text){
-  var bytes=[];
-  for(var i=0;i<text.length;i++){var c=text.charCodeAt(i);bytes.push(c>127?63:c);}
-  var ver=1;
-  for(var v=1;v<=4;v++){if(bytes.length<=DCAP[v-1][1]){ver=v;break;}}
-  var sz=ver*4+17, totalDC=DCAP[ver-1][1], ecCnt=ECWDS[ver-1][1];
-  /* encode bits */
-  var bits=[];
-  bits.push(0,1,0,0);
-  for(var i=7;i>=0;i--)bits.push((bytes.length>>i)&1);
-  for(var i=0;i<bytes.length;i++)for(var j=7;j>=0;j--)bits.push((bytes[i]>>j)&1);
-  for(var i=0;i<4&&bits.length<totalDC*8;i++)bits.push(0);
-  while(bits.length%8)bits.push(0);
-  var pb=[0xEC,0x11],pi=0;
-  while(bits.length<totalDC*8){for(var j=7;j>=0;j--)bits.push((pb[pi%2]>>j)&1);pi++;}
-  var dc=[];
-  for(var i=0;i<totalDC;i++){var b=0;for(var j=0;j<8;j++)b=(b<<1)|bits[i*8+j];dc.push(b);}
-  var ec=rsEnc(dc,ecCnt);
-  var all=dc.concat(ec);
-  var ab=[];
-  for(var i=0;i<all.length;i++)for(var j=7;j>=0;j--)ab.push((all[i]>>j)&1);
-  var rem=[0,7,7,7];for(var i=0;i<rem[ver-1];i++)ab.push(0);
-  /* matrix */
-  var mat=[];for(var i=0;i<sz;i++)mat.push(new Array(sz).fill(-1));
-  var res=[];for(var i=0;i<sz;i++)res.push(new Array(sz).fill(false));
-  function sm(r,c,v){mat[r][c]=v;res[r][c]=true;}
-  function finder(tr,tc){for(var r=0;r<7;r++)for(var c=0;c<7;c++){sm(tr+r,tc+c,(r===0||r===6||c===0||c===6||( r>=2&&r<=4&&c>=2&&c<=4))?1:0);}}
-  finder(0,0);finder(0,sz-7);finder(sz-7,0);
-  for(var i=0;i<8;i++){sm(7,i,0);sm(i,7,0);sm(7,sz-8+i,0);sm(i,sz-8,0);sm(sz-8,i,0);sm(sz-8+i,7,0);}
-  for(var i=0;i<=8;i++){res[8][i]=true;res[i][8]=true;}
-  res[8][sz-8]=true;
-  for(var i=sz-7;i<sz;i++){res[8][i]=true;res[i][8]=true;}
-  mat[sz-8][8]=1;
-  for(var i=8;i<sz-8;i++){if(!res[6][i])sm(6,i,i%2?0:1);if(!res[i][6])sm(i,6,i%2?0:1);}
-  if(ver>=2){var ap=ALIGN[ver-1];for(var ai=0;ai<ap.length;ai++)for(var aj=0;aj<ap.length;aj++){var ar=ap[ai],ac=ap[aj];if(res[ar][ac])continue;for(var r=-2;r<=2;r++)for(var c=-2;c<=2;c++)sm(ar+r,ac+c,(Math.abs(r)===2||Math.abs(c)===2||(r===0&&c===0))?1:0);}}
-  var bi=0,up=true,col=sz-1;
-  while(col>0){if(col===6)col--;for(var d=0;d<sz;d++){var row=up?(sz-1-d):d;for(var dc2=0;dc2<=1;dc2++){var cc=col-dc2;if(!res[row][cc])mat[row][cc]=bi<ab.length?ab[bi++]:0;}}up=!up;col-=2;}
-  for(var r=0;r<sz;r++)for(var c=0;c<sz;c++){if(!res[r][c]&&mat[r][c]!==-1&&(Math.floor(r/2+c/3)%2===0))mat[r][c]^=1;}
-  var fi=FMT['M'][2];var fb=[];for(var i=14;i>=0;i--)fb.push((fi>>i)&1);
-  var fp=[[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
-  for(var i=0;i<15;i++)mat[fp[i][0]][fp[i][1]]=fb[i];
-  for(var i=0;i<7;i++)mat[sz-1-i][8]=fb[i];
-  mat[sz-8][8]=1;
-  for(var i=7;i<15;i++)mat[8][sz-15+i]=fb[i];
-  return{mat:mat,size:sz};
+/* ── Reed-Solomon ── */
+function rsGenPoly(n){
+  var g=[1];
+  for(var i=0;i<n;i++){
+    var t=[1,GF_EXP[i]], r=new Array(g.length+1).fill(0);
+    for(var j=0;j<g.length;j++)
+      for(var k=0;k<t.length;k++)
+        r[j+k]^=gmul(g[j],t[k]);
+    g=r;
+  }
+  return g;
+}
+function rsEncode(data,ecCount){
+  var g=rsGenPoly(ecCount), msg=data.slice();
+  for(var i=0;i<ecCount;i++) msg.push(0);
+  for(var i=0;i<data.length;i++){
+    var c=msg[i];
+    if(c) for(var j=0;j<g.length;j++) msg[i+j]^=gmul(g[j],c);
+  }
+  return msg.slice(data.length);
 }
 
-/* QR → SVG string, px in screen pixels but we'll use CSS to constrain */
-function qrSVG(text,px){
-  var q=makeQR(text),n=q.size,m=q.mat,cell=px/n;
-  var p=['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ',px,' ',px,'" width="',px,'" height="',px,'"><rect width="',px,'" height="',px,'" fill="#fff"/>'];
-  for(var r=0;r<n;r++)for(var c=0;c<n;c++)if(m[r][c]===1){
-    p.push('<rect x="',(c*cell).toFixed(1),'" y="',(r*cell).toFixed(1),'" width="',cell.toFixed(1),'" height="',cell.toFixed(1),'" fill="#000"/>');
+/* ── Symbol parameters [rows, cols, datawords, ecwords] ── */
+var PARAMS=[
+  [10,10, 3, 5],
+  [12,12, 5, 7],
+  [14,14, 8,10],
+  [16,16,12,12],
+  [18,18,18,14],
+  [20,20,22,18],
+  [22,22,30,20],
+  [24,24,36,24],
+];
+
+/* ── ASCII encode ── */
+function dmEncode(text){
+  var cw=[], i=0;
+  while(i<text.length){
+    var c=text.charCodeAt(i);
+    if(c>=48&&c<=57&&i+1<text.length){
+      var c2=text.charCodeAt(i+1);
+      if(c2>=48&&c2<=57){ cw.push((c-48)*10+(c2-48)+130); i+=2; continue; }
+    }
+    cw.push(c+1); i++;
   }
-  p.push('</svg>');return p.join('');
+  return cw;
+}
+
+function pickParams(cw){
+  for(var i=0;i<PARAMS.length;i++) if(cw.length<=PARAMS[i][2]) return PARAMS[i];
+  return PARAMS[PARAMS.length-1];
+}
+
+function padData(cw,capacity){
+  var out=cw.slice();
+  if(out.length<capacity) out.push(129);
+  while(out.length<capacity){
+    var r=(((149*(out.length+1))%253)+130)%254;
+    out.push(r);
+  }
+  return out;
+}
+
+/* ── ECC200 module placement ── */
+function buildMatrix(rows,cols,data){
+  var mat=[];
+  for(var r=0;r<rows;r++) mat.push(new Array(cols).fill(-1));
+
+  /* Finder borders */
+  for(var i=0;i<rows;i++){
+    mat[i][0]=1;
+    mat[i][cols-1]=(i%2===0)?1:0;
+  }
+  for(var j=0;j<cols;j++){
+    mat[rows-1][j]=1;
+    mat[0][j]=(j%2===0)?1:0;
+  }
+
+  var used=[];
+  for(var r=0;r<rows;r++) used.push(new Array(cols).fill(false));
+  for(var i=0;i<rows;i++){ used[i][0]=true; used[i][cols-1]=true; }
+  for(var j=0;j<cols;j++){ used[0][j]=true; used[rows-1][j]=true; }
+
+  function setMod(r,c,bit){
+    if(r<0) r+=rows; if(c<0) c+=cols;
+    if(r<0||r>=rows||c<0||c>=cols) return;
+    if(used[r][c]) return;
+    used[r][c]=true; mat[r][c]=bit;
+  }
+
+  /* Standard Utah 8-cell shape */
+  function utah(r,c,b){
+    setMod(r-2,c-2,(b>>7)&1); setMod(r-2,c-1,(b>>6)&1);
+    setMod(r-1,c-2,(b>>5)&1); setMod(r-1,c-1,(b>>4)&1);
+    setMod(r-1,c,  (b>>3)&1); setMod(r,  c-2,(b>>2)&1);
+    setMod(r,  c-1,(b>>1)&1); setMod(r,  c,  (b>>0)&1);
+  }
+
+  /* Corner patterns */
+  function corner1(b){
+    setMod(rows-1,0,(b>>7)&1); setMod(rows-1,1,(b>>6)&1);
+    setMod(rows-1,2,(b>>5)&1); setMod(0,cols-2,(b>>4)&1);
+    setMod(0,cols-1,(b>>3)&1); setMod(1,cols-1,(b>>2)&1);
+    setMod(2,cols-1,(b>>1)&1); setMod(3,cols-1,(b>>0)&1);
+  }
+  function corner2(b){
+    setMod(rows-3,0,(b>>7)&1); setMod(rows-2,0,(b>>6)&1);
+    setMod(rows-1,0,(b>>5)&1); setMod(0,cols-4,(b>>4)&1);
+    setMod(0,cols-3,(b>>3)&1); setMod(0,cols-2,(b>>2)&1);
+    setMod(0,cols-1,(b>>1)&1); setMod(1,cols-1,(b>>0)&1);
+  }
+  function corner3(b){
+    setMod(rows-3,0,(b>>7)&1); setMod(rows-2,0,(b>>6)&1);
+    setMod(rows-1,0,(b>>5)&1); setMod(0,cols-2,(b>>4)&1);
+    setMod(0,cols-1,(b>>3)&1); setMod(1,cols-1,(b>>2)&1);
+    setMod(2,cols-1,(b>>1)&1); setMod(3,cols-1,(b>>0)&1);
+  }
+  function corner4(b){
+    setMod(rows-1,0,  (b>>7)&1); setMod(rows-1,cols-1,(b>>6)&1);
+    setMod(0,cols-3,(b>>5)&1);   setMod(0,cols-2,(b>>4)&1);
+    setMod(0,cols-1,(b>>3)&1);   setMod(1,cols-3,(b>>2)&1);
+    setMod(1,cols-2,(b>>1)&1);   setMod(1,cols-1,(b>>0)&1);
+  }
+
+  var cwIdx=0;
+  function nextByte(){ return cwIdx<data.length?data[cwIdx++]:0; }
+
+  var r=4, c=0;
+  do {
+    if(r===rows&&c===0)                       corner1(nextByte());
+    if(r===rows-2&&c===0&&cols%4!==0)         corner2(nextByte());
+    if(r===rows-2&&c===0&&cols%8===4)         corner3(nextByte());
+    if(r===rows+4&&c===2&&cols%8===0)         corner4(nextByte());
+    do {
+      if(r<rows&&c>=0&&!used[r][c]) utah(r,c,nextByte());
+      r-=2; c+=2;
+    } while(r>=0&&c<cols);
+    r+=1; c+=3;
+    do {
+      if(r>=0&&c<cols&&!used[r][c]) utah(r,c,nextByte());
+      r+=2; c-=2;
+    } while(r<rows&&c>=0);
+    r+=3; c+=1;
+  } while(r<rows||c<cols);
+
+  /* Fill any untouched interior cells */
+  for(var ri=1;ri<rows-1;ri++)
+    for(var ci=1;ci<cols-1;ci++)
+      if(mat[ri][ci]===-1) mat[ri][ci]=0;
+
+  return mat;
+}
+
+/* ── Public: text → inline SVG string ── */
+function dmSVG(text, cssSize){
+  var cw     = dmEncode(text);
+  var par    = pickParams(cw);
+  var rows=par[0], cols=par[1], dcap=par[2], eccap=par[3];
+  var padded = padData(cw, dcap);
+  var ec     = rsEncode(padded, eccap);
+  var mat    = buildMatrix(rows, cols, padded.concat(ec));
+  var cell   = cssSize/rows;
+  var p=[
+    '<svg xmlns="http://www.w3.org/2000/svg"',
+    ' viewBox="0 0 ',cssSize,' ',cssSize,'"',
+    ' width="',cssSize,'" height="',cssSize,'">',
+    '<rect width="',cssSize,'" height="',cssSize,'" fill="#fff"/>',
+  ];
+  for(var r=0;r<rows;r++)
+    for(var c=0;c<cols;c++)
+      if(mat[r][c]===1)
+        p.push('<rect x="',(c*cell).toFixed(2),'" y="',(r*cell).toFixed(2),
+               '" width="',cell.toFixed(2),'" height="',cell.toFixed(2),'" fill="#000"/>');
+  p.push('</svg>');
+  return p.join('');
 }
 
 /* ── Products ── */
 var PROD=[
-  {b:'BTT-00101',sku:'BTT-S-001',short:'Goblin Gem',sz:'S'},
-  {b:'BTT-00102',sku:'BTT-S-002',short:'Sapphire Sprite',sz:'S'},
-  {b:'BTT-00103',sku:'BTT-S-003',short:'Rascal Ruby',sz:'S'},
-  {b:'BTT-00201',sku:'BTT-M-001',short:'Purple Prism',sz:'M'},
-  {b:'BTT-00202',sku:'BTT-M-002',short:'Trickster Token',sz:'M'},
-  {b:'BTT-00203',sku:'BTT-M-003',short:"Captain's Cube",sz:'M'},
-  {b:'BTT-00301',sku:'BTT-L-001',short:'Magenta Monolith',sz:'L'},
-  {b:'BTT-00302',sku:'BTT-L-002',short:'White Whopper',sz:'L'},
-  {b:'BTT-00303',sku:'BTT-L-003',short:'Diamond Dynamo',sz:'L'},
+  {b:'BTT-00101',sku:'BTT-S-001',short:'Goblin Gem',       sz:'S'},
+  {b:'BTT-00102',sku:'BTT-S-002',short:'Sapphire Sprite',  sz:'S'},
+  {b:'BTT-00103',sku:'BTT-S-003',short:'Rascal Ruby',      sz:'S'},
+  {b:'BTT-00201',sku:'BTT-M-001',short:'Purple Prism',     sz:'M'},
+  {b:'BTT-00202',sku:'BTT-M-002',short:'Trickster Token',  sz:'M'},
+  {b:'BTT-00203',sku:'BTT-M-003',short:"Captain's Cube",   sz:'M'},
+  {b:'BTT-00301',sku:'BTT-L-001',short:'Magenta Monolith', sz:'L'},
+  {b:'BTT-00302',sku:'BTT-L-002',short:'White Whopper',    sz:'L'},
+  {b:'BTT-00303',sku:'BTT-L-003',short:'Diamond Dynamo',   sz:'L'},
 ];
+
+/* CSS px sizes per size class (used for SVG viewBox; CSS constrains physical size) */
+var DM_PX={S:38, M:57, L:57}; /* 38≈1cm, 57≈1.5cm at 96dpi */
 
 function buildProdGrid(id){
   var g=document.getElementById(id);
   PROD.forEach(function(p){
-    var d=document.createElement('div');d.className='prod-cell';
+    var px=DM_PX[p.sz];
+    var d=document.createElement('div');
+    d.className='prod-cell sz-'+p.sz;
     d.innerHTML=
       '<div class="prod-size-dot dot-'+p.sz+'"></div>'+
-      '<div class="prod-qr">'+qrSVG(p.b,38)+'</div>'+
+      '<div class="prod-dm">'+dmSVG(p.b,px)+'</div>'+
       '<div class="prod-sku">'+p.b+'</div>'+
       '<div class="prod-name-short">'+p.short+'</div>';
     g.appendChild(d);
@@ -208,7 +345,7 @@ function buildToteGrid(id,from,to){
     var d=document.createElement('div');d.className='tote-cell';
     d.innerHTML=
       '<div class="tote-word">Tiny Tote</div>'+
-      '<div class="tote-qr">'+qrSVG('TOTE:'+code,76)+'</div>'+
+      '<div class="tote-dm">'+dmSVG('TOTE:'+code,76)+'</div>'+
       '<div class="tote-code">'+code+'</div>';
     g.appendChild(d);
   }
