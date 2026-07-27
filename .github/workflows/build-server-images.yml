@@ -116,10 +116,8 @@ jobs:
         run: echo "sha=sha-$(echo '${{ github.sha }}' | cut -c1-7)" >> $GITHUB_OUTPUT
 
       # ── Production deploy (main) ──────────────────────────────────────────────
-
-      - name: Apply MetalLB config (prod)
-        if: github.ref_name == 'main'
-        run: kubectl apply --validate=false -f k8s/metallb-config.yaml
+      # MetalLB config is cluster-level infrastructure — applied once at setup,
+      # not on every push.  The runner only has namespace-scoped rights.
 
       - name: Apply production manifests
         if: github.ref_name == 'main'
@@ -150,10 +148,8 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       # ── Test deploy (feature/mobile-web-client) ───────────────────────────────
-
-      - name: Apply MetalLB pool (test)
-        if: github.ref_name == 'feature/mobile-web-client'
-        run: kubectl apply --validate=false -f k8s/overlays/test/metallb-pool.yaml
+      # MetalLB pool is cluster-level infrastructure — applied once at setup.
+      # The sandbox pool (192.168.11.0/24) already covers all test IPs.
 
       - name: Apply test manifests
         if: github.ref_name == 'feature/mobile-web-client'
