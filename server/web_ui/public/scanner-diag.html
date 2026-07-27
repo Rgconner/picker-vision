@@ -111,9 +111,27 @@ async function scanLoop() {
   const vid = document.getElementById('vid');
   if (detector && vid.readyState >= 2) {
     try {
-      const results = await detector.detect(vid);
+      /* Capture frame to canvas first — some Chrome versions need this */
+      const canvas = document.createElement('canvas');
+      canvas.width  = vid.videoWidth  || 640;
+      canvas.height = vid.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(vid, 0, 0);
+
+      /* Try detect on both video element and canvas frame */
+      let results = await detector.detect(vid);
+      if (results.length === 0) results = await detector.detect(canvas);
+
       if (results.length > 0) {
         results.forEach(r => log('✓ SCANNED: ' + r.format + ' → ' + r.rawValue));
+      }
+
+      /* Every 3s show frame dimensions to confirm real pixels */
+      if (!scanLoop._tick) scanLoop._tick = 0;
+      if (++scanLoop._tick % 90 === 0) {
+        log('Frame: ' + vid.videoWidth + '×' + vid.videoHeight +
+            ' readyState:' + vid.readyState +
+            ' paused:' + vid.paused);
       }
     } catch(e) {
       log('detect() error: ' + e);
