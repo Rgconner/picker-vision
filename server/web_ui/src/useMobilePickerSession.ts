@@ -191,6 +191,7 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
       const payload = {
         picker_id:       id,
         timestamp:       new Date().toISOString(),
+        trace_id:        Math.random().toString(16).slice(2, 10),
         detections:      scans.filter((s) => s.type === 'product').map(toDetection),
         staging_regions: scans
           .filter((s) => s.type === 'staging')
@@ -221,6 +222,7 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
       const payload = {
         picker_id:       pickerIdRef.current,
         timestamp:       new Date().toISOString(),
+        trace_id:        Math.random().toString(16).slice(2, 10),
         action:          'validate',
         detections:      pickerState?.detections ?? [],
         staging_regions: pickerState?.staging_regions ?? [],

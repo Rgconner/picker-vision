@@ -3,6 +3,7 @@ import os
 import pathlib
 import threading
 import time
+import uuid
 from datetime import datetime, timezone
 
 import cv2
@@ -190,6 +191,7 @@ def _run_capture(streamer: ms_module.MJPEGStreamer, publisher: ep_module.EventPu
                 publisher.publish({
                     "picker_id":       PICKER_ID,
                     "timestamp":       _ts,
+                    "trace_id":        uuid.uuid4().hex[:8],
                     "detections":      product_detections_only,
                     "staging_regions": staging_regions,
                 })
@@ -207,6 +209,7 @@ def _run_capture(streamer: ms_module.MJPEGStreamer, publisher: ep_module.EventPu
                 publisher.publish({
                     "picker_id":       PICKER_ID,
                     "timestamp":       datetime.now(timezone.utc).isoformat(),
+                    "trace_id":        uuid.uuid4().hex[:8],
                     "action":          "validate",
                     "detections":      product_detections_only,
                     "staging_regions": staging_regions,

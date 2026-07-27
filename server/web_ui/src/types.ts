@@ -155,3 +155,24 @@ export interface OrderTote {
 export interface PackPlan {
   totes: OrderTote[];
 }
+
+// ── Scan Observability ────────────────────────────────────────────────────────
+
+export interface ScanOutcome {
+  barcode:  string;
+  result:   'correct' | 'unexpected' | 'unknown';
+  order_id: string | null;
+}
+
+export interface ScanLogEntry {
+  trace_id:        string;
+  picker_id:       string;
+  ts:              number;
+  time:            string;
+  barcodes:        string[];
+  outcomes:        ScanOutcome[];
+  processing_ms:   number;
+  order_completed: string | null;
+  validation:      { correct: number; missing: number; unexpected: number } | null;
+  error:           string | null;
+}

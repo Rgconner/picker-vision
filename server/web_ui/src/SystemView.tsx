@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import type { LogLine, LogResponse, PickerInfo, ServiceTelemetry, SystemTelemetry } from './types';
+import type { LogLine, LogResponse, PickerInfo, ScanLogEntry, ServiceTelemetry, SystemTelemetry } from './types';
 import { useStreamStats } from './useStreamStats';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -333,6 +333,149 @@ function VersionTable({ telemetry }: { telemetry: SystemTelemetry }) {
   );
 }
 
+// ── ScanLogTable ─────────────────────────────────────────────────────────────
+
+function ScanLogTable() {
+  const [entries, setEntries]         = useState<ScanLogEntry[]>([]);
+  const [pickerFilter, setPickerFilter] = useState<string>('');
+  const [outcomeFilter, setOutcomeFilter] = useState<string>('all');
+  const [open, setOpen]               = useState(true);
+
+  useEffect(() => {
+    async function fetchLog() {
+      try {
+        const res = await fetch('/api/scan-log?limit=50');
+        if (res.ok) setEntries(await res.json());
+      } catch { /* ignore */ }
+    }
+    fetchLog();
+    const id = setInterval(fetchLog, 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  const allPickers = Array.from(new Set(entries.map((e) => e.picker_id))).sort();
+
+  const filtered = entries.filter((e) => {
+    if (pickerFilter && e.picker_id !== pickerFilter) return false;
+    if (outcomeFilter === 'error' && !e.error) return false;
+    if (outcomeFilter === 'correct') {
+      if (e.outcomes.length === 0 || !e.outcomes.every((o) => o.result === 'correct')) return false;
+    }
+    if (outcomeFilter === 'unexpected') {
+      if (!e.outcomes.some((o) => o.result === 'unexpected')) return false;
+    }
+    return true;
+  });
+
+  function rowColour(e: ScanLogEntry): string {
+    if (e.error) return 'text-[#ef4444]';
+    if (e.outcomes.some((o) => o.result === 'unexpected')) return 'text-[#ef4444]';
+    if (e.outcomes.every((o) => o.result === 'correct') && e.outcomes.length > 0) return 'text-[#22c55e]';
+    return 'text-[#94a3b8]';
+  }
+
+  return (
+    <div>
+      {/* Collapsible header */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-2 text-left mb-3"
+      >
+        <span className="text-[#94a3b8] text-xs font-semibold uppercase tracking-wider">
+          Recent Scan Events
+        </span>
+        <span className="text-[#57606a] text-xs ml-1">{open ? '▲' : '▼'}</span>
+        <span className="text-[#57606a] text-xs ml-auto">{entries.length} total</span>
+      </button>
+
+      {open && (
+        <>
+          {/* Filters */}
+          <div className="flex items-center gap-3 mb-2 flex-wrap">
+            <select
+              value={pickerFilter}
+              onChange={(e) => setPickerFilter(e.target.value)}
+              className="bg-[#0f1117] border border-[#2d3142] text-[#e2e8f0] text-xs rounded-md px-2 py-1 focus:outline-none focus:border-[#06b6d4]"
+            >
+              <option value="">All pickers</option>
+              {allPickers.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <select
+              value={outcomeFilter}
+              onChange={(e) => setOutcomeFilter(e.target.value)}
+              className="bg-[#0f1117] border border-[#2d3142] text-[#e2e8f0] text-xs rounded-md px-2 py-1 focus:outline-none focus:border-[#06b6d4]"
+            >
+              <option value="all">All outcomes</option>
+              <option value="correct">Correct</option>
+              <option value="unexpected">Unexpected</option>
+              <option value="error">Error</option>
+            </select>
+            <span className="text-[#57606a] text-xs ml-auto">refreshes every 5s</span>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="text-[#57606a] text-xs text-center py-4 border border-[#2d3142] rounded-xl bg-[#1a1d27]">
+              No scan events match the current filter.
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-[#2d3142] bg-[#1a1d27]">
+              <table className="w-full text-xs text-[#94a3b8]">
+                <thead>
+                  <tr className="border-b border-[#2d3142] text-[#57606a]">
+                    <th className="text-left px-3 py-2">Time</th>
+                    <th className="text-left px-3 py-2">Trace</th>
+                    <th className="text-left px-3 py-2">Picker</th>
+                    <th className="text-left px-3 py-2">Barcodes</th>
+                    <th className="text-left px-3 py-2">Outcome</th>
+                    <th className="text-left px-3 py-2">Ms</th>
+                    <th className="text-left px-3 py-2">Order</th>
+                    <th className="text-left px-3 py-2">Error</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((e, i) => (
+                    <tr key={i} className={`border-b border-[#2d3142] last:border-0 ${rowColour(e)}`}>
+                      <td className="px-3 py-1.5 font-mono shrink-0">{e.time}</td>
+                      <td className="px-3 py-1.5 font-mono text-[#57606a]">{e.trace_id}</td>
+                      <td className="px-3 py-1.5 font-semibold text-[#e2e8f0]">{e.picker_id}</td>
+                      <td className="px-3 py-1.5 font-mono max-w-[160px]">
+                        {e.barcodes.length === 0
+                          ? <span className="text-[#57606a]">—</span>
+                          : e.barcodes.join(', ')}
+                      </td>
+                      <td className="px-3 py-1.5">
+                        {e.outcomes.length === 0 && !e.error
+                          ? <span className="text-[#57606a]">empty</span>
+                          : e.outcomes.map((o, j) => (
+                              <span key={j} className={`mr-1 ${
+                                o.result === 'correct'    ? 'text-[#22c55e]' :
+                                o.result === 'unexpected' ? 'text-[#ef4444]' :
+                                'text-[#f59e0b]'
+                              }`}>
+                                {o.result[0].toUpperCase()}
+                              </span>
+                            ))
+                        }
+                      </td>
+                      <td className="px-3 py-1.5 font-mono text-[#57606a]">{e.processing_ms}</td>
+                      <td className="px-3 py-1.5 font-mono text-[#57606a]">
+                        {e.order_completed ?? '—'}
+                      </td>
+                      <td className="px-3 py-1.5 text-[#ef4444] max-w-[120px] truncate">
+                        {e.error ?? ''}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── SystemView ────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -394,6 +537,10 @@ export function SystemView({ telemetry, focusService }: Props) {
       {/* Log viewer */}
       {section('Logs')}
       <LogViewer pickers={telemetry.pickers} />
+
+      {/* Scan event ledger */}
+      {section('Scan Observability')}
+      <ScanLogTable />
 
       {/* Version table */}
       {section('Component Versions')}

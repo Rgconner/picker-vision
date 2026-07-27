@@ -18,6 +18,7 @@ Usage
 import collections
 import logging
 import os
+import sys
 from typing import Any
 
 _RING_SIZE = int(os.environ.get("LOG_RING_SIZE", "200"))
@@ -47,8 +48,8 @@ class _RingBufferHandler(logging.Handler):
                 "logger":  record.name,
                 "message": record.getMessage(),
             })
-        except Exception:  # noqa: BLE001  — never crash the calling thread
-            pass
+        except Exception as _e:  # noqa: BLE001  — never crash the calling thread
+            sys.stderr.write(f"log_ring emit error: {_e}\n")
         finally:
             self._emitting = False
 

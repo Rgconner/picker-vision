@@ -4,6 +4,7 @@ import type { AuthState } from './useAuth';
 import { useSupervisorSocket } from './useSupervisorSocket';
 import { VideoPanel } from './VideoPanel';
 import { DemoControls } from './DemoControls';
+import { ScanStrip } from './ScanStrip';
 
 interface Props {
   auth: AuthState;
@@ -54,6 +55,8 @@ export function SupervisorView({ auth }: Props) {
     <div className="flex flex-col">
       {/* Demo controls panel */}
       <DemoControls auth={auth} />
+      {/* Last-5-scans strip */}
+      <ScanStrip />
 
       <div className="p-4 flex flex-col gap-4">
       {/* Header row */}

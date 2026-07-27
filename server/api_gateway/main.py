@@ -189,7 +189,7 @@ async def _proxy(method: str, url: str, body: dict | None = None) -> dict:
         return resp.json()
 
 
-async def _ws_proxy(client_ws: WebSocket, upstream_url: str):
+async def _ws_proxy(client_ws: WebSocket, upstream_url: str, picker_id: str = "unknown"):
     await client_ws.accept()
     try:
         async with websockets.connect(upstream_url) as upstream_ws:
@@ -208,8 +208,8 @@ async def _ws_proxy(client_ws: WebSocket, upstream_url: str):
             )
             for task in pending:
                 task.cancel()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("WS proxy error picker=%s: %s", picker_id, e)
     finally:
         try:
             await client_ws.close()
@@ -305,13 +305,13 @@ async def events_detection(request: Request):
 @app.websocket("/ws/{picker_id}")
 async def ws_picker(picker_id: str, websocket: WebSocket):
     upstream = f"ws://{_ws_hub_host}/ws/{picker_id}"
-    await _ws_proxy(websocket, upstream)
+    await _ws_proxy(websocket, upstream, picker_id=picker_id)
 
 
 @app.websocket("/ws/supervisor")
 async def ws_supervisor(websocket: WebSocket):
     upstream = f"ws://{_ws_hub_host}/ws/supervisor"
-    await _ws_proxy(websocket, upstream)
+    await _ws_proxy(websocket, upstream, picker_id="supervisor")
 
 
 # ---------------------------------------------------------------------------
@@ -414,8 +414,13 @@ async def api_demo_stop(request: Request):
     try:
         body = await request.json()
     except Exception:
-        pass
+        logger.debug("demo/stop: no JSON body")
     return await _proxy("POST", f"{ORDER_SERVICE_URL}/demo/stop", body or None)
+
+
+@app.get("/api/scan-log")
+async def api_scan_log(limit: int = 50):
+    return await _proxy("GET", f"{EVENT_PROCESSOR_URL}/scan-log?limit={limit}")
 
 
 @app.get("/api/pickers")

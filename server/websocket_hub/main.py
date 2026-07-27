@@ -18,6 +18,7 @@ segment.  The same rule applies for /ws/supervisor vs /ws/{picker_id}.
 
 import asyncio
 import json
+import logging
 import os
 import threading
 from typing import Any
@@ -50,6 +51,9 @@ _redis_sync = redis_lib.from_url(REDIS_URL, decode_responses=True)
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("websocket_hub")
 
 import log_ring as _log_ring
 _log_ring.attach()
@@ -111,16 +115,21 @@ def _launch_listener(
     """Spawn a daemon thread that blocks on pubsub.listen() and enqueues messages."""
 
     def _run():
-        try:
-            for msg in pubsub.listen():
+        while not stop_event.is_set():
+            try:
+                for msg in pubsub.listen():
+                    if stop_event.is_set():
+                        break
+                    msg_type = msg.get("type")
+                    if msg_type in ("message", "pmessage"):
+                        data = msg.get("data", "")
+                        asyncio.run_coroutine_threadsafe(queue.put(data), loop)
+            except Exception as e:
                 if stop_event.is_set():
                     break
-                msg_type = msg.get("type")
-                if msg_type in ("message", "pmessage"):
-                    data = msg.get("data", "")
-                    asyncio.run_coroutine_threadsafe(queue.put(data), loop)
-        except Exception:
-            pass  # connection closed — WebSocket handler will detect disconnect
+                logger.error("Pub/Sub listener crashed: %s", e, exc_info=True)
+                # brief pause before restart to avoid tight crash loop
+                import time as _t; _t.sleep(1)
 
     t = threading.Thread(target=_run, daemon=True)
     t.start()
@@ -191,8 +200,8 @@ async def ws_supervisor(websocket: WebSocket):
             if raw:
                 try:
                     snapshot[pid] = json.loads(raw)
-                except json.JSONDecodeError:
-                    pass
+                except json.JSONDecodeError as e:
+                    logger.warning("Bad JSON in snapshot for picker=%s: %s", pid, e)
     if snapshot:
         await websocket.send_text(json.dumps({"type": "snapshot", "pickers": snapshot}))
 

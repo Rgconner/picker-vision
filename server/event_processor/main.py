@@ -12,7 +12,9 @@ POST /orders/{order_id}/confirm-packed
 """
 
 import asyncio
+import collections
 import json
+import logging
 import os
 import time
 from datetime import datetime, timezone
@@ -30,10 +32,17 @@ SERVICE_VERSION = (
 _STARTED_AT  = datetime.now(timezone.utc).isoformat()
 _START_MONO  = time.monotonic()
 _COUNTERS: dict[str, int] = {
-    "events_received":      0,
-    "events_processed":     0,
-    "order_service_errors": 0,
+    "events_received":           0,
+    "events_processed":          0,
+    "events_enriched":           0,
+    "order_service_errors":      0,
+    "order_service_timeouts":    0,
+    "validations_requested":     0,
+    "orders_completed_detected": 0,
 }
+
+# Scan event ledger — rolling store of the last 100 scan events
+_scan_ledger: collections.deque = collections.deque(maxlen=100)
 
 import httpx
 import redis as redis_lib
@@ -80,6 +89,9 @@ def _cache_set(key: str, data: Any) -> None:
 # App
 # ---------------------------------------------------------------------------
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("event_processor")
+
 import log_ring as _log_ring
 _log_ring.attach()
 
@@ -120,18 +132,45 @@ async def receive_detection(body: dict):
     action: str | None = body.get("action")
     detections: list[dict] = body.get("detections", [])
     staging_regions: list[dict] = body.get("staging_regions", [])
+    trace_id: str = body.get("trace_id", "no-trace")
 
-    async with httpx.AsyncClient(timeout=5.0) as client:
+    t0 = time.monotonic()
+    ledger_entry: dict = {
+        "trace_id":        trace_id,
+        "picker_id":       picker_id,
+        "ts":              time.time(),
+        "time":            datetime.now(timezone.utc).strftime("%H:%M:%S.") + f"{int(datetime.now(timezone.utc).microsecond / 1000):03d}",
+        "barcodes":        [d["value"] for d in detections if d.get("type") == "product"],
+        "outcomes":        [],
+        "processing_ms":   0,
+        "order_completed": None,
+        "validation":      None,
+        "error":           None,
+    }
+
+    logger.info("detect trace=%s picker=%s barcodes=%s",
+                trace_id, picker_id, ledger_entry["barcodes"])
+
+    try:
+      async with httpx.AsyncClient(timeout=5.0) as client:
         # ------------------------------------------------------------------
         # 1. Fetch order data concurrently (with cache)
         # ------------------------------------------------------------------
         orders_data = _cache_get("orders")
         if orders_data is None:
-            resp = await client.get(f"{ORDER_SERVICE_URL}/orders")
-            if resp.status_code == 200:
-                orders_data = resp.json()
-            else:
+            try:
+                resp = await client.get(f"{ORDER_SERVICE_URL}/orders")
+                if resp.status_code == 200:
+                    orders_data = resp.json()
+                else:
+                    _COUNTERS["order_service_errors"] += 1
+                    logger.warning("order-service GET /orders returned HTTP %d trace=%s",
+                                   resp.status_code, trace_id)
+                    orders_data = []
+            except httpx.TimeoutException:
                 _COUNTERS["order_service_errors"] += 1
+                _COUNTERS["order_service_timeouts"] += 1
+                logger.warning("order-service GET /orders timed out trace=%s", trace_id)
                 orders_data = []
             _cache_set("orders", orders_data)
 
@@ -190,6 +229,9 @@ async def receive_detection(body: dict):
                 d["status"] = "correct"
 
             enriched_detections.append(d)
+            if d.get("type") == "product":
+                logger.debug("enrich trace=%s barcode=%s outcome=%s order=%s",
+                             trace_id, barcode, d["status"], d.get("order_id", "—"))
 
         # ------------------------------------------------------------------
         # 3. Enrich staging regions concurrently
@@ -251,6 +293,9 @@ async def receive_detection(body: dict):
                 order_complete_pending_id = order["id"]
                 # Use the first staging code in the order as representative
                 order_complete_staging_code = lines[0]["staging_code"] if lines else None
+                logger.info("order_complete trace=%s picker=%s order=%s staging=%s",
+                            trace_id, picker_id, order_complete_pending_id, order_complete_staging_code)
+                _COUNTERS["orders_completed_detected"] += 1
                 break
 
         # ------------------------------------------------------------------
@@ -258,6 +303,7 @@ async def receive_detection(body: dict):
         # ------------------------------------------------------------------
         validation_result: dict | None = None
         if action == "validate":
+            _COUNTERS["validations_requested"] += 1
             all_order_barcodes = {
                 ln["product_barcode"]
                 for order in orders_data
@@ -274,6 +320,9 @@ async def receive_detection(body: dict):
                 "missing": missing,
                 "unexpected": unexpected,
             }
+            logger.info("validate trace=%s picker=%s correct=%d missing=%d unexpected=%d",
+                        trace_id, picker_id, len(correct), len(missing), len(unexpected))
+            ledger_entry["validation"] = {"correct": len(correct), "missing": len(missing), "unexpected": len(unexpected)}
 
         # ------------------------------------------------------------------
         # 6. Build enriched payload
@@ -282,6 +331,7 @@ async def receive_detection(body: dict):
             "picker_id": picker_id,
             "timestamp": body.get("timestamp"),
             "action": action,
+            "trace_id": trace_id,
             "detections": enriched_detections,
             "staging_regions": enriched_regions,
         }
@@ -315,12 +365,33 @@ async def receive_detection(body: dict):
         if validation_result:
             _redis.publish(channel, json.dumps(validation_result))
 
-    _COUNTERS["events_processed"] += 1
-    return {
-        "status": "processed",
-        "picker_id": picker_id,
-        "detection_count": len(enriched_detections),
-    }
+        # Populate ledger outcomes and mark enriched
+        ledger_entry["outcomes"] = [
+            {
+                "barcode":  d["value"],
+                "result":   d.get("status", "unknown"),
+                "order_id": d.get("order_id"),
+            }
+            for d in enriched_detections
+            if d.get("type") == "product"
+        ]
+        ledger_entry["order_completed"] = order_complete_pending_id
+        _COUNTERS["events_enriched"] += 1
+
+      _COUNTERS["events_processed"] += 1
+      return {
+          "status": "processed",
+          "picker_id": picker_id,
+          "trace_id": trace_id,
+          "detection_count": len(enriched_detections),
+      }
+
+    except Exception as exc:
+        ledger_entry["error"] = str(exc)
+        raise
+    finally:
+        ledger_entry["processing_ms"] = round((time.monotonic() - t0) * 1000)
+        _scan_ledger.append(ledger_entry)
 
 
 # ---------------------------------------------------------------------------
@@ -353,8 +424,8 @@ async def confirm_packed(order_id: str):
                     json={"action": "lock_staging", "staging_code": code},
                     timeout=3.0,
                 )
-            except Exception:
-                pass  # best-effort; Pi will pick up lock state from Redis on next event
+            except Exception as e:
+                logger.debug("lock_staging broadcast failed (best-effort): %s", e)
 
         # Publish a staging_locked message to all picker channels
         locked_msg = json.dumps({"type": "staging_locked", "order_id": order_id, "staging_codes": staging_codes})
@@ -366,3 +437,16 @@ async def confirm_packed(order_id: str):
                 _redis.publish(f"picker:{pid}:updates", locked_msg)
 
     return order_data
+
+
+# ---------------------------------------------------------------------------
+# Scan log
+# ---------------------------------------------------------------------------
+
+@app.get("/scan-log")
+def get_scan_log(limit: int = 50):
+    """Return recent scan events from the in-memory ledger, newest first."""
+    limit = min(limit, 100)
+    entries = list(_scan_ledger)
+    entries.reverse()
+    return entries[:limit]
