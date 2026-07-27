@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bob's Tiny Treasures — Where Every Pick Tells a Story</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#ffffff; --surface:#f4f4f4; --border:#e0e0e0;
+    --text:#161616; --muted:#525252;
+    --accent:#0f62fe; --accent2:#8a3ffc;
+    --green:#24a148; --yellow:#f1c21b;
+    --header-bg:#161616;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;background:var(--bg);color:var(--text)}
+
+  /* ── IBM Header ── */
+  .ibm-header{background:var(--header-bg);padding:0 24px;height:48px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+  .ibm-header-left{display:flex;align-items:center;gap:16px}
+  .ibm-wordmark{font-size:20px;font-weight:700;color:#fff;letter-spacing:-0.5px}
+  .ibm-header-nav{display:flex;gap:0}
+  .ibm-nav-link{font-size:13px;color:#c6c6c6;text-decoration:none;padding:0 16px;height:48px;display:flex;align-items:center;border-bottom:2px solid transparent}
+  .ibm-nav-link:hover{color:#fff;border-bottom-color:#fff}
+
+  /* ── Hero ── */
+  .hero{background:#161616;color:#fff;padding:72px 24px 64px;text-align:center}
+  .hero-inner{max-width:680px;margin:0 auto}
+  .hero-eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:#a8b2c1;margin-bottom:16px}
+  .hero-title{font-size:38px;font-weight:700;line-height:1.15;margin-bottom:20px;color:#fff}
+  .hero-title em{font-style:normal;color:#be95ff}
+  .hero-sub{font-size:16px;font-weight:300;color:#c6c6c6;line-height:1.75;margin-bottom:36px;max-width:580px;margin-left:auto;margin-right:auto}
+  .hero-cta-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:48px}
+  .btn{display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;font-family:inherit;border-radius:3px;text-decoration:none;cursor:pointer;transition:all 0.15s}
+  .btn-primary{background:var(--accent);color:#fff;border:2px solid var(--accent)}
+  .btn-primary:hover{background:#0353e9;border-color:#0353e9}
+  .btn-outline{background:transparent;color:#fff;border:2px solid #6f6f6f}
+  .btn-outline:hover{border-color:#fff}
+  .btn-ghost{background:transparent;color:#be95ff;border:2px solid #6929c4}
+  .btn-ghost:hover{background:#6929c4;color:#fff}
+  .hero-stats{display:flex;gap:0;justify-content:center;border-top:1px solid #393939;padding-top:28px}
+  .hero-stat{padding:0 28px;border-right:1px solid #393939;text-align:center}
+  .hero-stat:last-child{border-right:none}
+  .hero-stat-value{font-size:24px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:#fff;display:block}
+  .hero-stat-label{font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:#a8b2c1;margin-top:2px;display:block}
+
+  /* ── Page ── */
+  .page{max-width:860px;margin:0 auto;padding:0 24px 56px}
+
+  /* ── Section ── */
+  .section{padding:48px 0;border-bottom:1px solid var(--border)}
+  .section:last-of-type{border-bottom:none}
+  .section-eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px}
+  .section-title{font-size:24px;font-weight:700;line-height:1.25;margin-bottom:14px}
+  .section-body{font-size:15px;font-weight:300;color:var(--muted);line-height:1.8;max-width:640px;margin-bottom:24px}
+
+  /* ── Destination cards ── */
+  .dest-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:24px}
+  .dest-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:28px 24px;text-decoration:none;color:inherit;display:block;transition:border-color 0.15s,box-shadow 0.15s;position:relative}
+  .dest-card:hover{border-color:var(--accent);box-shadow:0 2px 12px rgba(15,98,254,0.08)}
+  .dest-card-eyebrow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px}
+  .dest-card-title{font-size:18px;font-weight:700;margin-bottom:8px;color:var(--text)}
+  .dest-card-body{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px}
+  .dest-card-link{font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px}
+  .dest-card.story{border-left:3px solid var(--accent2)}
+  .dest-card.demo{border-left:3px solid var(--green)}
+  .dest-card.estimate{border-left:3px solid var(--accent)}
+  .dest-card.ibm{border-left:3px solid var(--yellow)}
+
+  /* ── Product shelf ── */
+  .shelf{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:24px;margin-top:8px}
+  .shelf-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);margin-bottom:14px}
+  .shelf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .shelf-item{background:#fff;border:1px solid var(--border);border-radius:4px;padding:12px;text-align:center}
+  .shelf-item-emoji{font-size:24px;display:block;margin-bottom:6px}
+  .shelf-item-name{font-size:11px;font-weight:600;color:var(--text);line-height:1.3}
+  .shelf-item-sku{font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-top:2px}
+
+  /* ── Tech specs ── */
+  .spec-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+  .spec-card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:16px}
+  .spec-card-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);margin-bottom:6px}
+  .spec-card-value{font-size:13px;font-weight:600;color:var(--text)}
+  .spec-card-sub{font-size:12px;color:var(--muted);margin-top:2px}
+
+  /* ── IBM Footer ── */
+  .ibm-footer{background:#161616;color:#c6c6c6;padding:40px 24px 32px;margin-top:0}
+  .ibm-footer-inner{max-width:860px;margin:0 auto}
+  .ibm-footer-nav{display:grid;grid-template-columns:repeat(4,1fr);gap:32px;margin-bottom:32px}
+  .ibm-footer-col-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#fff;margin-bottom:12px}
+  .ibm-footer-link{display:block;font-size:13px;color:#c6c6c6;text-decoration:none;margin-bottom:8px;line-height:1.4}
+  .ibm-footer-link:hover{color:#fff;text-decoration:underline}
+  .ibm-footer-bottom{display:flex;justify-content:space-between;align-items:center;padding-top:24px;border-top:1px solid #393939;flex-wrap:wrap;gap:12px}
+  .ibm-footer-copyright{font-size:12px;color:#8d8d8d}
+  .ibm-footer-wordmark{font-size:18px;font-weight:700;color:#fff}
+
+  .made-with{text-align:center;font-size:11px;color:#6f6f6f;padding:12px 0 0;background:#161616}
+
+  @media(max-width:640px){
+    .dest-grid{grid-template-columns:1fr}
+    .shelf-grid{grid-template-columns:repeat(2,1fr)}
+    .spec-row{grid-template-columns:1fr 1fr}
+    .ibm-footer-nav{grid-template-columns:1fr 1fr}
+    .hero-stats{flex-wrap:wrap}
+    .hero-stat{border-right:none;border-bottom:1px solid #393939;padding:12px 0;width:50%}
+    .hero-title{font-size:26px}
+    .ibm-header-nav{display:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- IBM Header -->
+<div class="ibm-header">
+  <div class="ibm-header-left">
+    <span class="ibm-wordmark">IBM</span>
+  </div>
+  <nav class="ibm-header-nav">
+    <a class="ibm-nav-link" href="260727-picker-vision-Value-Client.html#tab-story">Origin Story</a>
+    <a class="ibm-nav-link" href="260727-picker-vision-Value-Client.html">Build Estimate</a>
+    <a class="ibm-nav-link" href="https://www.ibm.com/watsonx" target="_blank" rel="noopener">IBM watsonx</a>
+  </nav>
+</div>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">Art of the Possible · IBM Bob AI · Warehouse Intelligence</div>
+    <h1 class="hero-title">Bob's <em>Tiny Treasures</em></h1>
+    <p class="hero-sub">A warehouse AI experiment gone delightfully off-script. What started as "can a camera help a picker find the right barcode?" became a fully deployed retail shop — running on a Raspberry Pi, powered by IBM AI.</p>
+    <div class="hero-cta-row">
+      <a class="btn btn-primary" href="260727-picker-vision-Value-Client.html">Read the Origin Story</a>
+      <a class="btn btn-ghost" href="260727-picker-vision-Value-Client.html#tab-demostore">Explore the Demo Shop</a>
+      <a class="btn btn-outline" href="https://www.ibm.com/watsonx" target="_blank" rel="noopener">Powered by IBM watsonx</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><span class="hero-stat-value">4 days</span><span class="hero-stat-label">Delivery time</span></div>
+      <div class="hero-stat"><span class="hero-stat-value">1,770 hrs</span><span class="hero-stat-label">Equivalent dev effort</span></div>
+      <div class="hero-stat"><span class="hero-stat-value">74×</span><span class="hero-stat-label">Value multiplier</span></div>
+      <div class="hero-stat"><span class="hero-stat-value">70</span><span class="hero-stat-label">Git commits</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- Section: Where to go -->
+  <div class="section">
+    <div class="section-eyebrow">Explore</div>
+    <h2 class="section-title">Where would you like to start?</h2>
+    <p class="section-body">There are two ways in. The origin story tells you why this exists and what it proves. The demo itself shows you the system working — a live warehouse picking AI with a fully stocked toy shop running inside it.</p>
+
+    <div class="dest-grid">
+      <a class="dest-card story" href="260727-picker-vision-Value-Client.html">
+        <div class="dest-card-eyebrow">Origin Story + Build Estimate</div>
+        <div class="dest-card-title">The Story of How This Got Built</div>
+        <div class="dest-card-body">Four chapters. One Raspberry Pi. An IBM architect, Bob AI, and a question that seemed like an afternoon's work. Includes the full build estimate, platform scope, and value story.</div>
+        <span class="dest-card-link">Read the origin story →</span>
+      </a>
+
+      <a class="dest-card demo" href="https://bobstinytreasures.snwbd.com" target="_blank" rel="noopener">
+        <div class="dest-card-eyebrow">Live Demo</div>
+        <div class="dest-card-title">The Demo Itself</div>
+        <div class="dest-card-body">Watch the camera pick barcodes in real time. Step through a pick order for Bob's Tiny Treasures. Pack a tote using the bin-packing wizard. Print a label sheet. The whole thing, live.</div>
+        <span class="dest-card-link">Open the demo →</span>
+      </a>
+
+      <a class="dest-card estimate" href="260727-picker-vision-Value-Client.html">
+        <div class="dest-card-eyebrow">Build Estimate</div>
+        <div class="dest-card-title">Platform Development &amp; Demo Shop Scope</div>
+        <div class="dest-card-body">High-level work breakdown: what was built, how complex each piece is, and what the equivalent 7-person team effort looks like. Two groups — Platform Development and Demo Shop.</div>
+        <span class="dest-card-link">View the estimate →</span>
+      </a>
+
+      <a class="dest-card ibm" href="https://www.ibm.com/watsonx" target="_blank" rel="noopener">
+        <div class="dest-card-eyebrow">IBM · watsonx</div>
+        <div class="dest-card-title">Learn About Bob AI at IBM</div>
+        <div class="dest-card-body">Bob is built on IBM watsonx — the enterprise AI platform that makes this kind of AI-assisted delivery possible at scale. Learn how IBM is putting AI to work for clients across every industry.</div>
+        <span class="dest-card-link">Explore watsonx →</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Section: The store -->
+  <div class="section">
+    <div class="section-eyebrow">The Store</div>
+    <h2 class="section-title">What's on the shelves</h2>
+    <p class="section-body">Nine carefully chosen products. Three pick zones. A warehouse that knows where everything lives. These are the items your pickers are picking — and the items that make the demo feel real.</p>
+
+    <div class="shelf">
+      <div class="shelf-title">Bob's Tiny Treasures — Current Inventory</div>
+      <div class="shelf-grid">
+        <div class="shelf-item"><span class="shelf-item-emoji">🤖</span><span class="shelf-item-name">Plush Robot (Sm/Md/Lg)</span><span class="shelf-item-sku">BTT-R01 – BTT-R03</span></div>
+        <div class="shelf-item"><span class="shelf-item-emoji">🔌</span><span class="shelf-item-name">Mini Circuit Board</span><span class="shelf-item-sku">BTT-C01</span></div>
+        <div class="shelf-item"><span class="shelf-item-emoji">✨</span><span class="shelf-item-name">Holographic Stickers</span><span class="shelf-item-sku">BTT-S01</span></div>
+        <div class="shelf-item"><span class="shelf-item-emoji">💡</span><span class="shelf-item-name">Retro LED Keychain</span><span class="shelf-item-sku">BTT-K01</span></div>
+        <div class="shelf-item"><span class="shelf-item-emoji">🧦</span><span class="shelf-item-name">Binary-Pattern Socks</span><span class="shelf-item-sku">BTT-X01</span></div>
+        <div class="shelf-item"><span class="shelf-item-emoji">🦆</span><span class="shelf-item-name">Grad-Cap Rubber Duck</span><span class="shelf-item-sku">BTT-D01</span></div>
+        <div class="shelf-item"><span class="shelf-item-emoji">🖥️</span><span class="shelf-item-name">Tiny Mainframe Paperweight</span><span class="shelf-item-sku">BTT-M01</span></div>
+        <div class="shelf-item"><span class="shelf-item-emoji">📦</span><span class="shelf-item-name">3 live pick orders</span><span class="shelf-item-sku">Active now</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: What's under the hood -->
+  <div class="section">
+    <div class="section-eyebrow">Under the Hood</div>
+    <h2 class="section-title">A real system, not a slide deck</h2>
+    <p class="section-body">Everything in Bob's Tiny Treasures is production code — running in Kubernetes, streaming real video, responding to real barcode scans. Here's what's powering it.</p>
+
+    <div class="spec-row">
+      <div class="spec-card"><div class="spec-card-label">Vision Hardware</div><div class="spec-card-value">Raspberry Pi 5</div><div class="spec-card-sub">$70 · runs full CV pipeline on-device</div></div>
+      <div class="spec-card"><div class="spec-card-label">Barcode Detection</div><div class="spec-card-value">OpenCV dual-engine</div><div class="spec-card-sub">QR + Code 128 · ~15 fps · no cloud required</div></div>
+      <div class="spec-card"><div class="spec-card-label">Backend Services</div><div class="spec-card-value">4 FastAPI services</div><div class="spec-card-sub">Order · Event Processor · Gateway · WS Hub</div></div>
+      <div class="spec-card"><div class="spec-card-label">Real-Time Feed</div><div class="spec-card-value">Redis + WebSocket</div><div class="spec-card-sub">Supervisor sees every pick event live</div></div>
+      <div class="spec-card"><div class="spec-card-label">Mobile Client</div><div class="spec-card-value">AR browser app</div><div class="spec-card-sub">No app install · any smartphone · live overlay</div></div>
+      <div class="spec-card"><div class="spec-card-label">Deployment</div><div class="spec-card-value">Kubernetes</div><div class="spec-card-sub">Namespace-isolated · MetalLB · nginx ingress</div></div>
+    </div>
+  </div>
+
+  <!-- Section: The AI story -->
+  <div class="section">
+    <div class="section-eyebrow">The AI Story</div>
+    <h2 class="section-title">1 architect. 1 AI. 4 days.</h2>
+    <p class="section-body">The gap between "I have a warehouse problem" and "I have a working AI system that helps my pickers" is not years and millions of dollars. It's a conversation with the right partner and the right tools.</p>
+    <div style="margin-top:8px">
+      <a class="btn btn-primary" href="260727-picker-vision-Value-Client.html" style="margin-right:12px">Read the full origin story</a>
+      <a class="btn btn-outline" href="https://www.ibm.com/consulting/garage" target="_blank" rel="noopener" style="color:var(--accent);border-color:var(--accent)">IBM Garage — Art of the Possible</a>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<!-- IBM Footer -->
+<div class="ibm-footer">
+  <div class="ibm-footer-inner">
+    <div class="ibm-footer-nav">
+      <div>
+        <div class="ibm-footer-col-title">This Demo</div>
+        <a class="ibm-footer-link" href="260727-picker-vision-Value-Client.html">Origin Story</a>
+        <a class="ibm-footer-link" href="260727-picker-vision-Value-Client.html">Build Estimate</a>
+        <a class="ibm-footer-link" href="https://bobstinytreasures.snwbd.com" target="_blank" rel="noopener">Live Demo</a>
+      </div>
+      <div>
+        <div class="ibm-footer-col-title">IBM watsonx</div>
+        <a class="ibm-footer-link" href="https://www.ibm.com/watsonx" target="_blank" rel="noopener">watsonx overview</a>
+        <a class="ibm-footer-link" href="https://www.ibm.com/products/watsonx-ai" target="_blank" rel="noopener">watsonx.ai</a>
+        <a class="ibm-footer-link" href="https://www.ibm.com/products/watsonx-assistant" target="_blank" rel="noopener">watsonx Assistant</a>
+        <a class="ibm-footer-link" href="https://www.ibm.com/products/watsonx-data" target="_blank" rel="noopener">watsonx.data</a>
+      </div>
+      <div>
+        <div class="ibm-footer-col-title">IBM Consulting</div>
+        <a class="ibm-footer-link" href="https://www.ibm.com/consulting" target="_blank" rel="noopener">IBM Consulting</a>
+        <a class="ibm-footer-link" href="https://www.ibm.com/garage" target="_blank" rel="noopener">IBM Garage</a>
+        <a class="ibm-footer-link" href="https://www.ibm.com/consulting/industries/supply-chain" target="_blank" rel="noopener">Supply Chain</a>
+        <a class="ibm-footer-link" href="https://www.ibm.com/consulting/industries/retail" target="_blank" rel="noopener">Retail</a>
+      </div>
+      <div>
+        <div class="ibm-footer-col-title">IBM</div>
+        <a class="ibm-footer-link" href="https://www.ibm.com" target="_blank" rel="noopener">ibm.com</a>
+        <a class="ibm-footer-link" href="https://www.ibm.com/about" target="_blank" rel="noopener">About IBM</a>
+        <a class="ibm-footer-link" href="https://www.ibm.com/privacy" target="_blank" rel="noopener">Privacy</a>
+        <a class="ibm-footer-link" href="https://www.ibm.com/legal" target="_blank" rel="noopener">Terms of use</a>
+      </div>
+    </div>
+    <div class="ibm-footer-bottom">
+      <span class="ibm-footer-copyright">© 2026 International Business Machines Corporation · Built with IBM Bob AI</span>
+      <span class="ibm-footer-wordmark">IBM</span>
+    </div>
+  </div>
+</div>
+<div class="made-with">Made with IBM Bob</div>
+
+</body>
+</html>

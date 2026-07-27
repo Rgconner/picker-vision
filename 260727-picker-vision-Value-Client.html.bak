@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bob's Tiny Treasures — Origin Story &amp; Build Estimate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#ffffff; --surface:#f4f4f4; --surface2:#e0e0e0; --border:#e0e0e0;
+    --text:#161616; --muted:#525252; --accent:#0f62fe; --accent2:#8a3ffc;
+    --red:#da1e28; --green:#24a148; --yellow:#f1c21b; --teal:#007d79;
+    --header-bg:#161616;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;background:var(--bg);color:var(--text)}
+
+  /* ── Header ── */
+  .ibm-header{background:var(--header-bg);padding:0 24px;height:48px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+  .ibm-header-left{display:flex;align-items:center;gap:16px}
+  .ibm-wordmark{font-size:20px;font-weight:700;letter-spacing:-0.5px;color:#fff}
+  .ibm-header-title{font-size:14px;color:#c6c6c6;font-weight:300;border-left:1px solid #393939;padding-left:16px}
+  .ibm-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:2px;text-transform:uppercase;letter-spacing:0.5px;background:#24a148;color:#fff}
+
+  /* ── Page shell ── */
+  .page{max-width:860px;margin:0 auto;padding:0 24px 56px}
+
+  /* ── Hero ── */
+  .hero{padding:36px 0 28px;border-bottom:1px solid var(--border);margin-bottom:28px}
+  .hero-eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:10px}
+  .hero-title{font-size:30px;font-weight:700;line-height:1.2;margin-bottom:14px}
+  .hero-title em{font-style:normal;color:var(--accent2)}
+  .hero-sub{font-size:15px;color:var(--muted);font-weight:300;max-width:620px;line-height:1.7}
+  .hero-cta-row{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap}
+  .cta-btn{display:inline-block;padding:9px 20px;font-size:13px;font-weight:600;font-family:inherit;border-radius:3px;text-decoration:none;cursor:pointer}
+  .cta-primary{background:var(--accent);color:#fff;border:2px solid var(--accent)}
+  .cta-primary:hover{background:#0353e9}
+  .cta-secondary{background:transparent;color:var(--accent);border:2px solid var(--accent)}
+  .cta-secondary:hover{background:#edf4ff}
+  .hero-meta{display:flex;gap:28px;margin-top:24px;flex-wrap:wrap}
+  .hero-meta-item{display:flex;flex-direction:column}
+  .hero-meta-label{font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted)}
+  .hero-meta-value{font-size:17px;font-weight:700;font-family:'IBM Plex Mono',monospace}
+
+  /* ── Tabs ── */
+  .tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:32px;gap:0;overflow-x:auto}
+  .tab{padding:10px 18px;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit;text-transform:uppercase;letter-spacing:0.6px;white-space:nowrap}
+  .tab:hover{color:var(--text)}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+
+  /* ── Cards ── */
+  .card-row{display:grid;gap:16px;margin-bottom:24px}
+  .cr3{grid-template-columns:repeat(3,1fr)}
+  .cr2{grid-template-columns:repeat(2,1fr)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:16px}
+  .card-label{font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:6px}
+  .card-value{font-size:21px;font-weight:700;font-family:'IBM Plex Mono',monospace}
+  .card-sub{font-size:11px;color:var(--muted);margin-top:4px}
+  .ca{border-left:3px solid var(--accent)}
+  .cg{border-left:3px solid var(--green)}
+  .cp{border-left:3px solid var(--accent2)}
+  .cy{border-left:3px solid var(--yellow)}
+
+  /* ── Section titles ── */
+  .section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);margin:28px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+
+  /* ── Tables ── */
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px}
+  th{background:var(--surface);font-weight:600;text-align:left;padding:8px 10px;border:1px solid var(--border);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.3px}
+  td{padding:7px 10px;border:1px solid var(--border);vertical-align:top}
+  tr:nth-child(even) td{background:#fafafa}
+  tr.sub td{background:var(--surface);font-weight:700;font-size:12px;color:var(--muted)}
+  tr.tot td{background:#161616;color:#fff;font-weight:700}
+  tr.grp td{background:#e8e8e8;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.3px;color:var(--muted)}
+
+  /* ── Tier badges ── */
+  .badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 5px;border-radius:2px;text-transform:uppercase;letter-spacing:0.3px;color:#fff}
+  .bxs{background:#525252}.bs{background:#0e6027}.bm{background:#0043ce}.bl{background:#7e3e00}.bxl{background:#a2191f}
+
+  /* ── Pull quote / callout ── */
+  .pull-quote{border-left:3px solid var(--accent2);padding:16px 20px;background:#f6f3ff;margin:20px 0;border-radius:0 4px 4px 0}
+  .pull-quote p{font-size:14px;line-height:1.75;color:#3d2885;font-style:italic}
+  .callout{padding:14px 18px;margin:16px 0;border-radius:4px;font-size:13px;line-height:1.65}
+  .ci{border-left:3px solid var(--accent);background:#edf4ff}
+  .cw{border-left:3px solid var(--yellow);background:#fff8f0}
+
+  /* ── Story prose ── */
+  .story{max-width:700px}
+  .story h2{font-size:20px;font-weight:700;margin:32px 0 10px;color:var(--text)}
+  .story h3{font-size:15px;font-weight:700;margin:24px 0 8px;color:var(--text)}
+  .story p{font-size:14px;line-height:1.8;color:#2d2d2d;margin-bottom:16px}
+  .story p.lead{font-size:16px;font-weight:300;color:var(--muted);line-height:1.9;margin-bottom:20px}
+  .story blockquote{border-left:3px solid var(--accent2);padding:12px 18px;background:#f6f3ff;margin:20px 0;border-radius:0 4px 4px 0;font-style:italic;color:#3d2885;font-size:14px;line-height:1.7}
+  .story .aside{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px 18px;margin:20px 0;font-size:13px;line-height:1.65;color:var(--muted)}
+  .story .aside strong{color:var(--text)}
+  .story ul{margin:0 0 16px 20px}
+  .story ul li{font-size:14px;line-height:1.8;color:#2d2d2d;margin-bottom:4px}
+  .story .chapter-divider{display:flex;align-items:center;gap:12px;margin:32px 0 20px}
+  .story .chapter-divider span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);white-space:nowrap}
+  .story .chapter-divider::before,.story .chapter-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+  /* ── Activity bars ── */
+  .bar-wrap{margin-bottom:14px}
+  .bar-meta{display:flex;justify-content:space-between;margin-bottom:4px}
+  .bar-name{font-size:12px;font-weight:600}
+  .bar-pct{font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+  .bar-track{height:18px;background:var(--surface2);border-radius:2px;overflow:hidden}
+  .bar-fill{height:100%;display:flex;align-items:center;padding-left:8px;font-size:10px;font-weight:600;color:#fff;border-radius:2px}
+
+  /* ── Value headline ── */
+  .value-hl{background:#161616;color:#fff;padding:20px 24px;border-radius:4px;margin:24px 0;font-size:15px;line-height:1.75}
+
+  /* ── Qual table ── */
+  .qual td:first-child{font-weight:600;width:190px}
+  .yes{color:var(--green);font-weight:600}
+  .no{color:var(--red)}
+  .warn{color:#c57a00}
+
+  /* ── Recommendations ── */
+  details{margin-bottom:10px}
+  summary{cursor:pointer;font-size:13px;font-weight:600;padding:9px 14px;background:var(--surface);border:1px solid var(--border);border-radius:4px;list-style:none}
+  summary::before{content:'▶  ';font-size:10px}
+  details[open] summary::before{content:'▼  '}
+  .rec{padding:12px 14px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;font-size:13px;line-height:1.7}
+  .rec p{margin-bottom:8px}
+
+  /* ── Footer ── */
+  .page-footer{margin-top:52px;padding-top:16px;border-top:1px solid var(--border);text-align:center;font-size:11px;color:var(--muted)}
+  .page-footer a{color:var(--accent)}
+  .page-footer p+p{margin-top:4px}
+
+  @media(max-width:600px){
+    .cr3,.cr2{grid-template-columns:1fr 1fr}
+    .tabs{gap:0}
+    .tab{padding:8px 10px;font-size:10px}
+    .hero-title{font-size:22px}
+  }
+</style>
+</head>
+<body>
+
+<!-- IBM Header -->
+<div class="ibm-header">
+  <div class="ibm-header-left">
+    <span class="ibm-wordmark">IBM</span>
+    <span class="ibm-header-title">Bob's Tiny Treasures — Art of the Possible</span>
+  </div>
+  <span class="ibm-badge">Client</span>
+</div>
+
+<div class="page">
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <div class="hero-eyebrow">A warehouse AI experiment — gone delightfully off-script</div>
+    <h1 class="hero-title">We built a <em>warehouse vision system.</em><br>Then we built a whole toy store inside it.</h1>
+    <p class="hero-sub">What started as "can AI help a picker find the right barcode?" turned into a full-stack AI-assisted build: computer vision, mobile AR, real-time telemetry, Kubernetes deployment — and a complete demo retail shop called Bob's Tiny Treasures. One architect. One AI. Four days.</p>
+    <div class="hero-cta-row">
+      <a class="cta-btn cta-primary" href="#" onclick="switchTab('story',this);return false">Read the Origin Story</a>
+      <a class="cta-btn cta-secondary" href="https://www.ibm.com/watsonx" target="_blank" rel="noopener">Learn about Bob AI at IBM</a>
+    </div>
+    <div class="hero-meta">
+      <div class="hero-meta-item"><span class="hero-meta-label">Equivalent Dev Effort</span><span class="hero-meta-value">1,770 hrs</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">Architect Active Time</span><span class="hero-meta-value">12.5 hrs</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">Value Multiplier</span><span class="hero-meta-value" style="color:var(--green)">74×</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">Work Items Delivered</span><span class="hero-meta-value">45</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">Commits</span><span class="hero-meta-value">70</span></div>
+    </div>
+  </div>
+
+  <!-- ── Tabs ── -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('story',this)">Origin Story</button>
+    <button class="tab" onclick="switchTab('platform',this)">Platform Development</button>
+    <button class="tab" onclick="switchTab('demostore',this)">Demo Shop</button>
+    <button class="tab" onclick="switchTab('value',this)">Value Story</button>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       TAB 1 — ORIGIN STORY (Prologue)
+  ════════════════════════════════════════════ -->
+  <div id="tab-story" class="tab-panel active">
+    <div class="story">
+
+      <p class="lead">Every great demo has an origin story. Ours started with a question so mundane it barely seemed worth asking — and ended with a fully deployed retail shop running on a Raspberry Pi.</p>
+
+      <div class="chapter-divider"><span>Chapter 1 — The Question</span></div>
+
+      <h2>It started with a barcode and a scanner that wasn't quite good enough</h2>
+
+      <p>The problem was simple, the kind warehouses deal with every day: pickers — the people who walk the floor pulling items for orders — spend a surprising amount of time second-guessing themselves. Is that the right barcode? Is that the right shelf? Did I already scan that?</p>
+
+      <p>Existing handheld scanners are fine for what they are. But they're not intelligent. They don't know what order you're working. They don't see the tote you're loading. They can't confirm you've picked the right thing in the right quantity.</p>
+
+      <blockquote>"What if the camera could help? What if the system could watch the picker work and give real-time guidance — without requiring expensive hardware or a three-year ERP integration project?"</blockquote>
+
+      <p>That was the question. It seemed like a reasonable afternoon's worth of exploration.</p>
+
+      <div class="chapter-divider"><span>Chapter 2 — The Experiment</span></div>
+
+      <h2>A Raspberry Pi, an IBM Architect, and Bob AI walk into a warehouse</h2>
+
+      <p>The experiment started with a $70 Raspberry Pi 5 and an IBM architect who wanted to test something. Not a formal project. Not a funded initiative. Just: <em>what can we build together, Bob?</em></p>
+
+      <p>Bob is IBM's AI development assistant — built on watsonx. You describe what you want. Bob writes the code, reasons through the design, catches the bugs, and keeps the architecture coherent across dozens of files simultaneously. The architect provides the domain expertise, the customer context, and the judgment. Bob provides the velocity.</p>
+
+      <div class="aside"><strong>What got built on Day 1:</strong> A complete Python computer vision pipeline running on the Pi — dual-engine barcode detection (QR + 1D), staging area detection using Canny edge analysis, MJPEG live video streaming, a FastAPI control surface, and an offline-resilient event publisher that buffers to JSONL when the server is unreachable. Four server-side services. A React web UI. Kubernetes manifests for the whole thing. 50 files. 4,632 lines of code. One commit.</div>
+
+      <p>It was, not to put too fine a point on it, a lot.</p>
+
+      <div class="chapter-divider"><span>Chapter 3 — Off-Script</span></div>
+
+      <h2>Then someone said: "What if we actually showed this to a customer?"</h2>
+
+      <p>A working system is impressive. A working system with a story is a demo. And demos need a scenario that a customer can actually see themselves in.</p>
+
+      <p>Abstract warehouses are hard to care about. But a toy shop — a real shop with named products, shelf locations, pick orders, and a tote that needs to be packed just right — that's something you can stand in front of and immediately understand.</p>
+
+      <blockquote>"Let's build a demo retail shop. Something small, charming, and slightly absurd. Let's call it Bob's Tiny Treasures."</blockquote>
+
+      <p>And this is where the experiment went delightfully off-script.</p>
+
+      <p>Because what should have been "add some seed data and a nice label" became: a full warehouse grid, 9 SKUs, 3 pick zones, 9 shelf locations, 3 live orders, a bin-packing engine that figures out how to stack items into a tote, a multi-step Pack Wizard for the picker to step through, a server-side PDF label sheet generator with Avery-compatible layout, stock location labels, a brand logo, and a Kubernetes namespace overlay — all fully deployed alongside the production system.</p>
+
+      <div class="aside">
+        <strong>Bob's Tiny Treasures — what's on the shelves:</strong>
+        <ul style="margin-top:8px">
+          <li>Plush robots (small, medium, large)</li>
+          <li>Miniature circuit boards (decorative, naturally)</li>
+          <li>Holographic sticker packs</li>
+          <li>Retro LED keychains</li>
+          <li>Binary-patterned socks</li>
+          <li>Tiny rubber ducks wearing graduation caps</li>
+          <li>A "World's Smallest Mainframe" novelty paperweight</li>
+        </ul>
+        <p style="margin-top:8px">Every product is real enough to pick, scan, pack, and ship. The warehouse knows where each one lives. The system knows how to fit them in a tote. The labels know which shelf they came from.</p>
+      </div>
+
+      <div class="chapter-divider"><span>Chapter 4 — What This Actually Demonstrates</span></div>
+
+      <h2>This isn't a prototype. It's a proof of what AI-assisted delivery can do.</h2>
+
+      <p>The system running behind Bob's Tiny Treasures is not a mockup. It's production code running in Kubernetes, responding to real barcode scans, streaming real video from a real camera, and publishing real events over a real WebSocket feed.</p>
+
+      <p>A traditional development project of this scope — 45 work items across platform services, mobile AR, and a full demo scenario — would take a 7-person team approximately <strong>9.5 weeks</strong> to deliver, at a cost in the mid-six figures.</p>
+
+      <p>This was delivered in <strong>4 calendar days</strong>. 12.5 active architect hours. The architect brought the domain expertise, the customer context, and the vision of what the demo needed to be. Bob turned every conversation into working, deployable code.</p>
+
+      <blockquote>"Every dollar invested in this demo returned 74 dollars in equivalent professional value — against industry benchmarks for a comparably-staffed development team."</blockquote>
+
+      <p>That's not the headline, though. The headline is what this demo shows a customer standing in front of it: that the gap between "I have a warehouse problem" and "I have a working AI system that helps my pickers" is not years and millions of dollars. It's a conversation with the right partner and the right tools.</p>
+
+      <div class="chapter-divider"><span>Epilogue</span></div>
+
+      <h2>What's next for the experiment</h2>
+
+      <p>The Raspberry Pi is still running. The pickers are still picking (they're fictional, but they're very dedicated). The totes are being packed with admirable precision.</p>
+
+      <p>The next chapter is yours. If you can imagine a process — in any industry, at any scale — where real-time visibility, AI-assisted guidance, and rapid deployable intelligence could change how your people work, this is what that looks like at the beginning.</p>
+
+      <p>Come find us. The tiny treasures are waiting.</p>
+
+      <div style="margin-top:28px;display:flex;gap:12px;flex-wrap:wrap">
+        <a class="cta-btn cta-primary" href="#" onclick="switchTab('platform',this);return false">See what was built →</a>
+        <a class="cta-btn cta-secondary" href="https://www.ibm.com/watsonx" target="_blank" rel="noopener">Explore IBM watsonx</a>
+      </div>
+
+    </div>
+  </div><!-- /story -->
+
+  <!-- ════════════════════════════════════════════
+       TAB 2 — PLATFORM DEVELOPMENT
+  ════════════════════════════════════════════ -->
+  <div id="tab-platform" class="tab-panel">
+
+    <div class="callout ci" style="margin-bottom:24px">
+      <strong>High-level scope only.</strong> This tab shows the equivalent professional effort for the Picker Vision platform — the computer vision pipeline, server services, web UI, mobile AR client, and Kubernetes infrastructure. Hours are industry-standard benchmarks for a 7-person team; the actual build was AI-assisted and completed in a fraction of that time.
+    </div>
+
+    <div class="card-row cr3">
+      <div class="card ca"><div class="card-label">Platform Work Items</div><div class="card-value">37</div><div class="card-sub">Pi pipeline · Services · Web UI · Infra</div></div>
+      <div class="card"><div class="card-label">Equivalent Team Hours</div><div class="card-value">1,288</div><div class="card-sub">Platform + Mobile UX combined</div></div>
+      <div class="card cg"><div class="card-label">Schedule Equivalent</div><div class="card-value">~6.9 wks</div><div class="card-sub">At 7-person team capacity</div></div>
+    </div>
+
+    <div class="section-title">Raspberry Pi Vision Node</div>
+    <table>
+      <thead><tr><th>Component</th><th>What It Does</th><th>Complexity</th><th>Est. Hrs</th></tr></thead>
+      <tbody>
+        <tr><td>Barcode detector</td><td>Dual-engine QR + 1D detection using OpenCV — runs entirely on-device at ~15 fps</td><td><span class="badge bm">Medium</span></td><td>37</td></tr>
+        <tr><td>Staging area detector</td><td>Canny edge analysis + quad-fit detects when a tote enters the pick zone</td><td><span class="badge bm">Medium</span></td><td>37</td></tr>
+        <tr><td>Frame annotator</td><td>Draws detection overlays on the live video feed in real time</td><td><span class="badge bs">Small</span></td><td>18</td></tr>
+        <tr><td>MJPEG streamer</td><td>Multi-client HTTP video server — any browser can watch the camera</td><td><span class="badge bs">Small</span></td><td>18</td></tr>
+        <tr><td>Event publisher</td><td>Publishes scan events to the server; buffers to disk if the network drops</td><td><span class="badge bl">Large</span></td><td>76</td></tr>
+        <tr><td>Vision service</td><td>Orchestrates all Pi components — camera, detection, streaming, control API</td><td><span class="badge bl">Large</span></td><td>76</td></tr>
+        <tr><td>Deployment infra</td><td>Config loader, network utilities, startup script, Dockerfile</td><td><span class="badge bm">Medium</span></td><td>37</td></tr>
+        <tr class="sub"><td colspan="3">Pi Node Sub-total</td><td>299</td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">Server Services</div>
+    <table>
+      <thead><tr><th>Service</th><th>What It Does</th><th>Complexity</th><th>Est. Hrs</th></tr></thead>
+      <tbody>
+        <tr><td>Order Service</td><td>SQLAlchemy ORM, 7 REST endpoints for orders, products, staging, and confirmation. Adapter pattern supports local or SAP data sources.</td><td><span class="badge bm">Medium ×3</span></td><td>111</td></tr>
+        <tr><td>Event Processor</td><td>Consumes Pi scan events, enriches with order data, publishes completion signals via Redis pub/sub</td><td><span class="badge bl">Large</span></td><td>76</td></tr>
+        <tr><td>API Gateway</td><td>Single ingress: picker registry, proxy routing, WebSocket proxy, CORS, API-key middleware</td><td><span class="badge bl">Large</span></td><td>76</td></tr>
+        <tr><td>WebSocket Hub</td><td>Redis pubsub listener serving real-time pick events to supervisors and operators simultaneously</td><td><span class="badge bl">Large</span></td><td>76</td></tr>
+        <tr><td>Versioning &amp; observability</td><td>VERSION files, log ring buffers across all services, health endpoints, telemetry SSE feed, system UI tab</td><td><span class="badge bm">Medium ×2</span></td><td>74</td></tr>
+        <tr class="sub"><td colspan="3">Services Sub-total</td><td>413</td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">Web UI &amp; Mobile Client</div>
+    <table>
+      <thead><tr><th>Component</th><th>What It Does</th><th>Complexity</th><th>Est. Hrs</th></tr></thead>
+      <tbody>
+        <tr><td>Operator View</td><td>Live video panel with SVG detection overlay, real-time pick list, confirmation controls</td><td><span class="badge bl">Large</span></td><td>84</td></tr>
+        <tr><td>Supervisor View</td><td>Fleet overview — all active pickers, order progress, system health strip</td><td><span class="badge bm">Medium</span></td><td>41</td></tr>
+        <tr><td>Stream stats + System tab</td><td>Live MJPEG byte-count sparkline, health counters, system telemetry dashboard</td><td><span class="badge bs">Small ×2</span></td><td>40</td></tr>
+        <tr><td>Mobile AR client</td><td>Smartphone camera with live AR barcode overlay, works on any mobile browser (no app install). Landscape split layout for tablet.</td><td><span class="badge bl">Large ×2</span></td><td>168</td></tr>
+        <tr><td>Mobile auth &amp; management</td><td>Login, user management, cart-type CRUD, lite picker mode for constrained devices</td><td><span class="badge bl">Large</span></td><td>84</td></tr>
+        <tr><td>Debug snapshot feed</td><td>Live snapshot endpoint for diagnosing detection issues without connecting a monitor to the Pi</td><td><span class="badge bm">Medium</span></td><td>37</td></tr>
+        <tr class="sub"><td colspan="3">UI Sub-total</td><td>454</td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">Infrastructure</div>
+    <table>
+      <thead><tr><th>Component</th><th>What It Does</th><th>Complexity</th><th>Est. Hrs</th></tr></thead>
+      <tbody>
+        <tr><td>Kubernetes manifests</td><td>9 base manifests — 6 services, Redis, MetalLB load balancer, nginx ingress. Test environment overlay with kustomization.</td><td><span class="badge bl">Large</span></td><td>74</td></tr>
+        <tr><td>Docker Compose + Dockerfiles</td><td>6 Dockerfiles + compose file for local development</td><td><span class="badge bm">Medium</span></td><td>33</td></tr>
+        <tr><td>OpenAPI spec + README</td><td>Full API documentation and project README</td><td><span class="badge bs">Small</span></td><td>14</td></tr>
+        <tr class="sub"><td colspan="3">Infra Sub-total</td><td>121</td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">Platform Total</div>
+    <table>
+      <thead><tr><th>Area</th><th>Est. Hours</th></tr></thead>
+      <tbody>
+        <tr><td>Raspberry Pi Vision Node</td><td>299</td></tr>
+        <tr><td>Server Services</td><td>413</td></tr>
+        <tr><td>Web UI &amp; Mobile Client</td><td>454</td></tr>
+        <tr><td>Infrastructure</td><td>121</td></tr>
+        <tr class="tot"><td>Platform Total</td><td>1,288</td></tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap">
+      <a class="cta-btn cta-primary" href="#" onclick="switchTab('demostore',this);return false">See the Demo Shop →</a>
+    </div>
+
+  </div><!-- /platform -->
+
+  <!-- ════════════════════════════════════════════
+       TAB 3 — DEMO SHOP (Bob's Tiny Treasures)
+  ════════════════════════════════════════════ -->
+  <div id="tab-demostore" class="tab-panel">
+
+    <div class="pull-quote">
+      <p>Bob's Tiny Treasures is a fully operational demo retail shop — 9 products, 3 pick zones, live orders, and a complete pack-and-label workflow — running on top of the Picker Vision platform. It exists to answer the question every customer asks: "What does this look like in my world?" Here, this is our world.</p>
+    </div>
+
+    <div class="card-row cr3">
+      <div class="card cp"><div class="card-label">Demo Shop Work Items</div><div class="card-value">8</div><div class="card-sub">100% plan coverage — built spec-first</div></div>
+      <div class="card"><div class="card-label">Equivalent Team Hours</div><div class="card-value">482</div><div class="card-sub">Full shop scenario end-to-end</div></div>
+      <div class="card cy"><div class="card-label">Largest Item</div><div class="card-value">B07</div><div class="card-sub">Label Generator — XL tier, 140 hrs</div></div>
+    </div>
+
+    <div class="section-title">What Was Built</div>
+    <table>
+      <thead><tr><th>ID</th><th>Deliverable</th><th>What It Does</th><th>Complexity</th><th>Est. Hrs</th></tr></thead>
+      <tbody>
+        <tr><td>B01</td><td>Data model extensions</td><td>New OrderTote, ToteLayer, ToteLineAssignment tables. Products gain a size_inches field for bin-packing. WarehouseScenario lets you switch between customer scenarios.</td><td><span class="badge bs">Small</span></td><td>18</td></tr>
+        <tr><td>B02</td><td>BTT fixture &amp; seed</td><td>9 products, 3 pick zones, 9 shelf locations, 3 live orders, a validation script that verifies the seed is consistent end-to-end</td><td><span class="badge bm">Medium</span></td><td>37</td></tr>
+        <tr><td>B03</td><td>Warehouse Setup Wizard — backend</td><td>7 REST endpoints: grid layout, inventory placement, scenario profiles, instance configuration</td><td><span class="badge bm">Medium</span></td><td>41</td></tr>
+        <tr><td>B04</td><td>Warehouse Setup Wizard — frontend</td><td>Three-tab panel: Grid (drag-and-drop floor plan), Inventory (product placement), Scenarios (switch demo configs). Barcode scanner integration for product lookup.</td><td><span class="badge bl">Large</span></td><td>84</td></tr>
+        <tr><td>B05</td><td>Pack &amp; Verify — backend</td><td>packer.py — a bin-packing engine that calculates the optimal tote layer arrangement for any order. 3 endpoints: pack plan, confirm layer, finalize. 240-line test suite.</td><td><span class="badge bm">Medium</span></td><td>37</td></tr>
+        <tr><td>B06</td><td>Pack Wizard — frontend</td><td>Step-through modal that guides the picker through each tote layer. Integrates with the mobile scanner. Supervisor gets a Pack button to initiate for any order.</td><td><span class="badge bl">Large</span></td><td>84</td></tr>
+        <tr><td>B07</td><td>Label Sheet Generator</td><td>Server-side PDF generation using ReportLab. Two print modes: cut-yourself sheets and Avery-compatible laser labels. Three barcode types (Code 128, QR, Data Matrix). Designer UI lets you configure layout, size, and quantity before printing.</td><td><span class="badge bxl">X-Large</span></td><td>140</td></tr>
+        <tr><td>B08</td><td>Brand, K8s overlay, CI</td><td>The Bob's Tiny Treasures logo (SVG robot holding gems), a dedicated Kubernetes namespace overlay, a seed Job with ConfigMap volume, CI pipeline extension for the BTT branch</td><td><span class="badge bm">Medium</span></td><td>41</td></tr>
+        <tr class="tot"><td colspan="4">Demo Shop Total</td><td>482</td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">A Note on Plan Coverage</div>
+    <div class="callout ci">
+      <strong>100% of the Demo Shop was planned before it was built.</strong> Every one of the 8 work items above was written as a specification, reviewed, and approved before Bob wrote a single line of code. This is the project team's recommended model for all future AI-assisted builds: specify first, build second. The platform (Group A) was built differently — domain expertise substituted for formal planning — and shows a 20% formal plan coverage ratio as a result.
+    </div>
+
+    <div style="margin-top:20px;display:flex;gap:12px;flex-wrap:wrap">
+      <a class="cta-btn cta-primary" href="#" onclick="switchTab('value',this);return false">See the Value Story →</a>
+      <a class="cta-btn cta-secondary" href="https://www.ibm.com/watsonx" target="_blank" rel="noopener">Learn about IBM watsonx</a>
+    </div>
+
+  </div><!-- /demostore -->
+
+  <!-- ════════════════════════════════════════════
+       TAB 4 — VALUE STORY
+  ════════════════════════════════════════════ -->
+  <div id="tab-value" class="tab-panel">
+
+    <div class="pull-quote">
+      <p>You bring deep domain expertise and a precise vision of what your customer needs. AI translates that vision into production-quality code, demos, and documentation — with no translation layer, no PM handoff, no sprint cycles. The result is experiences that delight customers and demonstrate what is possible when human expertise and AI work as one team.</p>
+    </div>
+
+    <div class="card-row cr3">
+      <div class="card ca"><div class="card-label">Equivalent professional effort</div><div class="card-value">$271,782</div><div class="card-sub">1,770 hrs × industry-standard rates + 20% contingency</div></div>
+      <div class="card cg"><div class="card-label">Value multiplier</div><div class="card-value" style="color:var(--green)">74×</div><div class="card-sub">per $1 of architect investment vs. industry benchmark</div></div>
+      <div class="card"><div class="card-label">Actual delivery</div><div class="card-value">4 days</div><div class="card-sub">vs. ~9.5 weeks equivalent for a traditional team</div></div>
+    </div>
+
+    <div class="section-title">Scope at a Glance</div>
+    <table>
+      <thead><tr><th>Group</th><th>What Was Delivered</th><th>Equiv. Hours</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Platform Development</strong></td><td>Pi vision pipeline, 4 server services, desktop + mobile web UI, Kubernetes infrastructure, CI/CD pipeline</td><td>1,288</td></tr>
+        <tr><td><strong>Demo Shop — Bob's Tiny Treasures</strong></td><td>Full demo retail scenario: warehouse grid, seed data, setup wizard, bin-packing engine, pack wizard UI, PDF label generator, brand &amp; deployment</td><td>482</td></tr>
+        <tr class="tot"><td>Total</td><td></td><td>1,770</td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">Activity Breakdown — 70 Commits</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Where the time actually went, derived from git commit analysis.</p>
+    <div class="bar-wrap">
+      <div class="bar-meta"><span class="bar-name">Building new features — 22 commits</span><span class="bar-pct">60%</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:60%;background:#0043ce">Building</div></div>
+    </div>
+    <div class="bar-wrap">
+      <div class="bar-meta"><span class="bar-name">Iteration, CI fixes &amp; integration — 41 commits</span><span class="bar-pct">34%</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:34%;background:#6929c4">Iteration / Fix</div></div>
+    </div>
+    <div class="bar-wrap">
+      <div class="bar-meta"><span class="bar-name">Planning &amp; documentation — 7 commits</span><span class="bar-pct">6%</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:6%;background:#007d79">Planning</div></div>
+    </div>
+
+    <div class="section-title">Head-to-Head Comparison</div>
+    <table class="qual">
+      <thead><tr><th>Dimension</th><th>AI-Assisted Architect</th><th>Traditional 7-Person Team</th></tr></thead>
+      <tbody>
+        <tr><td>Investment</td><td class="yes">Significantly lower</td><td class="no">$130k–$271k (industry benchmark)</td></tr>
+        <tr><td>Time to first working demo</td><td class="yes">Hours to days</td><td class="no">Weeks to months</td></tr>
+        <tr><td>Who holds the vision</td><td class="yes">Architect — directly translated</td><td class="warn">PM / BA layer required</td></tr>
+        <tr><td>Customer context</td><td class="yes">No translation loss</td><td class="no">Brief → interpret → build</td></tr>
+        <tr><td>Iteration speed</td><td class="yes">Ask AI, get code — same session</td><td class="no">Sprint cycles (1–2 weeks each)</td></tr>
+        <tr><td>Domain knowledge</td><td class="yes">Architect owns it natively</td><td class="no">Must be taught from scratch</td></tr>
+        <tr><td>Risk of scope drift</td><td class="yes">Low — architect steers every commit</td><td class="no">High — handoff gaps compound</td></tr>
+        <tr><td>Value multiplier</td><td class="yes" style="font-family:'IBM Plex Mono',monospace;font-size:16px">74×</td><td class="no">1×</td></tr>
+        <tr><td>Best suited for</td><td class="yes">PoCs, demos, Art of the Possible</td><td class="warn">Production at enterprise scale</td></tr>
+      </tbody>
+    </table>
+
+    <div class="value-hl">
+      This system was built by <strong>1 architect working with IBM AI</strong> in <strong>12.5 active hours</strong> — delivering the equivalent output of a <strong>7-person professional development team</strong> at <strong>74× the value per dollar invested</strong> against industry benchmarks. A conversation became a warehouse. A warehouse became a toy store. The toy store became a demo.
+    </div>
+
+    <div class="section-title">Delivery Observations</div>
+    <details><summary>Highest-complexity items</summary>
+      <div class="rec">
+        <p><strong>Label Sheet Generator (B07 — X-Large, 140 hrs equivalent):</strong> Dual print mode, 3 barcode formats, ReportLab PDF generation, Avery-compatible layout. Validate alignment with physical test prints before customer demo.</p>
+        <p><strong>Pack engine + wizard (B05 + B06 — 121 hrs combined):</strong> Bin-packing algorithm and step-through wizard are tightly coupled — extend with care.</p>
+        <p><strong>Pi event publisher + vision service (P06 + P07 — 152 hrs combined):</strong> Threading model on Pi hardware is environment-dependent. Test on target hardware before any live demo session.</p>
+      </div>
+    </details>
+    <details><summary>Estimate confidence</summary>
+      <div class="rec"><p>±25% confidence band — planning-level estimate based on a complete codebase audit. The delivered system is fully readable, which tightens this estimate compared to a pre-build exercise. Approximate range: $204k – $371k against industry-standard benchmarks.</p></div>
+    </details>
+  </div><!-- /value -->
+
+</div><!-- /page -->
+
+<!-- ── Footer ── -->
+<div style="max-width:860px;margin:0 auto;padding:0 24px">
+  <div class="page-footer">
+    <p>Prepared by <a href="https://www.ibm.com/watsonx" target="_blank" rel="noopener">IBM · Bob AI</a> — <a href="https://www.ibm.com/products/watsonx-ai" target="_blank" rel="noopener">watsonx.ai</a> · <a href="https://www.ibm.com/garage" target="_blank" rel="noopener">IBM Garage</a> · <a href="https://www.ibm.com/consulting" target="_blank" rel="noopener">IBM Consulting</a></p>
+    <p>Planning-level estimate ±25% · 2026-07-27 · Client distribution</p>
+    <p style="margin-top:8px">Made with IBM Bob</p>
+  </div>
+</div>
+
+<script>
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active')});
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
+  document.getElementById('tab-'+name).classList.add('active');
+  if (btn && btn.classList) { btn.classList.add('active'); }
+  else { document.querySelectorAll('.tab').forEach(function(t){ if(t.textContent.toLowerCase().indexOf(name)!==-1) t.classList.add('active'); }); }
+  window.scrollTo(0,0);
+}
+</script>
+</body>
+</html>

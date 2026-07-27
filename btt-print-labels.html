@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bob's Tiny Treasures — Print Labels</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'IBM Plex Sans','Segoe UI',sans-serif;background:#d0d0d0;color:#161616}
+
+  /* ── screen chrome ── */
+  .bar{background:#161616;color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between}
+  .bar h1{font-size:14px;font-weight:600}
+  .bar p{font-size:11px;color:#a8b2c1}
+  .print-btn{background:#0f62fe;color:#fff;border:none;padding:7px 18px;font-size:12px;font-weight:600;border-radius:2px;cursor:pointer;font-family:inherit}
+  .note{background:#f4f4f4;border-bottom:1px solid #ccc;padding:8px 20px;font-size:11px;color:#525252}
+
+  /* ── sheet ── */
+  .sheet{width:8.5in;background:#fff;margin:20px auto;padding:0.35in 0.35in 0.35in;page-break-after:always}
+  .sheet:last-child{page-break-after:auto}
+  .sheet-hdr{font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#aaa;text-align:center;margin-bottom:8pt;padding-bottom:5pt;border-bottom:0.5pt solid #e0e0e0}
+
+  /* ── PRODUCT LABELS
+       QR = 1×1 cm = ~28.35pt
+       Label cell = QR + text below, dashed cut border
+       Grid: auto-fill columns of 2.2cm ─────────────────── */
+  .prod-grid{display:flex;flex-wrap:wrap;gap:6pt}
+  .prod-cell{
+    display:inline-flex;flex-direction:column;align-items:center;
+    border:1pt dashed #999;border-radius:2pt;
+    padding:3pt 3pt 3pt;
+    gap:2pt;
+    /* fixed width to accommodate QR + padding + text */
+    width:2.2cm;
+  }
+  .prod-qr{width:1cm;height:1cm;flex-shrink:0}
+  .prod-qr svg{width:1cm;height:1cm;display:block}
+  .prod-sku{font-size:5pt;font-weight:700;font-family:'Courier New',monospace;color:#161616;text-align:center;line-height:1.2;word-break:break-all}
+  .prod-name-short{font-size:4.5pt;color:#444;text-align:center;line-height:1.2}
+  .prod-size-dot{width:5pt;height:5pt;border-radius:50%;flex-shrink:0}
+  .dot-S{background:#0e6027}.dot-M{background:#0043ce}.dot-L{background:#a2191f}
+
+  /* ── TOTE LABELS
+       QR = 2×2 cm = ~56.7pt
+       Label cell = QR + code below, dashed cut border ─── */
+  .tote-grid{display:flex;flex-wrap:wrap;gap:6pt}
+  .tote-cell{
+    display:inline-flex;flex-direction:column;align-items:center;
+    border:1pt dashed #999;border-radius:2pt;
+    padding:4pt 4pt 4pt;
+    gap:3pt;
+    width:3.2cm;
+  }
+  .tote-qr{width:2cm;height:2cm;flex-shrink:0}
+  .tote-qr svg{width:2cm;height:2cm;display:block}
+  .tote-code{font-size:10pt;font-weight:700;font-family:'Courier New',monospace;color:#161616;letter-spacing:1pt}
+  .tote-word{font-size:4.5pt;text-transform:uppercase;letter-spacing:.5pt;color:#888;font-weight:700}
+
+  /* ── print ── */
+  @media print{
+    body{background:#fff}
+    .bar,.note{display:none}
+    .sheet{margin:0;page-break-after:always;padding:0.3in}
+    .sheet:last-child{page-break-after:auto}
+  }
+  @page{size:letter portrait;margin:0}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div><h1>Bob's Tiny Treasures — Print Labels</h1><p>Sheet 1–2: Product labels (2 sets × 9) &nbsp;·&nbsp; Sheet 3–4: Tote labels (0001–0072)</p></div>
+  <button class="print-btn" onclick="window.print()">Print / Save PDF</button>
+</div>
+<div class="note">
+  Print: Letter · Portrait · 100% scale · Include backgrounds ✓ &nbsp;·&nbsp;
+  Product QR = 1×1 cm (encodes BTT-00101 etc.) &nbsp;·&nbsp; Tote QR = 2×2 cm (encodes TOTE:0001 etc.) &nbsp;·&nbsp; Cut on dashed lines
+</div>
+
+<!-- Sheet 1: products set 1 -->
+<div class="sheet">
+  <div class="sheet-hdr">Bob's Tiny Treasures — Product Labels — Set 1 of 2 · bobstinytreasures.snwbd.com</div>
+  <div class="prod-grid" id="pg1"></div>
+</div>
+
+<!-- Sheet 2: products set 2 -->
+<div class="sheet">
+  <div class="sheet-hdr">Bob's Tiny Treasures — Product Labels — Set 2 of 2 · bobstinytreasures.snwbd.com</div>
+  <div class="prod-grid" id="pg2"></div>
+</div>
+
+<!-- Sheet 3: totes 0001–0036 -->
+<div class="sheet">
+  <div class="sheet-hdr">Bob's Tiny Treasures — Tiny Tote Labels — 0001–0036 · bobstinytreasures.snwbd.com</div>
+  <div class="tote-grid" id="tg1"></div>
+</div>
+
+<!-- Sheet 4: totes 0037–0072 -->
+<div class="sheet">
+  <div class="sheet-hdr">Bob's Tiny Treasures — Tiny Tote Labels — 0037–0072 · bobstinytreasures.snwbd.com</div>
+  <div class="tote-grid" id="tg2"></div>
+</div>
+
+<script>
+"use strict";
+/* ── GF(256) ── */
+var EXP=[],LOG=[];
+(function(){var x=1;for(var i=0;i<256;i++){EXP[i]=x;LOG[x]=i;x*=2;if(x>=256)x^=285;}})();
+function gm(a,b){return(a&&b)?EXP[(LOG[a]+LOG[b])%255]:0;}
+function rsGen(n){var p=[1];for(var i=0;i<n;i++){var t=[1,EXP[i]],r=new Array(p.length+t.length-1).fill(0);for(var j=0;j<p.length;j++)for(var k=0;k<t.length;k++)r[j+k]^=gm(p[j],t[k]);p=r;}return p;}
+function rsEnc(d,n){var g=rsGen(n),m=d.concat(new Array(n).fill(0));for(var i=0;i<d.length;i++){var c=m[i];if(c)for(var j=0;j<g.length;j++)m[i+j]^=gm(g[j],c);}return m.slice(d.length);}
+
+/* ── QR tables ── */
+var DCAP=[[17,14,11,7],[32,26,20,14],[53,42,32,24],[78,62,46,34]];
+var ECWDS=[[7,10,13,17],[10,16,22,28],[15,26,18,22],[20,18,26,16]];
+var ALIGN=[[],[],[6,18],[6,22]];
+var FMT={'M':[0x5412,0x5125,0x5E7C,0x5B4B,0x45F9,0x40CE,0x4F97,0x4AA0]};
+
+function makeQR(text){
+  var bytes=[];
+  for(var i=0;i<text.length;i++){var c=text.charCodeAt(i);bytes.push(c>127?63:c);}
+  var ver=1;
+  for(var v=1;v<=4;v++){if(bytes.length<=DCAP[v-1][1]){ver=v;break;}}
+  var sz=ver*4+17, totalDC=DCAP[ver-1][1], ecCnt=ECWDS[ver-1][1];
+  /* encode bits */
+  var bits=[];
+  bits.push(0,1,0,0);
+  for(var i=7;i>=0;i--)bits.push((bytes.length>>i)&1);
+  for(var i=0;i<bytes.length;i++)for(var j=7;j>=0;j--)bits.push((bytes[i]>>j)&1);
+  for(var i=0;i<4&&bits.length<totalDC*8;i++)bits.push(0);
+  while(bits.length%8)bits.push(0);
+  var pb=[0xEC,0x11],pi=0;
+  while(bits.length<totalDC*8){for(var j=7;j>=0;j--)bits.push((pb[pi%2]>>j)&1);pi++;}
+  var dc=[];
+  for(var i=0;i<totalDC;i++){var b=0;for(var j=0;j<8;j++)b=(b<<1)|bits[i*8+j];dc.push(b);}
+  var ec=rsEnc(dc,ecCnt);
+  var all=dc.concat(ec);
+  var ab=[];
+  for(var i=0;i<all.length;i++)for(var j=7;j>=0;j--)ab.push((all[i]>>j)&1);
+  var rem=[0,7,7,7];for(var i=0;i<rem[ver-1];i++)ab.push(0);
+  /* matrix */
+  var mat=[];for(var i=0;i<sz;i++)mat.push(new Array(sz).fill(-1));
+  var res=[];for(var i=0;i<sz;i++)res.push(new Array(sz).fill(false));
+  function sm(r,c,v){mat[r][c]=v;res[r][c]=true;}
+  function finder(tr,tc){for(var r=0;r<7;r++)for(var c=0;c<7;c++){sm(tr+r,tc+c,(r===0||r===6||c===0||c===6||( r>=2&&r<=4&&c>=2&&c<=4))?1:0);}}
+  finder(0,0);finder(0,sz-7);finder(sz-7,0);
+  for(var i=0;i<8;i++){sm(7,i,0);sm(i,7,0);sm(7,sz-8+i,0);sm(i,sz-8,0);sm(sz-8,i,0);sm(sz-8+i,7,0);}
+  for(var i=0;i<=8;i++){res[8][i]=true;res[i][8]=true;}
+  res[8][sz-8]=true;
+  for(var i=sz-7;i<sz;i++){res[8][i]=true;res[i][8]=true;}
+  mat[sz-8][8]=1;
+  for(var i=8;i<sz-8;i++){if(!res[6][i])sm(6,i,i%2?0:1);if(!res[i][6])sm(i,6,i%2?0:1);}
+  if(ver>=2){var ap=ALIGN[ver-1];for(var ai=0;ai<ap.length;ai++)for(var aj=0;aj<ap.length;aj++){var ar=ap[ai],ac=ap[aj];if(res[ar][ac])continue;for(var r=-2;r<=2;r++)for(var c=-2;c<=2;c++)sm(ar+r,ac+c,(Math.abs(r)===2||Math.abs(c)===2||(r===0&&c===0))?1:0);}}
+  var bi=0,up=true,col=sz-1;
+  while(col>0){if(col===6)col--;for(var d=0;d<sz;d++){var row=up?(sz-1-d):d;for(var dc2=0;dc2<=1;dc2++){var cc=col-dc2;if(!res[row][cc])mat[row][cc]=bi<ab.length?ab[bi++]:0;}}up=!up;col-=2;}
+  for(var r=0;r<sz;r++)for(var c=0;c<sz;c++){if(!res[r][c]&&mat[r][c]!==-1&&(Math.floor(r/2+c/3)%2===0))mat[r][c]^=1;}
+  var fi=FMT['M'][2];var fb=[];for(var i=14;i>=0;i--)fb.push((fi>>i)&1);
+  var fp=[[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
+  for(var i=0;i<15;i++)mat[fp[i][0]][fp[i][1]]=fb[i];
+  for(var i=0;i<7;i++)mat[sz-1-i][8]=fb[i];
+  mat[sz-8][8]=1;
+  for(var i=7;i<15;i++)mat[8][sz-15+i]=fb[i];
+  return{mat:mat,size:sz};
+}
+
+/* QR → SVG string, px in screen pixels but we'll use CSS to constrain */
+function qrSVG(text,px){
+  var q=makeQR(text),n=q.size,m=q.mat,cell=px/n;
+  var p=['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ',px,' ',px,'" width="',px,'" height="',px,'"><rect width="',px,'" height="',px,'" fill="#fff"/>'];
+  for(var r=0;r<n;r++)for(var c=0;c<n;c++)if(m[r][c]===1){
+    p.push('<rect x="',(c*cell).toFixed(1),'" y="',(r*cell).toFixed(1),'" width="',cell.toFixed(1),'" height="',cell.toFixed(1),'" fill="#000"/>');
+  }
+  p.push('</svg>');return p.join('');
+}
+
+/* ── Products ── */
+var PROD=[
+  {b:'BTT-00101',sku:'BTT-S-001',short:'Goblin Gem',sz:'S'},
+  {b:'BTT-00102',sku:'BTT-S-002',short:'Sapphire Sprite',sz:'S'},
+  {b:'BTT-00103',sku:'BTT-S-003',short:'Rascal Ruby',sz:'S'},
+  {b:'BTT-00201',sku:'BTT-M-001',short:'Purple Prism',sz:'M'},
+  {b:'BTT-00202',sku:'BTT-M-002',short:'Trickster Token',sz:'M'},
+  {b:'BTT-00203',sku:'BTT-M-003',short:"Captain's Cube",sz:'M'},
+  {b:'BTT-00301',sku:'BTT-L-001',short:'Magenta Monolith',sz:'L'},
+  {b:'BTT-00302',sku:'BTT-L-002',short:'White Whopper',sz:'L'},
+  {b:'BTT-00303',sku:'BTT-L-003',short:'Diamond Dynamo',sz:'L'},
+];
+
+function buildProdGrid(id){
+  var g=document.getElementById(id);
+  PROD.forEach(function(p){
+    var d=document.createElement('div');d.className='prod-cell';
+    d.innerHTML=
+      '<div class="prod-size-dot dot-'+p.sz+'"></div>'+
+      '<div class="prod-qr">'+qrSVG(p.b,38)+'</div>'+
+      '<div class="prod-sku">'+p.b+'</div>'+
+      '<div class="prod-name-short">'+p.short+'</div>';
+    g.appendChild(d);
+  });
+}
+buildProdGrid('pg1');
+buildProdGrid('pg2');
+
+/* ── Tote labels ── */
+function buildToteGrid(id,from,to){
+  var g=document.getElementById(id);
+  for(var n=from;n<=to;n++){
+    var code=String(n).padStart(4,'0');
+    var d=document.createElement('div');d.className='tote-cell';
+    d.innerHTML=
+      '<div class="tote-word">Tiny Tote</div>'+
+      '<div class="tote-qr">'+qrSVG('TOTE:'+code,76)+'</div>'+
+      '<div class="tote-code">'+code+'</div>';
+    g.appendChild(d);
+  }
+}
+buildToteGrid('tg1',1,36);
+buildToteGrid('tg2',37,72);
+</script>
+</body>
+</html>
