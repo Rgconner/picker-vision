@@ -209,9 +209,10 @@ export function DemoControls({ auth }: Props) {
         </button>
       </div>
 
-      {/* Next item QR */}
+      {/* QR row: next-item barcode + join-demo link */}
       {nextLine ? (
-        <div className="flex items-center gap-6 px-4 pb-3">
+        <div className="flex items-start gap-6 px-4 pb-3 flex-wrap">
+          {/* Next item to scan */}
           <div className="flex flex-col items-center gap-2">
             <div
               className="rounded-lg overflow-hidden border-2 border-[#6929c4]/40"
@@ -220,7 +221,7 @@ export function DemoControls({ auth }: Props) {
             />
             <span className="text-[#57606a] text-xs">Point your phone here →</span>
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 justify-center">
             <span className="text-[#94a3b8] text-xs font-semibold uppercase tracking-wider">
               Next item to scan
             </span>
@@ -238,6 +239,30 @@ export function DemoControls({ auth }: Props) {
                 ⚠ This order may contain a deliberate mistake — watch for the error workflow
               </span>
             )}
+          </div>
+
+          {/* Join Demo QR — phone scans this to open the mobile view pre-joined */}
+          <div className="flex flex-col items-center gap-2 ml-auto">
+            {(() => {
+              const joinUrl = `${window.location.origin}/app?picker_id=${encodeURIComponent(activeSession.picker_id)}`;
+              const fits = joinUrl.length <= 62;
+              return fits ? (
+                <>
+                  <div
+                    className="rounded-lg overflow-hidden border-2 border-[#f1c21b]/40"
+                    style={{ padding: '6px', background: '#fff', display: 'inline-block' }}
+                    dangerouslySetInnerHTML={{ __html: qrSvg(joinUrl, 120) }}
+                  />
+                  <span className="text-[#f1c21b] text-xs text-center">Scan to join demo<br />on your phone</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-[#f1c21b] text-xs font-semibold">Join as picker:</span>
+                  <span className="font-mono text-[#e2e8f0] text-xs break-all max-w-[140px]">{activeSession.picker_id}</span>
+                  <span className="text-[#57606a] text-xs">(set manually in Mobile tab)</span>
+                </>
+              );
+            })()}
           </div>
         </div>
       ) : order ? (

@@ -50,6 +50,32 @@ function savePickerId(id: string) {
   try { localStorage.setItem(STORAGE_KEY, id); } catch { /* ignore */ }
 }
 
+// ── Active demo picker_id (for Join Demo banner) ───────────────────────────────
+function useActiveDemoPickerId(): string | null {
+  const [demoPickerId, setDemoPickerId] = React.useState<string | null>(null);
+  useEffect(() => {
+    async function poll() {
+      try {
+        const res = await fetch('/api/demo/status');
+        if (!res.ok) return;
+        const sessions: { picker_id: string }[] = await res.json();
+        setDemoPickerId(sessions[0]?.picker_id ?? null);
+      } catch { /* ignore */ }
+    }
+    poll();
+    const id = setInterval(poll, 3000);
+    return () => clearInterval(id);
+  }, []);
+  return demoPickerId;
+}
+
+// ── URL picker_id param (Option C — set by Join Demo QR scan) ─────────────────
+function pickerIdFromUrl(): string {
+  try {
+    return new URLSearchParams(window.location.search).get('picker_id') ?? '';
+  } catch { return ''; }
+}
+
 // ── Orientation hook ───────────────────────────────────────────────────────────
 function useIsLandscape(): boolean {
   const query = '(orientation: landscape)';
@@ -75,10 +101,23 @@ interface MobilePickerViewProps {
 }
 
 export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: MobilePickerViewProps) {
-  const initialId = defaultPickerId || savedPickerId();
+  const urlPickerId = pickerIdFromUrl();
+  const initialId = urlPickerId || defaultPickerId || savedPickerId();
   const [pickerId, setPickerId]   = useState<string>(initialId);
   const [editId, setEditId]       = useState<string>(initialId);
   const [editMode, setEditMode]   = useState<boolean>(!initialId && !lockedPickerId);
+
+  // Option A: track active demo session for the Join Demo banner
+  const demoPickerId = useActiveDemoPickerId();
+  const showJoinBanner = demoPickerId && demoPickerId !== pickerId;
+
+  function handleJoinDemo() {
+    if (!demoPickerId) return;
+    savePickerId(demoPickerId);
+    setPickerId(demoPickerId);
+    setEditId(demoPickerId);
+    setEditMode(false);
+  }
   const [scanning, setScanning]   = useState<boolean>(false);
   const [orders, setOrders]       = useState<Order[]>([]);
   const [localValidation, setLocalValidation] = useState<ReturnType<typeof useMobilePickerSession>['validationResult']>(null);
@@ -157,6 +196,22 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   const stagingRegions = pickerState?.staging_regions ?? [];
 
   // ── Shared sub-sections ────────────────────────────────────────────────────
+
+  const joinBanner = showJoinBanner ? (
+    <div className="shrink-0 flex items-center gap-3 px-3 py-2 border-b border-[#f1c21b]/30 bg-[#f1c21b]/8"
+         style={{ background: 'rgba(241,194,27,0.07)' }}>
+      <span className="w-2 h-2 rounded-full bg-[#f1c21b] animate-pulse shrink-0" />
+      <span className="text-[#f1c21b] text-xs flex-1">
+        Demo running as <span className="font-mono font-semibold">{demoPickerId}</span>
+      </span>
+      <button
+        onClick={handleJoinDemo}
+        className="shrink-0 px-3 py-1 rounded-md text-xs font-bold bg-[#f1c21b] text-black active:brightness-90 transition-all"
+      >
+        Join Demo
+      </button>
+    </div>
+  ) : null;
 
   const header = (
     <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-[#2d3142] bg-[#1a1d27]">
@@ -259,6 +314,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
         {/* Left column — camera + controls (55 %) */}
         <div className="flex flex-col overflow-hidden border-r border-[#2d3142]" style={{ width: '55%' }}>
           {header}
+          {joinBanner}
           {/* Camera fills the remaining vertical space */}
           <div className="flex-1 min-h-0 overflow-hidden">
             {cameraPanel}
@@ -289,6 +345,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
       style={{ height: '100dvh', paddingBottom: 'env(safe-area-inset-bottom, 0px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       {header}
+      {joinBanner}
       {/* Camera takes up to 55 dvh — leaves ~45 dvh for controls + pick list */}
       <div className="shrink-0 w-full overflow-hidden" style={{ maxHeight: '55dvh' }}>
         {cameraPanel}
