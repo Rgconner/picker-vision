@@ -65,8 +65,6 @@ export function useMobileCamera(): MobileCameraState {
     setReady(false);
     setError(null);
 
-    // getUserMedia requires a secure context (HTTPS or localhost).
-    // navigator.mediaDevices is undefined on plain HTTP over LAN.
     if (!navigator.mediaDevices?.getUserMedia) {
       setError(
         'Camera unavailable: this page must be served over HTTPS. ' +
@@ -76,33 +74,36 @@ export function useMobileCamera(): MobileCameraState {
       return;
     }
 
-    // Build constraints: prefer environment-facing; allow explicit deviceId override.
-    // Request portrait-optimised dimensions when the device is in portrait mode so
-    // the camera delivers more vertical scan area instead of a heavily-cropped landscape frame.
-    const isPortrait = typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
-    const idealW = isPortrait ? 720  : 1280;
-    const idealH = isPortrait ? 1280 : 720;
-
-    let constraints: MediaStreamConstraints;
-    if (deviceId) {
-      constraints = { video: { deviceId: { exact: deviceId }, width: { ideal: idealW }, height: { ideal: idealH } } };
-    } else {
-      // Try environment (rear) camera first
-      constraints = { video: { facingMode: { ideal: 'environment' }, width: { ideal: idealW }, height: { ideal: idealH } } };
-    }
-
     try {
+      let targetDeviceId = deviceId;
+
+      // If no explicit deviceId, enumerate to find the rear camera by label.
+      // This avoids Android returning a low-res default stream when using
+      // facingMode alone — selecting by deviceId gets the full-res rear sensor.
+      if (!targetDeviceId) {
+        // First open a minimal stream to unlock device labels
+        const probe = await navigator.mediaDevices.getUserMedia({ video: true }).catch(() => null);
+        if (probe) probe.getTracks().forEach((t) => t.stop());
+
+        const all = await enumerateDevices();
+        const rear = all.find((d) => /back|rear|environment/i.test(d.label))
+                  ?? all[all.length - 1]; // Android puts rear camera last
+        targetDeviceId = rear?.deviceId ?? null;
+      }
+
+      const constraints: MediaStreamConstraints = targetDeviceId
+        ? { video: { deviceId: { exact: targetDeviceId }, width: { ideal: 1920, min: 1280 }, height: { ideal: 1080, min: 720 } } }
+        : { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920, min: 1280 }, height: { ideal: 1080, min: 720 } } };
+
       const s = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = s;
       setStream(s);
 
-      // Detect which facing mode we actually got
-      const track = s.getVideoTracks()[0];
+      const track    = s.getVideoTracks()[0];
       const settings = track?.getSettings?.() ?? {};
       setFacing((settings as MediaTrackSettings & { facingMode?: string }).facingMode ?? 'environment');
-      setActiveDeviceId((settings as MediaTrackSettings & { deviceId?: string }).deviceId ?? deviceId ?? null);
+      setActiveDeviceId((settings as MediaTrackSettings & { deviceId?: string }).deviceId ?? targetDeviceId ?? null);
 
-      // Now that we have permission, enumerate all devices
       const devs = await enumerateDevices();
       setDevices(devs);
       setReady(true);
