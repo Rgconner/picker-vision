@@ -10,8 +10,6 @@ resources:
   - ../../base
   # cert-manager Issuer + Certificate for the web-ui self-signed TLS cert
   - tls.yaml
-  # MetalLB L2Advertisement (reuses sandbox pool, names its own advertisement)
-  - metallb-l2.yaml
   # One-shot seed job — runs seed_btt.py after order-service is ready
   - seed-job.yaml
 
