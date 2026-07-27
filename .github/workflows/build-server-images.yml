@@ -107,8 +107,10 @@ jobs:
         id: tag
         shell: powershell
         run: |
-          $sha7 = "${{ github.sha }}".Substring(0,7)
-          "sha=sha-$sha7" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          $sha7 = "${{ github.sha }}".Substring(0, 7)
+          $line = "sha=sha-$sha7"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $line -Encoding utf8
+          Write-Host "Image tag: $line"
 
       # ── Production deploy (main) ──────────────────────────────────────────────
       # MetalLB config is cluster-level infrastructure — applied once at setup,
