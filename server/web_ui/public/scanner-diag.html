@@ -93,28 +93,41 @@ async function init() {
 async function startScan() {
   const vid = document.getElementById('vid');
   try {
+    /* Step 1: enumerate devices to find the rear camera device ID */
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(d => d.kind === 'videoinput');
+    log('Video devices: ' + videoDevices.length);
+    videoDevices.forEach((d,i) => log('  [' + i + '] ' + (d.label || 'unlabelled') + ' id:' + d.deviceId.slice(0,8)));
+
+    /* Pick the back/environment camera — label usually contains "back" or "rear"
+       Fall back to last device (Android puts rear camera last) */
+    const rear = videoDevices.find(d => /back|rear|environment/i.test(d.label))
+              || videoDevices[videoDevices.length - 1];
+    log('Using: ' + (rear?.label || 'unlabelled'));
+
+    /* Step 2: request max resolution explicitly on that deviceId */
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
-        facingMode: 'environment',
-        width:  { ideal: 1920 },
-        height: { ideal: 1080 },
+        deviceId: { exact: rear.deviceId },
+        width:    { ideal: 3840, min: 1280 },
+        height:   { ideal: 2160, min: 720 },
       },
       audio: false
     });
+
     vid.srcObject = stream;
     await vid.play();
     scanning = true;
 
-    /* Log actual track settings immediately */
     const track    = stream.getVideoTracks()[0];
     const settings = track.getSettings();
     log('Track: ' + settings.width + '×' + settings.height +
-        ' facing:' + settings.facingMode +
+        ' facing:' + (settings.facingMode || 'unknown') +
         ' deviceId:' + (settings.deviceId || '').slice(0,8));
 
     scanLoop();
   } catch(e) {
-    log('Camera error: ' + e);
+    log('Camera error: ' + e.name + ': ' + e.message);
   }
 }
 
