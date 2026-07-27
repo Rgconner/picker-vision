@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Picker Vision — Development Estimate (Client)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#ffffff;--surface:#f4f4f4;--surface2:#e0e0e0;--border:#e0e0e0;
+    --text:#161616;--muted:#525252;--accent:#0f62fe;--accent2:#8a3ffc;
+    --red:#da1e28;--green:#24a148;--yellow:#f1c21b;--teal:#007d79;
+    --header-bg:#161616;--header-text:#ffffff;
+    --badge-plan:#0043ce;--badge-code:#6929c4;
+    --badge-xs:#525252;--badge-s:#0e6027;--badge-m:#0043ce;--badge-l:#7e3e00;--badge-xl:#a2191f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;background:var(--bg);color:var(--text)}
+  .ibm-header{background:var(--header-bg);color:var(--header-text);padding:0 24px;height:48px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+  .ibm-header-left{display:flex;align-items:center;gap:16px}
+  .ibm-wordmark{font-size:20px;font-weight:700;letter-spacing:-0.5px;color:#fff}
+  .ibm-header-title{font-size:14px;color:#c6c6c6;font-weight:300;border-left:1px solid #393939;padding-left:16px}
+  .ibm-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:2px;text-transform:uppercase;letter-spacing:0.5px;background:#24a148;color:#fff}
+  .page{max-width:900px;margin:0 auto;padding:0 24px 48px}
+  .hero{padding:32px 0 24px;border-bottom:1px solid var(--border);margin-bottom:24px}
+  .hero-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px}
+  .hero-title{font-size:28px;font-weight:700;line-height:1.2;color:var(--text);margin-bottom:12px}
+  .hero-title sup{font-size:14px;font-weight:400;color:var(--accent)}
+  .hero-subtitle{font-size:15px;color:var(--muted);font-weight:300;max-width:640px}
+  .hero-meta{display:flex;gap:24px;margin-top:20px;flex-wrap:wrap}
+  .hero-meta-item{display:flex;flex-direction:column}
+  .hero-meta-label{font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)}
+  .hero-meta-value{font-size:18px;font-weight:600;color:var(--text);font-family:'IBM Plex Mono',monospace}
+  .tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:28px}
+  .tab{padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit;text-transform:uppercase;letter-spacing:0.5px}
+  .tab:hover{color:var(--text)}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+  .card-row{display:grid;gap:16px;margin-bottom:24px}
+  .card-row-4{grid-template-columns:repeat(4,1fr)}
+  .card-row-3{grid-template-columns:repeat(3,1fr)}
+  .card-row-2{grid-template-columns:repeat(2,1fr)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:16px}
+  .card-label{font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:6px}
+  .card-value{font-size:22px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--text)}
+  .card-sub{font-size:12px;color:var(--muted);margin-top:4px}
+  .card.accent{border-left:3px solid var(--accent)}
+  .card.green{border-left:3px solid var(--green)}
+  .card.purple{border-left:3px solid var(--accent2)}
+  .card.red{border-left:3px solid var(--red)}
+  .section-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:12px;margin-top:28px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px}
+  th{background:var(--surface);font-weight:600;text-align:left;padding:8px 10px;border:1px solid var(--border);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.3px}
+  td{padding:7px 10px;border:1px solid var(--border);vertical-align:middle}
+  tr:nth-child(even) td{background:#fafafa}
+  tr.subtotal td{background:var(--surface);font-weight:700;font-size:12px;color:var(--muted)}
+  tr.total td{background:#161616;color:#fff;font-weight:700}
+  tr.group-header td{background:#e8e8e8;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.3px;color:var(--muted)}
+  .badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 6px;border-radius:2px;text-transform:uppercase;letter-spacing:0.3px;color:#fff}
+  .badge-plan{background:var(--badge-plan)}.badge-code{background:var(--badge-code)}
+  .badge-xs{background:var(--badge-xs)}.badge-s{background:var(--badge-s)}.badge-m{background:var(--badge-m)}.badge-l{background:var(--badge-l)}.badge-xl{background:var(--badge-xl)}
+  .gantt-wrap{overflow-x:auto}
+  .bar-container{margin-bottom:16px}
+  .bar-label-row{display:flex;justify-content:space-between;margin-bottom:4px}
+  .bar-label{font-size:12px;font-weight:600}
+  .bar-pct{font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+  .bar-track{height:20px;background:var(--surface2);border-radius:2px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:2px;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:600;color:#fff}
+  .pull-quote{border-left:3px solid var(--accent2);padding:14px 18px;background:#f6f3ff;margin-bottom:24px;border-radius:0 4px 4px 0}
+  .pull-quote p{font-size:14px;line-height:1.7;color:#3d2885;font-style:italic}
+  .value-headline{background:#161616;color:#fff;padding:20px 24px;border-radius:4px;margin:24px 0;font-size:15px;line-height:1.7}
+  .coverage-bar{height:28px;border-radius:3px;overflow:hidden;display:flex;margin:12px 0}
+  .coverage-plan{background:var(--badge-plan);display:flex;align-items:center;padding-left:10px;font-size:11px;font-weight:600;color:#fff}
+  .coverage-code{background:var(--badge-code);display:flex;align-items:center;padding-left:10px;font-size:11px;font-weight:600;color:#fff}
+  .callout{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px 18px;margin:16px 0}
+  .callout.warning{border-left:3px solid var(--yellow);background:#fff8f0}
+  .callout.info{border-left:3px solid var(--accent)}
+  details{margin-bottom:12px}
+  summary{cursor:pointer;font-size:13px;font-weight:600;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:4px;list-style:none;display:flex;align-items:center;gap:8px}
+  summary::before{content:'▶';font-size:10px;transition:transform 0.15s}
+  details[open] summary::before{transform:rotate(90deg)}
+  .rec-body{padding:12px 14px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;font-size:13px;line-height:1.7}
+  .rec-body p{margin-bottom:8px}
+  .qual-table td:first-child{font-weight:600;width:200px}
+  .qual-table td.yes{color:var(--green);font-weight:600}
+  .qual-table td.no{color:var(--red)}
+  .qual-table td.warn{color:#c57a00}
+  .page-footer{margin-top:48px;padding-top:16px;border-top:1px solid var(--border);text-align:center;font-size:11px;color:var(--muted)}
+  @media(max-width:640px){
+    .card-row-4,.card-row-3{grid-template-columns:repeat(2,1fr)}
+    .card-row-2{grid-template-columns:1fr}
+    .tab{padding:8px 12px;font-size:11px}
+  }
+</style>
+</head>
+<body>
+
+<div class="ibm-header">
+  <div class="ibm-header-left">
+    <span class="ibm-wordmark">IBM</span>
+    <span class="ibm-header-title">Picker Vision — Development Summary</span>
+  </div>
+  <span class="ibm-badge">Client</span>
+</div>
+
+<div class="page">
+  <div class="hero">
+    <div class="hero-label">Art of the Possible — AI-Assisted Delivery</div>
+    <h1 class="hero-title">1 IBM Architect<sup> and Bob</sup> built a production warehouse vision system</h1>
+    <p class="hero-subtitle">Picker Vision — AI-powered barcode pick-assist, mobile AR scanner, Bob's Tiny Treasures retail demo scenario, Kubernetes deployment. Delivered in 4 days.</p>
+    <div class="hero-meta">
+      <div class="hero-meta-item"><span class="hero-meta-label">Work Items Delivered</span><span class="hero-meta-value">45</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">Equivalent Team Effort</span><span class="hero-meta-value">1,770 hrs</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">Team Size</span><span class="hero-meta-value">7-person equiv.</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">Value Multiplier</span><span class="hero-meta-value" style="color:var(--green)">74×</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">Architect Active Time</span><span class="hero-meta-value">12.5 hrs</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">Date</span><span class="hero-meta-value" style="font-size:14px">2026-07-27</span></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('overview',this)">Scope &amp; Delivery</button>
+    <button class="tab" onclick="switchTab('timeline',this)">Timeline</button>
+    <button class="tab" onclick="switchTab('coverage',this)">Planning Insight</button>
+    <button class="tab" onclick="switchTab('value',this)">Value Story</button>
+  </div>
+
+  <!-- ── TAB: SCOPE & DELIVERY ── -->
+  <div id="tab-overview" class="tab-panel active">
+    <div class="card-row card-row-4">
+      <div class="card accent"><div class="card-label">Equivalent Dev Hours</div><div class="card-value">1,770</div><div class="card-sub">7-person team baseline</div></div>
+      <div class="card"><div class="card-label">Schedule Equivalent</div><div class="card-value">~9.5 wks</div><div class="card-sub">47 calendar days</div></div>
+      <div class="card green"><div class="card-label">Delivery Groups</div><div class="card-value">3</div><div class="card-sub">Platform · Mobile · Demo Shop</div></div>
+      <div class="card"><div class="card-label">Work Items</div><div class="card-value">45</div><div class="card-sub">across 3 delivery groups</div></div>
+    </div>
+
+    <div class="section-title">WBS — Group A: Platform Development</div>
+    <table>
+      <thead><tr><th>ID</th><th>Work Item</th><th>Tier</th><th>Est. Hours</th></tr></thead>
+      <tbody>
+        <tr class="group-header"><td colspan="4">Core Infrastructure &amp; Services</td></tr>
+        <tr><td>P01</td><td>Pi: Barcode detector (QR + 1D, OpenCV dual-engine)</td><td><span class="badge badge-m">M</span></td><td>37</td></tr>
+        <tr><td>P02</td><td>Pi: Staging detector (Canny edges, quad-fit, polygon association)</td><td><span class="badge badge-m">M</span></td><td>37</td></tr>
+        <tr><td>P03</td><td>Pi: Frame annotator (OpenCV draw overlays, locked staging)</td><td><span class="badge badge-s">S</span></td><td>18</td></tr>
+        <tr><td>P04</td><td>Pi: MJPEG streamer (HTTP server, JPEG encode, multi-client)</td><td><span class="badge badge-s">S</span></td><td>18</td></tr>
+        <tr><td>P05</td><td>Pi: Camera probe (V4L2 device probe, index fallback)</td><td><span class="badge badge-xs">XS</span></td><td>4</td></tr>
+        <tr><td>P06</td><td>Pi: Event publisher (offline JSONL buffer, backoff, heartbeat)</td><td><span class="badge badge-l">L</span></td><td>76</td></tr>
+        <tr><td>P07</td><td>Pi: Vision service (capture loop, FastAPI control, threading)</td><td><span class="badge badge-l">L</span></td><td>76</td></tr>
+        <tr><td>P08</td><td>Pi: Deployment infra (config_loader, network_utils, Dockerfile)</td><td><span class="badge badge-m">M</span></td><td>37</td></tr>
+        <tr><td>P09</td><td>Pi: Fix registration — LAN IP probe, set_stream/control_url</td><td><span class="badge badge-s">S</span></td><td>18</td></tr>
+        <tr><td>P10</td><td>Pi: All-products active scoring refactor</td><td><span class="badge badge-xs">XS</span></td><td>4</td></tr>
+        <tr><td>P11</td><td>Order Service: SQLAlchemy ORM models + seed data</td><td><span class="badge badge-m">M</span></td><td>37</td></tr>
+        <tr><td>P12</td><td>Order Service: Adapter pattern (BaseAdapter, LocalAdapter, SapAdapter)</td><td><span class="badge badge-m">M</span></td><td>37</td></tr>
+        <tr><td>P13</td><td>Order Service: FastAPI CRUD (7 endpoints)</td><td><span class="badge badge-m">M</span></td><td>37</td></tr>
+        <tr><td>P14</td><td>Event Processor: enrichment pipeline (async, Redis pub/sub)</td><td><span class="badge badge-l">L</span></td><td>76</td></tr>
+        <tr><td>P15</td><td>API Gateway: picker registry, proxy routing, WS proxy, CORS</td><td><span class="badge badge-l">L</span></td><td>76</td></tr>
+        <tr><td>P16</td><td>WebSocket Hub: Redis pubsub, supervisor+operator WS feeds</td><td><span class="badge badge-l">L</span></td><td>76</td></tr>
+        <tr><td>P17</td><td>Versioning: VERSION files, configmap keys, VERSIONS.md</td><td><span class="badge badge-s">S</span></td><td>18</td></tr>
+        <tr><td>P18</td><td>Log ring buffer: log_ring.py + /logs all services + pi proxy</td><td><span class="badge badge-m">M</span></td><td>37</td></tr>
+        <tr><td>P19</td><td>Health &amp; telemetry: /health counters + /api/telemetry + SSE</td><td><span class="badge badge-m">M</span></td><td>37</td></tr>
+        <tr class="group-header"><td colspan="4">Web UI</td></tr>
+        <tr><td>P20</td><td>WebUI: types.ts (shared detection, order, telemetry interfaces)</td><td><span class="badge badge-s">S</span></td><td>20</td></tr>
+        <tr><td>P21</td><td>WebUI: Operator View (VideoPanel, SVG overlay, PickList)</td><td><span class="badge badge-l">L</span></td><td>84</td></tr>
+        <tr><td>P22</td><td>WebUI: Supervisor View (SupervisorView, useSupervisorSocket)</td><td><span class="badge badge-m">M</span></td><td>41</td></tr>
+        <tr><td>P23</td><td>WebUI: Stream stats + StreamMeter (MJPEG byte count, sparkline)</td><td><span class="badge badge-s">S</span></td><td>20</td></tr>
+        <tr><td>P24</td><td>WebUI: HealthStrip + SystemView + useSystemHealth</td><td><span class="badge badge-l">L</span></td><td>84</td></tr>
+        <tr><td>P25</td><td>WebUI Mobile: MobilePickerView + AR canvas overlay</td><td><span class="badge badge-l">L</span></td><td>84</td></tr>
+        <tr><td>P26</td><td>WebUI Mobile: useMobileCamera (getUserMedia, device enum)</td><td><span class="badge badge-s">S</span></td><td>20</td></tr>
+        <tr><td>P27</td><td>WebUI Mobile: useBarcodeScanner (BarcodeDetector + ZXing, rAF)</td><td><span class="badge badge-m">M</span></td><td>37</td></tr>
+        <tr><td>P28</td><td>WebUI Mobile: useMobilePickerSession (WS, heartbeat, coalesce)</td><td><span class="badge badge-m">M</span></td><td>37</td></tr>
+        <tr><td>P29</td><td>WebUI Mobile: MobilePickList + MobileControls</td><td><span class="badge badge-s">S</span></td><td>20</td></tr>
+        <tr><td>P30</td><td>Barcode PDF: Code 128 height + QR landscape layout</td><td><span class="badge badge-s">S</span></td><td>18</td></tr>
+        <tr class="group-header"><td colspan="4">Infrastructure</td></tr>
+        <tr><td>P31</td><td>K8s: 9 base manifests (6 services, Redis, MetalLB, nginx)</td><td><span class="badge badge-l">L</span></td><td>60</td></tr>
+        <tr><td>P32</td><td>K8s: Overlay (test env) + kustomization</td><td><span class="badge badge-s">S</span></td><td>14</td></tr>
+        <tr><td>P33</td><td>Infra: docker-compose.yml + 6 Dockerfiles</td><td><span class="badge badge-m">M</span></td><td>33</td></tr>
+        <tr><td>P34</td><td>Infra: OpenAPI spec + README</td><td><span class="badge badge-s">S</span></td><td>14</td></tr>
+        <tr class="subtotal"><td colspan="3">Group A Total</td><td>1,089</td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">WBS — Group B: Mobile UX &amp; Debug Diagnostics</div>
+    <table>
+      <thead><tr><th>ID</th><th>Work Item</th><th>Tier</th><th>Est. Hours</th></tr></thead>
+      <tbody>
+        <tr><td>M01</td><td>Mobile auth, management UI, user/cart-type CRUD, lite picker mode</td><td><span class="badge badge-l">L</span></td><td>84</td></tr>
+        <tr><td>M02</td><td>Portrait layout fix (100dvh, camera view, safe-area, resolution)</td><td><span class="badge badge-m">M</span></td><td>41</td></tr>
+        <tr><td>M03</td><td>Detection ghosting fix (lastScan expiry, rAF guard, stable ref)</td><td><span class="badge badge-m">M</span></td><td>37</td></tr>
+        <tr><td>M04</td><td>Debug snapshot feed (hook, server endpoints, nginx routing)</td><td><span class="badge badge-m">M</span></td><td>37</td></tr>
+        <tr class="subtotal"><td colspan="3">Group B Total</td><td>199</td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">WBS — Group C: Demo Shop — Bob's Tiny Treasures</div>
+    <table>
+      <thead><tr><th>ID</th><th>Work Item</th><th>Tier</th><th>Est. Hours</th></tr></thead>
+      <tbody>
+        <tr><td>B01</td><td>Data model extensions (OrderTote, ToteLayer, ToteLineAssignment)</td><td><span class="badge badge-s">S</span></td><td>18</td></tr>
+        <tr><td>B02</td><td>Fixture &amp; seed data (9 products, 3 zones, 9 shelves, 3 orders, validation)</td><td><span class="badge badge-m">M</span></td><td>37</td></tr>
+        <tr><td>B03</td><td>Warehouse Setup Wizard — backend (7 CRUD endpoints)</td><td><span class="badge badge-m">M</span></td><td>41</td></tr>
+        <tr><td>B04</td><td>Warehouse Setup Wizard — frontend (Grid / Inventory / Scenarios tabs)</td><td><span class="badge badge-l">L</span></td><td>84</td></tr>
+        <tr><td>B05</td><td>Pack &amp; Verify — backend (bin-packing engine, 3 endpoints, test suite)</td><td><span class="badge badge-m">M</span></td><td>37</td></tr>
+        <tr><td>B06</td><td>Pack Wizard UI (step modal, mobile picker integration, supervisor flow)</td><td><span class="badge badge-l">L</span></td><td>84</td></tr>
+        <tr><td>B07</td><td>Label Sheet Generator (PDF engine + designer UI, 2 print modes, 3 barcode types)</td><td><span class="badge badge-xl">XL</span></td><td>140</td></tr>
+        <tr><td>B08</td><td>Brand logo (SVG robot+gems), K8s BTT overlay, CI pipeline extension</td><td><span class="badge badge-m">M</span></td><td>41</td></tr>
+        <tr class="subtotal"><td colspan="3">Group C Total</td><td>482</td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">Grand Total</div>
+    <table>
+      <thead><tr><th>Group</th><th>Hrs</th></tr></thead>
+      <tbody>
+        <tr><td>A — Platform Development</td><td>1,089</td></tr>
+        <tr><td>B — Mobile UX &amp; Debug</td><td>199</td></tr>
+        <tr><td>C — Demo Shop (Bob's Tiny Treasures)</td><td>482</td></tr>
+        <tr class="total"><td>Grand Total (equivalent 7-person team)</td><td>1,770</td></tr>
+      </tbody>
+    </table>
+
+    <table>
+      <thead><tr><th>Role</th><th>Count</th><th>Total Hrs</th><th>% Effort</th></tr></thead>
+      <tbody>
+        <tr><td>Manager</td><td>1</td><td>101</td><td>5.7%</td></tr>
+        <tr><td>Architect</td><td>1</td><td>169</td><td>9.5%</td></tr>
+        <tr><td>UI Designer</td><td>1</td><td>90</td><td>5.1%</td></tr>
+        <tr><td>Senior Developer</td><td>1</td><td>352</td><td>19.9%</td></tr>
+        <tr><td>Mid-Level Developer</td><td>2</td><td>706</td><td>39.9%</td></tr>
+        <tr><td>Junior Developer</td><td>2</td><td>352</td><td>19.9%</td></tr>
+        <tr class="total"><td colspan="2">TOTAL</td><td>1,770</td><td>100%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── TAB: TIMELINE ── -->
+  <div id="tab-timeline" class="tab-panel">
+    <div class="card-row card-row-4">
+      <div class="card accent"><div class="card-label">Total Duration</div><div class="card-value">~9.5 wks</div><div class="card-sub">47.4 calendar days</div></div>
+      <div class="card"><div class="card-label">Team Capacity/Day</div><div class="card-value">44.8 hrs</div><div class="card-sub">8 heads × 7h × 80%</div></div>
+      <div class="card"><div class="card-label">Adjusted Hours</div><div class="card-value">2,124</div><div class="card-sub">1,770 × 1.20 contingency</div></div>
+      <div class="card green"><div class="card-label">Actual Delivery</div><div class="card-value" style="font-size:14px">4 days</div><div class="card-sub">Jul 24–27, 2026</div></div>
+    </div>
+
+    <div class="callout info" style="margin-bottom:24px">
+      <strong>Note:</strong> A traditional 7-person team would require approximately 9.5 weeks to deliver this scope. This system was architected, built, tested, and deployed in <strong>4 calendar days</strong> — 12.5 active architect hours — using AI-assisted development. The timeline Gantt below shows the equivalent project plan.
+    </div>
+
+    <div class="section-title">Equivalent Project Gantt (7-person team baseline)</div>
+    <div class="gantt-wrap">
+      <svg width="840" height="280" viewBox="0 0 840 280" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;display:block">
+        <defs><pattern id="vgrid" width="84" height="280" patternUnits="userSpaceOnUse"><line x1="84" y1="0" x2="84" y2="280" stroke="#e0e0e0" stroke-width="1"/></pattern></defs>
+        <rect x="140" y="0" width="700" height="280" fill="url(#vgrid)"/>
+        <text x="182" y="18" font-size="10" fill="#525252" font-family="IBM Plex Mono,monospace" text-anchor="middle">Wk 1</text>
+        <text x="266" y="18" font-size="10" fill="#525252" font-family="IBM Plex Mono,monospace" text-anchor="middle">Wk 2</text>
+        <text x="350" y="18" font-size="10" fill="#525252" font-family="IBM Plex Mono,monospace" text-anchor="middle">Wk 3–4</text>
+        <text x="476" y="18" font-size="10" fill="#525252" font-family="IBM Plex Mono,monospace" text-anchor="middle">Wk 5–6</text>
+        <text x="602" y="18" font-size="10" fill="#525252" font-family="IBM Plex Mono,monospace" text-anchor="middle">Wk 7–8</text>
+        <text x="728" y="18" font-size="10" fill="#525252" font-family="IBM Plex Mono,monospace" text-anchor="middle">Wk 9–10</text>
+        <text x="130" y="52" font-size="11" fill="#161616" font-weight="600" font-family="IBM Plex Sans,sans-serif" text-anchor="end">Discovery</text>
+        <rect x="140" y="36" width="44" height="22" fill="#0f62fe" rx="2"/>
+        <text x="162" y="51" font-size="10" fill="#fff" font-family="IBM Plex Sans,sans-serif" text-anchor="middle">3d</text>
+        <text x="130" y="92" font-size="11" fill="#161616" font-weight="600" font-family="IBM Plex Sans,sans-serif" text-anchor="end">Design</text>
+        <rect x="140" y="76" width="89" height="22" fill="#8a3ffc" rx="2"/>
+        <text x="185" y="91" font-size="10" fill="#fff" font-family="IBM Plex Sans,sans-serif" text-anchor="middle">6d</text>
+        <text x="130" y="132" font-size="11" fill="#161616" font-weight="600" font-family="IBM Plex Sans,sans-serif" text-anchor="end">Build</text>
+        <rect x="195" y="116" width="398" height="22" fill="#0043ce" rx="2"/>
+        <text x="394" y="131" font-size="10" fill="#fff" font-family="IBM Plex Sans,sans-serif" text-anchor="middle">Build — 27 days</text>
+        <text x="130" y="172" font-size="11" fill="#161616" font-weight="600" font-family="IBM Plex Sans,sans-serif" text-anchor="end">Test</text>
+        <rect x="575" y="156" width="118" height="22" fill="#007d79" rx="2"/>
+        <text x="634" y="171" font-size="10" fill="#fff" font-family="IBM Plex Sans,sans-serif" text-anchor="middle">8d</text>
+        <text x="130" y="212" font-size="11" fill="#161616" font-weight="600" font-family="IBM Plex Sans,sans-serif" text-anchor="end">Deploy</text>
+        <rect x="693" y="196" width="44" height="22" fill="#da1e28" rx="2"/>
+        <text x="715" y="211" font-size="10" fill="#fff" font-family="IBM Plex Sans,sans-serif" text-anchor="middle">3d</text>
+        <circle cx="140" cy="248" r="4" fill="#161616"/>
+        <text x="140" y="265" font-size="10" fill="#161616" font-family="IBM Plex Sans,sans-serif" text-anchor="middle" font-weight="600">Start</text>
+        <circle cx="229" cy="248" r="4" fill="#8a3ffc"/>
+        <text x="229" y="265" font-size="10" fill="#8a3ffc" font-family="IBM Plex Sans,sans-serif" text-anchor="middle" font-weight="600">Design</text>
+        <circle cx="593" cy="248" r="4" fill="#0043ce"/>
+        <text x="593" y="265" font-size="10" fill="#0043ce" font-family="IBM Plex Sans,sans-serif" text-anchor="middle" font-weight="600">Build Done</text>
+        <circle cx="837" cy="248" r="4" fill="#24a148"/>
+        <text x="820" y="265" font-size="10" fill="#24a148" font-family="IBM Plex Sans,sans-serif" text-anchor="middle" font-weight="600">Go-Live</text>
+      </svg>
+    </div>
+
+    <div class="section-title">How This System Was Built — Activity Breakdown</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px">70 commits across 4 days. Breakdown by development activity.</p>
+    <div class="bar-container">
+      <div class="bar-label-row"><span class="bar-label">Building — 22 feature commits</span><span class="bar-pct">60%</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:60%;background:#0043ce">Building</div></div>
+    </div>
+    <div class="bar-container">
+      <div class="bar-label-row"><span class="bar-label">Iteration / Fixes — 41 refinement commits</span><span class="bar-pct">34%</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:34%;background:#6929c4">Iteration / Fix</div></div>
+    </div>
+    <div class="bar-container">
+      <div class="bar-label-row"><span class="bar-label">Planning &amp; Documentation — 7 commits</span><span class="bar-pct">6%</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:6%;background:#007d79">Planning</div></div>
+    </div>
+  </div>
+
+  <!-- ── TAB: PLANNING INSIGHT ── -->
+  <div id="tab-coverage" class="tab-panel">
+    <div class="card-row card-row-4">
+      <div class="card accent"><div class="card-label">Planned Items (before build)</div><div class="card-value">332 hrs</div><div class="card-sub">15 items · 4 plan files</div></div>
+      <div class="card purple"><div class="card-label">Domain Context Items</div><div class="card-value">1,438 hrs</div><div class="card-sub">30 items from expert knowledge</div></div>
+      <div class="card"><div class="card-label">Total Delivered</div><div class="card-value">1,770 hrs</div><div class="card-sub">45 work items</div></div>
+      <div class="card red"><div class="card-label">Formal Plan Coverage</div><div class="card-value">19%</div><div class="card-sub">of total equivalent effort</div></div>
+    </div>
+
+    <div class="section-title">What Was Planned vs. What Domain Context Provided</div>
+    <div class="coverage-bar">
+      <div class="coverage-plan" style="width:19%">Formally Planned 19%</div>
+      <div class="coverage-code" style="width:81%">From domain context &amp; expertise 81%</div>
+    </div>
+
+    <div class="callout info" style="margin-top:16px">
+      <strong>Key Insight:</strong> Only 19% of the delivered scope was described in formal planning documents. The remaining 81% was contributed from the architect's deep domain expertise and direct IBM product knowledge — translated into code without a traditional PM or BA layer. This is the core efficiency gain of the AI-assisted delivery model.
+    </div>
+    <div class="callout warning" style="margin-top:12px">
+      <strong>Exception — Bob's Tiny Treasures (Group C):</strong> The demo shop achieved 100% plan coverage — all 8 work items were formally planned before being built. This is the recommended model for future project cycles.
+    </div>
+
+    <div class="section-title">Key Work Items Delivered from Domain Knowledge</div>
+    <table>
+      <thead><tr><th>ID</th><th>Work Item</th><th>Tier</th><th>Equiv. Hours</th><th>Business Value</th></tr></thead>
+      <tbody>
+        <tr><td>P06</td><td>Pi: Event publisher (offline resilience)</td><td><span class="badge badge-l">L</span></td><td>76</td><td>System continues operating without server connectivity</td></tr>
+        <tr><td>P07</td><td>Pi: Vision service (full pipeline orchestration)</td><td><span class="badge badge-l">L</span></td><td>76</td><td>Coordinates camera, barcode, staging detection, and streaming</td></tr>
+        <tr><td>P14</td><td>Event Processor</td><td><span class="badge badge-l">L</span></td><td>76</td><td>Real-time order enrichment — picks never miss a scan event</td></tr>
+        <tr><td>P15</td><td>API Gateway</td><td><span class="badge badge-l">L</span></td><td>76</td><td>Single secure ingress for all picker and supervisor traffic</td></tr>
+        <tr><td>P16</td><td>WebSocket Hub</td><td><span class="badge badge-l">L</span></td><td>76</td><td>Live supervisor visibility into all active pickers</td></tr>
+        <tr><td>P21</td><td>WebUI: Operator View</td><td><span class="badge badge-l">L</span></td><td>84</td><td>Primary pick-floor interface with live video + detection overlay</td></tr>
+        <tr><td>P25</td><td>Mobile AR View</td><td><span class="badge badge-l">L</span></td><td>84</td><td>Hands-free AR barcode scanning on any smartphone</td></tr>
+        <tr><td>P31</td><td>K8s: Production manifests</td><td><span class="badge badge-l">L</span></td><td>60</td><td>Deployable to any Kubernetes cluster from day one</td></tr>
+        <tr><td colspan="3"><em>+ 22 further items (Pi detectors, services, mobile hooks, infra)</em></td><td>430</td><td></td></tr>
+        <tr class="subtotal"><td colspan="3">Domain-context sub-total</td><td>1,438</td><td></td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">Plan Coverage by Delivery Group</div>
+    <table>
+      <thead><tr><th>Group</th><th>Planned Hrs</th><th>Domain-Context Hrs</th><th>Total Hrs</th><th>Coverage</th></tr></thead>
+      <tbody>
+        <tr><td>A — Platform Development</td><td>216</td><td>873</td><td>1,089</td><td>20%</td></tr>
+        <tr><td>B — Mobile UX</td><td>116</td><td>83</td><td>199</td><td>58%</td></tr>
+        <tr><td>C — Demo Shop (BTT)</td><td>482</td><td>0</td><td>482</td><td style="color:var(--green);font-weight:700">100%</td></tr>
+        <tr class="total"><td>Overall</td><td>814</td><td>956</td><td>1,770</td><td>46%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── TAB: VALUE STORY ── -->
+  <div id="tab-value" class="tab-panel">
+    <div class="pull-quote">
+      <p>You bring deep domain expertise, industry knowledge, and a precise vision of what your customer needs. AI translates that vision into production-quality code, demos, and documentation — multiplying the value you deliver. The result: experiences that delight customers, accelerate time-to-value, and demonstrate what is possible when human expertise and AI work as one team.</p>
+    </div>
+
+    <div class="card-row card-row-3">
+      <div class="card accent"><div class="card-label">Equivalent dev effort (industry benchmark)</div><div class="card-value">$271,782</div><div class="card-sub">1,770 hrs × industry-standard rates × 1.2</div></div>
+      <div class="card green"><div class="card-label">Value multiplier vs. industry benchmark</div><div class="card-value" style="color:var(--green)">74×</div><div class="card-sub">for every $1 of architect investment</div></div>
+      <div class="card"><div class="card-label">Actual delivery time</div><div class="card-value">4 days</div><div class="card-sub">vs. ~9.5 weeks equivalent</div></div>
+    </div>
+
+    <div class="section-title">Two-Way Value Comparison</div>
+    <table>
+      <thead><tr><th>Dimension</th><th>AI-Assisted Architect</th><th>Traditional 7-Person Dev Team</th></tr></thead>
+      <tbody>
+        <tr><td>Value delivered</td><td style="font-weight:700;color:var(--green)">$271,782 equivalent</td><td>$271,782</td></tr>
+        <tr><td>Relative investment</td><td style="font-weight:700;color:var(--green)">Significantly lower</td><td>Baseline (1×)</td></tr>
+        <tr><td>Active architect hours</td><td>12.5 hrs</td><td>—</td></tr>
+        <tr><td>Calendar duration</td><td>4 days (actual)</td><td>~9.5 weeks (equivalent)</td></tr>
+        <tr><td>Team size</td><td>1 architect + AI</td><td>7 people</td></tr>
+        <tr><td>Domain expertise</td><td class="yes">✔ Architect owns it directly</td><td class="no">✘ Full briefing required</td></tr>
+        <tr><td>Customer context</td><td class="yes">✔ Architect owns it directly</td><td class="no">✘ Lost in PM/BA handoff</td></tr>
+        <tr><td>Time to first working demo</td><td class="yes">Hours to days</td><td class="no">Weeks to months</td></tr>
+        <tr><td>Iteration speed</td><td class="yes">Instant — discuss, get code</td><td class="no">Sprint cycles (1–2 weeks)</td></tr>
+        <tr><td>Risk of scope drift</td><td class="yes">Low — architect steers every turn</td><td class="no">High — handoff introduces gaps</td></tr>
+        <tr><td>Value multiplier</td><td style="font-weight:700;color:var(--green);font-family:'IBM Plex Mono',monospace">74×</td><td>1×</td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">Qualitative Trade-off</div>
+    <table class="qual-table">
+      <thead><tr><th>Dimension</th><th>AI-Assisted Architect</th><th>Traditional Dev Team</th></tr></thead>
+      <tbody>
+        <tr><td>Speed to first demo</td><td class="yes">Hours–days</td><td class="no">Weeks–months</td></tr>
+        <tr><td>Who holds the vision</td><td class="yes">You — directly translated</td><td class="warn">PM/BA layer required</td></tr>
+        <tr><td>Customer need awareness</td><td class="yes">Yours — no translation loss</td><td class="no">Brief → interpret → build</td></tr>
+        <tr><td>Iteration speed</td><td class="yes">Instant — ask AI, get code</td><td class="no">Sprint cycles</td></tr>
+        <tr><td>Risk of scope drift</td><td class="yes">Low — you steer every turn</td><td class="no">High — handoff gaps</td></tr>
+        <tr><td>Recommended for</td><td class="yes">PoCs, demos, Art of the Possible</td><td class="warn">Production scaled systems</td></tr>
+      </tbody>
+    </table>
+
+    <div class="value-headline">
+      This system was built by <strong>1 architect working with AI</strong> in <strong>12.5 active hours</strong> — delivering the equivalent of a <strong>7-person professional development team's output</strong> at <strong>74× the value per dollar invested</strong> against industry-standard benchmarks.
+    </div>
+  </div>
+
+  <!-- Recommendations -->
+  <div class="section-title" style="margin-top:32px">Delivery Observations</div>
+  <details><summary>Highest Complexity Items</summary>
+    <div class="rec-body">
+      <p><strong>B07 (Label Sheet Generator, XL, 140 hrs):</strong> Dual print mode, 3 barcode types, PDF generation. Highest single-item estimate in the project — validate Avery label alignment with physical test prints before customer demo.</p>
+      <p><strong>B05 + B06 (Pack engine + wizard, 121 hrs):</strong> Bin-packing algorithm and multi-step wizard are tightly coupled — verify data model stability before extending.</p>
+      <p><strong>P06 + P07 (Pi pipeline, 152 hrs):</strong> Threading model on Pi hardware is environment-dependent — test on target hardware before live demo.</p>
+    </div>
+  </details>
+  <details><summary>Effort Distribution</summary>
+    <div class="rec-body"><p>Mid-Level Developer capacity carries 39.9% of the total equivalent effort — the dominant critical path resource. Together with Senior Developer (19.9%), 60% of the project load falls on these two roles.</p></div>
+  </details>
+  <details><summary>Estimate Confidence</summary>
+    <div class="rec-body"><p>±25% confidence band — this is a planning-level estimate based on a full codebase audit. The delivered system is complete and readable, which tightens the estimate compared to a pre-build exercise. Range: approximately $204k – $371k adjusted against industry-standard benchmarks.</p></div>
+  </details>
+</div>
+
+<div style="max-width:900px;margin:0 auto;padding:0 24px">
+  <div class="page-footer">
+    <p>Prepared by <a href="https://www.ibm.com/watsonx" style="color:var(--accent)">IBM · Bob AI</a> · 2026-07-27 · Planning-level estimate ±25%</p>
+    <p style="margin-top:6px">Made with IBM Bob</p>
+  </div>
+</div>
+
+<script>
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active')});
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

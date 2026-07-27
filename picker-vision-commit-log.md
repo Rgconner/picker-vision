@@ -76,9 +76,27 @@ derived from the gap to the prior commit (capped at 60 min; gaps > 60 min = step
 | 47 | 2026-07-26 07:49 | 022e3d5 | **Planning** | docs(mobile-web-client): add value story pages and redesign planning docs | 5 | +1887 | −83 | 207.9 | 0 | Gap >6h overnight — value story HTML + estimate redesign plan |
 | 48 | 2026-07-26 08:38 | 17b5f88 | **Iteration** | fix(mobile-web-client): use wss when page is served over https | 3 | +6 | −3 | 9.75 | 49 | |
 | 49 | 2026-07-26 11:05 | 6a10616 | **Issue** | fix(mobile-web-client): serve http directly for cloudflared origin on port 80 | 1 | +87 | −2 | 11.8 | 0 | Step-away >60 min; nginx config fix for Cloudflare tunnel origin |
-| 50 | — | pending | **Issue** | fix(mobile): portrait layout — 100dvh, camera 55dvh, safe-area insets, compact controls | 5 | ~+90 | ~−18 | ~29.4 | — | Mobile QA session — this conversation |
-| 51 | — | pending | **Issue** | fix(mobile): detection ghosting — lastScan auto-expiry, rAF in-flight guard, stable onDetectRef | 3 | ~+38 | ~−12 | ~16.0 | — | |
-| 52 | — | pending | **Functionality** | feat(mobile): debug snapshot feed — useDebugSnapshot hook + /api/debug/snapshot endpoints | 5 | ~+130 | ~−8 | ~48.0 | — | New file useDebugSnapshot.ts; nginx + gateway endpoints; VERSION bumps |
+| 50 | 2026-07-26 18:36 | 2a813f1 | **Functionality** | feat(mobile): add debug snapshot feed, fix portrait layout and scan ghosting | 13 | +538 | −60 | 93.8 | 0 | Gap >6h overnight — not counted. Resolves 3 mobile QA issues in one commit |
+| 51 | 2026-07-26 19:39 | c05da3f | **Functionality** | feat(mobile-web-client): add auth, management UI, user/cart-type CRUD and lite picker mode | 11 | +1798 | −83 | 213.0 | 0 | Gap 63 min — step-away; largest mobile commit by line count |
+| 52 | 2026-07-26 19:58 | 39fb228 | **Iteration** | fix(ci): remove metallb apply steps from deploy job | 1 | +4 | −8 | 3.4 | 18 | |
+| 53 | 2026-07-26 20:07 | bcd9177 | **Iteration** | fix(ci): self-hosted runner — remove kubeconfig secret, switch deploy steps to PowerShell | 1 | +51 | −40 | 18.05 | 9 | |
+| 54 | 2026-07-26 20:11 | e87cbf1 | **Iteration** | fix(ci): use Add-Content for GITHUB_OUTPUT on Windows runner | 1 | +4 | −2 | 4.1 | 4 | |
+| 55 | 2026-07-26 20:14 | 3a757bb | **Iteration** | fix(ci): use env:GITHUB_SHA instead of template expression in PowerShell | 1 | +5 | −4 | 5.2 | 3 | |
+| 56 | 2026-07-26 20:30 | 1c069fc | **Issue** | fix(order-service): import Request from fastapi — fixes CrashLoopBackOff | 1 | +1 | −1 | 3.1 | 16 | Runtime crash in order-service pod on deploy |
+| 57 | 2026-07-26 20:31 | 8fba1b1 | **Iteration** | chore: remove credential leak warning commit (PAT revoked) | 0 | +0 | −0 | 0 | 1 | Git history scrub — no code change |
+| 58 | 2026-07-26 20:43 | c692b76 | **Planning** | chore(github-auth): use env:GH_PAT pattern in SKILL.md | 1 | +5 | −5 | 5.25 | 12 | Security hardening for skill docs |
+| 59 | 2026-07-26 21:46 | 2e4ec6a | **Functionality** | feat(btt): ST-1 data model extensions + ST-6 brand logo | 4 | +799 | −2 | 91.85 | 0 | Gap 63 min — step-away; BTT session begins. OrderTote/ToteLayer/ToteLineAssignment + logo.svg |
+| 60 | 2026-07-26 21:50 | 993237b | **Functionality** | feat(btt): ST-2 fixture seed + README + validation script | 4 | +710 | −2 | 83.1 | 4 | seed_btt.py 450 lines + validate script 100 lines |
+| 61 | 2026-07-26 21:54 | 0c5c627 | **Iteration** | feat(btt): ST-6 redesign logo as chat-bubble AI Bob | 1 | +122 | −105 | 9.35 | 4 | Logo redesign to chat-bubble robot motif |
+| 62 | 2026-07-26 21:57 | 07f8941 | **Functionality** | feat(btt): ST-3a warehouse setup wizard | 4 | +784 | −12 | 91.0 | 3 | BttSetupPanel.tsx 553 lines + ManagementView.tsx extension; Grid/Inventory/Scenarios tabs |
+| 63 | 2026-07-27 05:34 | 6e87b84 | **Functionality** | feat(btt): add pack & verify flow with bin-packing engine and wizard UI | 9 | +3858 | −7 | 440.4 | 0 | Gap 457 min — overnight sleep. Largest BTT commit: packer.py + PackWizard.tsx + 240-line test suite |
+| 64 | 2026-07-27 05:55 | 8cae463 | **Functionality** | feat(btt): add server-side PDF label sheet generator with designer UI | 6 | +1083 | −28 | 130.3 | 21 | label_generator.py ReportLab + BttLabelsPanel.tsx 455 lines |
+| 65 | 2026-07-27 06:04 | 597faae | **Functionality** | feat(btt): serve logo from static asset and add k8s BTT overlay | 13 | +667 | −163 | 87.35 | 9 | k8s/overlays/bobs-tiny-treasures/ + web-ui static serving |
+| 66 | 2026-07-27 06:08 | b649383 | **Functionality** | feat(btt): add demoCredentials module and link from README | 2 | +13 | −0 | 7.3 | 5 | |
+| 67 | 2026-07-27 06:18 | 004facc | **Iteration** | ci(btt): add bobs-tiny-treasures branch to build and deploy workflow | 1 | +32 | −0 | 9.6 | 10 | |
+| 68 | 2026-07-27 06:43 | 654c801 | **Functionality** | feat(btt): mount seed script as configmap volume in seed job | 3 | +170 | −4 | 26.5 | 22 | seed-script-configmap.yaml 157 lines |
+| 69 | 2026-07-27 06:56 | 1ccf489 | **Functionality** | feat(btt): add stock location label generator script and PDF fixture | 2 | +806 | −119 | 103.55 | 10 | generate_btt_labels.py + btt_stock_locations_letter.pdf fixture |
+| 70 | 2026-07-27 07:02 | a615368 | **Iteration** | refactor(btt): replace inline seed data with no-op stub for btt fixture | 1 | +11 | −224 | 14.2 | 7 | Removes 224 lines of duplicated inline seed data |
 
 ---
 
@@ -86,35 +104,36 @@ derived from the gap to the prior commit (capped at 60 min; gaps > 60 min = step
 
 | Metric | Value |
 |---|---|
-| Total commits logged | 52 (3 pending) |
-| Planning commits | 6 (12%) |
-| Functionality commits | 13 (25%) |
-| Issue commits | 8 (15%) |
-| Iteration commits | 25 (48%) |
-| Total lines added | ~14,711 |
-| Total lines deleted | ~1,226 |
-| Total Bob effort score | ~2,556.6 |
-| Avg Bob score per commit | ~49.2 |
-| Total human direction time | 588 min (~9.8 hrs) |
+| Total commits logged | 70 |
+| Planning commits | 7 (10%) |
+| Functionality commits | 22 (31%) |
+| Issue commits | 9 (13%) |
+| Iteration commits | 32 (46%) |
+| Total lines added | ~28,440 |
+| Total lines deleted | ~3,274 |
+| Total Bob effort score | ~4,507.3 |
+| Avg Bob score per commit | ~64.4 |
+| Total human direction time | 820 min (~13.7 hrs) |
 
 ### Category Breakdown
 
 ```
-Planning      ██████ 6  (12%) — docs, specs, plan files
-Functionality █████████████ 13 (25%) — net-new features
-Issue         ████████ 8  (15%) — runtime bugs, logic errors
-Iteration     ████████████████████████ 25 (48%) — CI, config, polish, version bumps
+Planning      ███ 7   (10%) — docs, specs, plan files
+Functionality ████████████████ 22 (31%) — net-new features  ← BTT session added 9 feat commits
+Issue         █████ 9  (13%) — runtime bugs, logic errors
+Iteration     █████████████████████████ 32 (46%) — CI, config, polish, version bumps
 ```
 
 ### Insight
 
-The 48% Iteration rate (down from 57% at commit #46) reflects the CI/build pipeline
-stabilization completing — recent sessions are skewing toward Functionality and Issue work,
-which is the expected maturity progression. The Planning share has grown to 12% as the
-project produces more value stories and formal plan documents. The two largest Bob effort
-scores remain commit #1 (613.2) and commit #20 (271.7), but commit #47 (207.9 — value
-story HTML) is now the third-largest single-commit output.
+The BTT session transformed the commit profile: Functionality is now the second-most
+common category at 31% (up from 25%), and the average Bob effort score jumped from 49.2
+to 64.4 per commit — driven by several monster BTT commits (commit #63 at 440.4 is now
+the second-largest in the project behind only #1 at 613.2). The three largest commits are
+now #1 (613.2 — initial scaffold), #63 (440.4 — pack wizard + packer engine), and
+#51 (213.0 — mobile auth + management CRUD). The BTT branch has 100% plan coverage, a
+notable departure from the 19% overall project ratio.
 
 ---
 
-*Generated by Bob `dev-estimator` skill — commit-log module. Last updated: 2026-07-26 (rev 4 — replaced estimated #47–49 with real git SHAs; added pending commits #50–52 from mobile QA + debug snapshot session)*
+*Generated by Bob `dev-estimator` skill — commit-log module. Last updated: 2026-07-27 (rev 5 — BTT branch session appended: commits #50–70; pending rows #50–52 replaced with real SHAs; BTT commits #59–70 added)*

@@ -1,30 +1,30 @@
 # Picker Vision — Development Estimate
 
-**Date:** 2025-07-14
-**Prepared by:** Bob (AI-assisted — `dev-estimator` skill v2, codebase-audit mode)
-**Rate Scenario:** IBM Blended
-**Contingency:** 20 %
+**Date:** 2025-07-27  
+**Prepared by:** Bob (AI-assisted — `dev-estimator` skill v2, codebase-audit mode)  
+**Rate Scenario:** Industry Standard  
+**Contingency:** 20 %  
 **Confidence Band:** ±25 % (planning-level estimate)
 
 ---
 
 ## Why This Estimate May Differ from Plan-Based Expectations
 
-Two plan files were found covering 10 work items. A full codebase audit identified
-**24 additional deliverables** not mentioned in any plan — bringing the total WBS to
-**34 items**.
+Four plan files were found covering 15 work items. A full codebase audit identified
+**30 additional deliverables** not mentioned in any plan — bringing the total WBS to
+**45 items** across three delivery groups.
 
 | Metric | Value |
 |---|---|
-| Plan items found | 10 (7 plan+code, 3 plan-only collapsed into adjacent items) |
-| Code-only items added by audit | 24 |
-| Plan coverage ratio | **217 / 1,089 hrs = 20 %** |
-| Cost attributable to unplanned items | **$125,160 base** (78 % of total) |
+| Plan items found | 15 (across 4 plan files) |
+| Code-only items added by audit | 30 |
+| Plan coverage ratio | **332 / 1,682 hrs = 20 %** |
+| Cost attributable to unplanned items | **$178,804 base** (80 % of total) |
 
 The plans described only incremental changes made after the initial v1.0.0 baseline.
 The codebase contains the full delivered scope including the entire Pi vision pipeline,
-all four server services, the desktop web UI, the mobile web client, K8s manifests,
-and Dockerfiles — none of which appeared in any plan document.
+all four server services, the desktop web UI, the mobile web client, the BTT demo shop
+scenario, K8s manifests, and Dockerfiles — the majority of which appeared in no plan document.
 
 ---
 
@@ -36,21 +36,21 @@ and Dockerfiles — none of which appeared in any plan document.
 | Team utilisation | 80 % |
 | Parallel execution | Yes |
 | Currency | USD |
-| Rates | IBM Blended |
+| Rates | Industry Standard |
 | Contingency | 20 % |
 
 ---
 
 ## Team & Rate Card
 
-| Role | Symbol | Count | Rate (IBM Blended) |
+| Role | Symbol | Count | Rate (Industry Standard) |
 |---|---|---|---|
-| Manager | MGR | 1 | $175/hr |
-| Architect | ARC | 1 | $200/hr |
-| UI Designer | DES | 1 | $140/hr |
-| Senior Developer | SRD | 1 | $180/hr |
-| Mid-Level Developer | MDD | 2 | $140/hr each |
-| Junior Developer | JRD | 2 | $100/hr each |
+| Manager | MGR | 1 | $150/hr |
+| Architect | ARC | 1 | $175/hr |
+| UI Designer | DES | 1 | $120/hr |
+| Senior Developer | SRD | 1 | $160/hr |
+| Mid-Level Developer | MDD | 2 | $120/hr each |
+| Junior Developer | JRD | 2 | $85/hr each |
 
 ---
 
@@ -58,62 +58,114 @@ and Dockerfiles — none of which appeared in any plan document.
 
 Source tags: **plan+code** = in a plan and in the codebase · **code** = codebase only (unplanned gap)
 
-### Group A — Plan + Code Items (in plans AND verified in codebase)
+---
 
-| ID | Work Item | Tier | MGR | ARC | DES | SRD | MDD | JRD | Hrs | Cost |
-|---|---|---|---|---|---|---|---|---|---|---|
-| P09 | Pi: Fix registration — LAN IP probe, set_stream/control_url | S | 1 | 1 | 0 | 4 | 8 | 4 | 18 | $2,760 |
-| P10 | Pi: All-products active scoring refactor | XS | 0.5 | 0.5 | 0 | 1 | 2 | 0 | 4 | $595 |
-| P17 | Versioning: VERSION files, configmap keys, VERSIONS.md | S | 1 | 1 | 0 | 4 | 8 | 4 | 18 | $2,760 |
-| P18 | Log ring buffer: log_ring.py + /logs all services + pi proxy | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,480 |
-| P19 | Health & telemetry: /health counters + /api/telemetry + SSE | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,480 |
-| P24 | WebUI: HealthStrip + SystemView + useSystemHealth | L | 4 | 8 | 8 | 16 | 32 | 16 | 84 | $12,820 |
-| P30 | Barcode PDF: Code 128 height + QR landscape layout + version bumps | S | 1 | 1 | 0 | 4 | 8 | 4 | 18 | $2,760 |
-| **Sub-total A** | | | **11.5** | **17.5** | **8** | **45** | **90** | **44** | **216** | **$32,655** |
+### Group A — Platform Development (Core System)
 
-### Group B — Code-Only Items (in codebase, absent from all plans)
+Work items from the initial system build and incremental feature cycles through v1.3.0.
 
-| ID | Work Item | Tier | MGR | ARC | DES | SRD | MDD | JRD | Hrs | Cost |
-|---|---|---|---|---|---|---|---|---|---|---|
-| P01 | Pi: Barcode detector (QR + 1D, OpenCV dual-engine) | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,480 |
-| P02 | Pi: Staging detector (Canny edges, quad-fit, polygon association) | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,480 |
-| P03 | Pi: Frame annotator (OpenCV draw overlays, locked staging) | S | 1 | 1 | 0 | 4 | 8 | 4 | 18 | $2,760 |
-| P04 | Pi: MJPEG streamer (HTTP server, JPEG encode, multi-client) | S | 1 | 1 | 0 | 4 | 8 | 4 | 18 | $2,760 |
-| P05 | Pi: Camera probe (V4L2 device probe, index fallback) | XS | 0.5 | 0.5 | 0 | 1 | 2 | 0 | 4 | $595 |
-| P06 | Pi: Event publisher (offline JSONL buffer, backoff, heartbeat) | L | 4 | 8 | 0 | 16 | 32 | 16 | 76 | $11,560 |
-| P07 | Pi: Vision service (capture loop, FastAPI control, threading) | L | 4 | 8 | 0 | 16 | 32 | 16 | 76 | $11,560 |
-| P08 | Pi: Deployment infra (config_loader, network_utils, start.sh, env template, install-service.sh, Dockerfile) | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,480 |
-| P11 | Order Service: SQLAlchemy ORM models + seed data | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,480 |
-| P12 | Order Service: Adapter pattern (BaseAdapter, LocalAdapter, SapAdapter stub, factory) | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,480 |
-| P13 | Order Service: FastAPI CRUD (7 endpoints, orders/products/staging/confirm-packed) | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,480 |
-| P14 | Event Processor: enrichment pipeline (async fetch, cache, completion detect, validation, Redis pub/sub) | L | 4 | 8 | 0 | 16 | 32 | 16 | 76 | $11,560 |
-| P15 | API Gateway: picker registry, proxy routing, WS proxy, CORS, API-key middleware | L | 4 | 8 | 0 | 16 | 32 | 16 | 76 | $11,560 |
-| P16 | WebSocket Hub: Redis pubsub listener, supervisor+operator WS feeds, keepalive | L | 4 | 8 | 0 | 16 | 32 | 16 | 76 | $11,560 |
-| P20 | WebUI: types.ts (all shared detection, order, telemetry, log interfaces) | S | 1 | 1 | 2 | 4 | 8 | 4 | 20 | $3,060 |
-| P21 | WebUI: Operator View (VideoPanel, SVG overlay, PickList, Controls, usePickerSocket, StagingOverlay) | L | 4 | 8 | 8 | 16 | 32 | 16 | 84 | $12,820 |
-| P22 | WebUI: Supervisor View (SupervisorView, useSupervisorSocket) | M | 2 | 3 | 4 | 8 | 16 | 8 | 41 | $6,280 |
-| P23 | WebUI: Stream stats + StreamMeter (fetch-based MJPEG byte count, sparkline) | S | 1 | 1 | 2 | 4 | 8 | 4 | 20 | $3,060 |
-| P25 | WebUI Mobile: MobilePickerView + MobileCameraView + AR canvas overlay | L | 4 | 8 | 8 | 16 | 32 | 16 | 84 | $12,820 |
-| P26 | WebUI Mobile: useMobileCamera (getUserMedia, device enum, facing toggle) | S | 1 | 1 | 2 | 4 | 8 | 4 | 20 | $3,060 |
-| P27 | WebUI Mobile: useBarcodeScanner (native BarcodeDetector + ZXing fallback, rAF loop) | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,480 |
-| P28 | WebUI Mobile: useMobilePickerSession (WS, register heartbeat, coalesce buffer, offline queue) | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,480 |
-| P29 | WebUI Mobile: MobilePickList + MobileControls (live pick list, validation modal) | S | 1 | 1 | 2 | 4 | 8 | 4 | 20 | $3,060 |
-| P31 | K8s: 9 base manifests (6 services, Redis, MetalLB, namespace, nginx configmap) | L | 4 | 8 | 0 | 16 | 32 | 0 | 60 | $9,120 |
-| P32 | K8s: Overlay (test env configmap-patch) + kustomization | S | 1 | 1 | 0 | 4 | 8 | 0 | 14 | $2,120 |
-| P33 | Infra: docker-compose.yml + 6 Dockerfiles | M | 2 | 3 | 0 | 8 | 16 | 4 | 33 | $4,960 |
-| P34 | Infra: OpenAPI spec (docs/api-spec.yaml) + README | S | 1 | 1 | 0 | 4 | 8 | 0 | 14 | $2,120 |
-| **Sub-total B** | | | **54.5** | **89.5** | **34** | **175** | **352** | **168** | **873** | **$130,175** |
+#### Group A1 — Plan + Code Items
 
-### Grand Total
+| ID | Work Item | Source | Tier | MGR | ARC | DES | SRD | MDD | JRD | Hrs | Cost |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| P09 | Pi: Fix registration — LAN IP probe, set_stream/control_url | plan+code | S | 1 | 1 | 0 | 4 | 8 | 4 | 18 | $2,520 |
+| P10 | Pi: All-products active scoring refactor | plan+code | XS | 0.5 | 0.5 | 0 | 1 | 2 | 0 | 4 | $560 |
+| P17 | Versioning: VERSION files, configmap keys, VERSIONS.md | plan+code | S | 1 | 1 | 0 | 4 | 8 | 4 | 18 | $2,520 |
+| P18 | Log ring buffer: log_ring.py + /logs all services + pi proxy | plan+code | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,160 |
+| P19 | Health & telemetry: /health counters + /api/telemetry + SSE | plan+code | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,160 |
+| P24 | WebUI: HealthStrip + SystemView + useSystemHealth | plan+code | L | 4 | 8 | 8 | 16 | 32 | 16 | 84 | $11,760 |
+| P30 | Barcode PDF: Code 128 height + QR landscape layout + version bumps | plan+code | S | 1 | 1 | 0 | 4 | 8 | 4 | 18 | $2,520 |
+| **Sub-total A1** | | | | **11.5** | **17.5** | **8** | **45** | **90** | **44** | **216** | **$30,200** |
+
+#### Group A2 — Code-Only Items (unplanned gap)
+
+| ID | Work Item | Source | Tier | MGR | ARC | DES | SRD | MDD | JRD | Hrs | Cost |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| P01 | Pi: Barcode detector (QR + 1D, OpenCV dual-engine) | code | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,160 |
+| P02 | Pi: Staging detector (Canny edges, quad-fit, polygon association) | code | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,160 |
+| P03 | Pi: Frame annotator (OpenCV draw overlays, locked staging) | code | S | 1 | 1 | 0 | 4 | 8 | 4 | 18 | $2,520 |
+| P04 | Pi: MJPEG streamer (HTTP server, JPEG encode, multi-client) | code | S | 1 | 1 | 0 | 4 | 8 | 4 | 18 | $2,520 |
+| P05 | Pi: Camera probe (V4L2 device probe, index fallback) | code | XS | 0.5 | 0.5 | 0 | 1 | 2 | 0 | 4 | $560 |
+| P06 | Pi: Event publisher (offline JSONL buffer, backoff, heartbeat) | code | L | 4 | 8 | 0 | 16 | 32 | 16 | 76 | $10,600 |
+| P07 | Pi: Vision service (capture loop, FastAPI control, threading) | code | L | 4 | 8 | 0 | 16 | 32 | 16 | 76 | $10,600 |
+| P08 | Pi: Deployment infra (config_loader, network_utils, start.sh, Dockerfile) | code | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,160 |
+| P11 | Order Service: SQLAlchemy ORM models + seed data | code | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,160 |
+| P12 | Order Service: Adapter pattern (BaseAdapter, LocalAdapter, SapAdapter stub) | code | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,160 |
+| P13 | Order Service: FastAPI CRUD (7 endpoints, orders/products/staging/confirm-packed) | code | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,160 |
+| P14 | Event Processor: enrichment pipeline (async fetch, cache, completion detect, Redis pub/sub) | code | L | 4 | 8 | 0 | 16 | 32 | 16 | 76 | $10,600 |
+| P15 | API Gateway: picker registry, proxy routing, WS proxy, CORS, API-key middleware | code | L | 4 | 8 | 0 | 16 | 32 | 16 | 76 | $10,600 |
+| P16 | WebSocket Hub: Redis pubsub listener, supervisor+operator WS feeds, keepalive | code | L | 4 | 8 | 0 | 16 | 32 | 16 | 76 | $10,600 |
+| P20 | WebUI: types.ts (all shared detection, order, telemetry, log interfaces) | code | S | 1 | 1 | 2 | 4 | 8 | 4 | 20 | $2,800 |
+| P21 | WebUI: Operator View (VideoPanel, SVG overlay, PickList, Controls, usePickerSocket) | code | L | 4 | 8 | 8 | 16 | 32 | 16 | 84 | $11,760 |
+| P22 | WebUI: Supervisor View (SupervisorView, useSupervisorSocket) | code | M | 2 | 3 | 4 | 8 | 16 | 8 | 41 | $5,720 |
+| P23 | WebUI: Stream stats + StreamMeter (fetch-based MJPEG byte count, sparkline) | code | S | 1 | 1 | 2 | 4 | 8 | 4 | 20 | $2,800 |
+| P25 | WebUI Mobile: MobilePickerView + MobileCameraView + AR canvas overlay | code | L | 4 | 8 | 8 | 16 | 32 | 16 | 84 | $11,760 |
+| P26 | WebUI Mobile: useMobileCamera (getUserMedia, device enum, facing toggle) | code | S | 1 | 1 | 2 | 4 | 8 | 4 | 20 | $2,800 |
+| P27 | WebUI Mobile: useBarcodeScanner (native BarcodeDetector + ZXing fallback, rAF loop) | code | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,160 |
+| P28 | WebUI Mobile: useMobilePickerSession (WS, register heartbeat, coalesce buffer) | code | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,160 |
+| P29 | WebUI Mobile: MobilePickList + MobileControls (live pick list, validation modal) | code | S | 1 | 1 | 2 | 4 | 8 | 4 | 20 | $2,800 |
+| P31 | K8s: 9 base manifests (6 services, Redis, MetalLB, namespace, nginx configmap) | code | L | 4 | 8 | 0 | 16 | 32 | 0 | 60 | $8,400 |
+| P32 | K8s: Overlay (test env configmap-patch) + kustomization | code | S | 1 | 1 | 0 | 4 | 8 | 0 | 14 | $1,960 |
+| P33 | Infra: docker-compose.yml + 6 Dockerfiles | code | M | 2 | 3 | 0 | 8 | 16 | 4 | 33 | $4,640 |
+| P34 | Infra: OpenAPI spec (docs/api-spec.yaml) + README | code | S | 1 | 1 | 0 | 4 | 8 | 0 | 14 | $1,960 |
+| **Sub-total A2** | | | | **54.5** | **89.5** | **34** | **175** | **352** | **168** | **873** | **$122,080** |
+
+#### Group A — Platform Dev Total
 
 | Group | MGR | ARC | DES | SRD | MDD | JRD | Hrs | Base Cost |
 |---|---|---|---|---|---|---|---|---|
-| A — Plan+code | 11.5 | 17.5 | 8 | 45 | 90 | 44 | 216 | $32,655 |
-| B — Code-only | 54.5 | 89.5 | 34 | 175 | 352 | 168 | 873 | $130,175 |
-| **Grand Total** | **66** | **107** | **42** | **220** | **442** | **212** | **1,089** | **$162,830** |
+| A1 Plan+code | 11.5 | 17.5 | 8 | 45 | 90 | 44 | 216 | $30,200 |
+| A2 Code-only | 54.5 | 89.5 | 34 | 175 | 352 | 168 | 873 | $122,080 |
+| **Platform Dev Total** | **66** | **107** | **42** | **220** | **442** | **212** | **1,089** | **$152,280** |
 
-> **Plan coverage ratio: 216 / 1,089 hrs = 20 %**
-> Plans captured only 1 in 5 hours of the total delivered work.
+---
+
+### Group B — Mobile UX & Debug Diagnostics
+
+Work items from the `feature/mobile-web-client` and mobile QA sessions (v1.2.0 → v1.3.0).
+
+| ID | Work Item | Source | Tier | MGR | ARC | DES | SRD | MDD | JRD | Hrs | Cost |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| M01 | Mobile auth, management UI, user/cart-type CRUD and lite picker mode | plan+code | L | 4 | 8 | 8 | 16 | 32 | 16 | 84 | $11,760 |
+| M02 | Portrait layout fix (100dvh, 55dvh camera, safe-area, compact controls, resolution) | plan+code | M | 2 | 3 | 4 | 8 | 16 | 8 | 41 | $5,720 |
+| M03 | Detection ghosting fix (lastScan expiry, rAF in-flight guard, stable onDetectRef) | plan+code | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,160 |
+| M04 | Debug snapshot feed (useDebugSnapshot hook, /api/debug/snapshot endpoints, nginx) | plan+code | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,160 |
+| **Mobile UX Total** | | | | **10** | **17** | **12** | **40** | **80** | **40** | **199** | **$27,800** |
+
+> Note: M01 (auth + management CRUD) was included in the mobile-web-client branch but substantially extends the
+> platform beyond mobile-only scope. It is the largest mobile addition at L-tier.
+
+---
+
+### Group C — Demo Shop: Bob's Tiny Treasures
+
+Work items from the `feature/bobs-tiny-treasures` branch — the full BTT demo scenario.
+
+| ID | Work Item | Source | Tier | MGR | ARC | DES | SRD | MDD | JRD | Hrs | Cost |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| B01 | Data model extensions (OrderTote, ToteLayer, ToteLineAssignment, WarehouseScenario, Product.size_inches) | plan+code | S | 1 | 1 | 0 | 4 | 8 | 4 | 18 | $2,520 |
+| B02 | BTT fixture & seed (seed_btt.py, 9 products, 3 zones, 9 shelves, 3 orders, validation) | plan+code | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,160 |
+| B03 | Warehouse Setup Wizard — backend (7 endpoints: grid, inventory, scenarios CRUD, instance-profile) | plan+code | M | 2 | 3 | 4 | 8 | 16 | 8 | 41 | $5,720 |
+| B04 | Warehouse Setup Wizard — frontend BttSetupPanel (Grid / Inventory / Scenarios sub-tabs, barcode scanner integration) | plan+code | L | 4 | 8 | 8 | 16 | 32 | 16 | 84 | $11,760 |
+| B05 | Pack & Verify — backend (packer.py bin-packing engine, 3 endpoints: pack/pack-plan/layer PATCH, unit tests) | plan+code | M | 2 | 3 | 0 | 8 | 16 | 8 | 37 | $5,160 |
+| B06 | Pack Wizard UI (PackWizard.tsx step modal, mobile picker integration, supervisor Pack button) | plan+code | L | 4 | 8 | 8 | 16 | 32 | 16 | 84 | $11,760 |
+| B07 | Label Sheet Generator (label_generator.py ReportLab PDF engine + BttLabelsPanel.tsx designer UI, 2 print modes, 3 barcode types) | plan+code | XL | 8 | 16 | 12 | 24 | 48 | 32 | 140 | $19,600 |
+| B08 | Brand logo (logo.svg robot+gems), K8s BTT overlay (namespace + seed Job + configmap), CI pipeline extension | plan+code | M | 2 | 3 | 4 | 8 | 16 | 8 | 41 | $5,720 |
+| **Demo Shop Total** | | | | **25** | **45** | **36** | **92** | **184** | **100** | **482** | **$67,400** |
+
+---
+
+### Grand Total — All Groups
+
+| Group | MGR | ARC | DES | SRD | MDD | JRD | Hrs | Base Cost |
+|---|---|---|---|---|---|---|---|---|
+| A — Platform Development | 66 | 107 | 42 | 220 | 442 | 212 | 1,089 | $152,280 |
+| B — Mobile UX & Debug | 10 | 17 | 12 | 40 | 80 | 40 | 199 | $27,800 |
+| C — Demo Shop (BTT) | 25 | 45 | 36 | 92 | 184 | 100 | 482 | $67,400 |
+| **Grand Total** | **101** | **169** | **90** | **352** | **706** | **352** | **1,770** | **$247,480** |
+
+> **Plan coverage ratio: 332 / 1,770 hrs = 19 %**
+> Plans captured fewer than 1 in 5 hours of the total delivered work.
 
 ---
 
@@ -121,12 +173,12 @@ Source tags: **plan+code** = in a plan and in the codebase · **code** = codebas
 
 | Item | Value |
 |---|---|
-| Base total hours | 1,089 hrs |
-| Contingency (20 %) | +218 hrs |
-| **Adjusted total hours** | **1,307 hrs** |
-| Base cost | $162,830 |
-| Contingency amount | +$32,566 |
-| **Adjusted total cost** | **$195,396** |
+| Base total hours | 1,770 hrs |
+| Contingency (20 %) | +354 hrs |
+| **Adjusted total hours** | **2,124 hrs** |
+| Base cost (Industry Std) | $247,480 |
+| Contingency amount | +$49,496 |
+| **Adjusted total cost (Industry Std)** | **$296,976** |
 
 ---
 
@@ -135,10 +187,10 @@ Source tags: **plan+code** = in a plan and in the codebase · **code** = codebas
 | Metric | Value |
 |---|---|
 | Effective team capacity/day | 44.8 hrs (8 heads × 7 h × 80 %) |
-| Calendar days | 29.2 days |
-| **Calendar weeks** | **~5.8 weeks** |
-| Estimated start | 2025-07-14 |
-| Estimated completion | 2025-08-25 |
+| Calendar days | 47.4 days |
+| **Calendar weeks** | **~9.5 weeks** |
+| Estimated start | 2025-07-24 |
+| Estimated completion | 2025-10-03 |
 
 ---
 
@@ -146,13 +198,13 @@ Source tags: **plan+code** = in a plan and in the codebase · **code** = codebas
 
 | Role | Count | Total Hrs | % Effort | Total Cost |
 |---|---|---|---|---|
-| Manager (MGR) | 1 | 66 | 6.1 % | $11,550 |
-| Architect (ARC) | 1 | 107 | 9.8 % | $21,400 |
-| UI Designer (DES) | 1 | 42 | 3.9 % | $5,880 |
-| Senior Developer (SRD) | 1 | 220 | 20.2 % | $39,600 |
-| Mid-Level Developer (MDD) | 2 | 442 | 40.6 % | $61,880 |
-| Junior Developer (JRD) | 2 | 212 | 19.5 % | $21,200 |
-| **TOTAL** | **7** | **1,089** | **100 %** | **$161,510** |
+| Manager (MGR) | 1 | 101 | 5.7 % | $15,150 |
+| Architect (ARC) | 1 | 169 | 9.5 % | $29,575 |
+| UI Designer (DES) | 1 | 90 | 5.1 % | $10,800 |
+| Senior Developer (SRD) | 1 | 352 | 19.9 % | $56,320 |
+| Mid-Level Developer (MDD) | 2 | 706 | 39.9 % | $84,720 |
+| Junior Developer (JRD) | 2 | 352 | 19.9 % | $29,920 |
+| **TOTAL** | **7** | **1,770** | **100 %** | **$226,485** |
 
 ---
 
@@ -160,36 +212,34 @@ Source tags: **plan+code** = in a plan and in the codebase · **code** = codebas
 
 | Scenario | Base Cost | +20% Contingency | Total |
 |---|---|---|---|
-| IBM US | $202,300 | $40,460 | $242,760 |
-| **IBM Blended** | **$161,510** | **$32,302** | **$193,812** |
-| IBM Offshore | $111,795 | $22,359 | $134,154 |
-| Industry Standard | $139,925 | $27,985 | $167,910 |
-
-> Delta vs plan-only estimate (previous run, $45,684): **+$148,128 (+324%)** — reflecting the 80% of work that plans never described.
+| IBM US | $320,490 | $64,098 | $384,588 |
+| IBM Blended | $255,600 | $51,120 | $306,720 |
+| IBM Offshore | $175,950 | $35,190 | $211,140 |
+| **Industry Standard** | **$226,485** | **$45,297** | **$271,782** |
 
 ---
 
 ## Recommendations
 
 1. **Biggest risk items:**
-   P06 + P07 (Pi event publisher + vision service, L each, 152 hrs combined) — the offline JSONL buffer, exponential backoff, and threading model on headless hardware is the hardest component to regression-test. Hardware-in-the-loop with intermittent LAN is the most likely source of rework.
-   P14 + P15 (Event Processor enrichment + API Gateway, L each, 152 hrs combined) — async concurrent enrichment pipeline with Redis, caching, and order completion logic is complex; any order data model change breaks multiple layers simultaneously.
-   P25 (Mobile: MobilePickerView + MobileCameraView + AR canvas, L, 84 hrs) — the rAF canvas animation loop and dual-engine barcode scanning are the hardest-to-test frontend pieces; Android OEM camera permission quirks are the most likely rework trigger.
+   P06 + P07 (Pi event publisher + vision service, L each, 152 hrs combined) — offline JSONL buffer and threading model on headless Pi hardware remain the hardest components to regression-test in CI.
+   B07 (Label Sheet Generator, XL, 140 hrs) — dual print mode (cut-yourself + Avery-matched), three barcode types, and ReportLab PDF generation with embedded SVG logo is the most complex single BTT deliverable. The ±0.5 mm Avery alignment requirement is particularly hard to validate without physical printing.
+   B05 + B06 (Pack engine + wizard, M+L, 121 hrs combined) — the bin-packing algorithm and multi-step tote wizard are tightly coupled; any order data model change breaks both layers.
 
 2. **Staffing bottleneck:**
-   MDD ×2 carry **442 hrs / 40.6%** of total effort — dominant critical-path resource. SRD at 220 hrs / 20.2% is the #2 constraint. Between them they hold 60% of the project. At 80% utilisation (5.6 hrs/day each) the two MDDs deliver 11.2 hrs/day combined — nearly a quarter of the team's daily capacity alone.
+   MDD ×2 carry **706 hrs / 39.9%** of total effort — dominant critical-path resource across all three groups. SRD at 352 hrs / 19.9% is the #2 constraint. Together they hold 60% of the project.
 
 3. **Contingency guidance:**
-   20% is appropriate. The codebase is complete and design decisions are locked in. Key residual risks: (a) Pi Wi-Fi reliability and DHCP address changes in production, (b) Android OEM getUserMedia quirks on the ZXing fallback path, (c) the SAP adapter is a stub — any real ERP integration would add significant unestimated scope.
+   20% is appropriate. Core platform is delivered and stable. Key residual risks: (a) Pi hardware reliability in live demo environments, (b) Label PDF Avery alignment validation, (c) BTT is intentionally demo-scale — any production hardening (real ERP integration, SAP adapter) would require a separate, larger effort.
 
-4. **Scenario delta:**
-   IBM Blended ($193,812) vs IBM US ($242,760) = **$48,948 savings** (20% cheaper). vs IBM Offshore ($134,154) = **$59,658 premium** for blended over offshore.
+4. **Scenario delta (Industry Standard selected for client-facing output):**
+   Industry Standard ($271,782) is the conservative customer-facing benchmark. IBM Blended ($306,720) = +$34,938 premium. IBM US ($384,588) = +$112,806 premium. IBM Offshore ($211,140) = −$60,642 discount.
 
 5. **Accuracy caveat:**
-   ±25% confidence band → range **$146,109 – $244,515** (adjusted). The codebase is fully delivered and readable, which tightens the estimate compared to a typical planning-level exercise. Tighten further with: confirmed team velocity data, finalised sprint breakdown, and hardware test results on the Pi with real camera + network conditions.
+   ±25% confidence band → range **$203,837 – $371,128** (adjusted). All three delivery groups are fully implemented and readable in the codebase, which tightens the estimate vs a pre-build planning exercise.
 
 6. **Plan coverage gap — ⚠ Critical finding:**
-   Plan documents covered only **20% of total hours (216 / 1,089)**. This is far below the 80% threshold. For all future work on this project, plans should be written to cover the full system scope from first commit, not just incremental changes layered onto an undocumented baseline. The 27 code-only items ($130,175 base) represent foundational platform work — the entire Pi vision pipeline, all four Python services, the desktop UI, mobile client, K8s manifests, and Dockerfiles — none of which appears in any plan file.
+   Plan documents covered only **19% of total hours (332 / 1,770)**. The BTT group is the exception — all 8 BTT items are plan+code, representing 100% plan coverage for the demo shop. The platform and mobile groups remain dominated by code-only items. Future work should follow the BTT model: plan first, then build.
 
 ---
 
@@ -197,79 +247,57 @@ Source tags: **plan+code** = in a plan and in the codebase · **code** = codebas
 
 > *Art of the Possible: you bring deep IBM product knowledge, industry expertise, and a precise vision of what your client needs. Bob translates that vision into production-quality code, demos, and documentation — multiplying the value you deliver to IBM customers. Together we are a high-value team: your domain mastery and customer insight combined with Bob's ability to build, analyse, and document at speed. The result is experiences that delight IBM customers, accelerate pipeline, and demonstrate what is possible when human expertise and AI work as one.*
 
-### Session Summary
+### Session Summary — Two Sessions
 
-| Metric | Value |
-|---|---|
-| Your active time (git-derived) | 8.7 hrs |
-| Step-aways / dead-time excluded | 18.9 hrs |
-| Session date range | 2026-07-24 → 2026-07-25 |
-| Working blocks identified (60-min gap threshold) | 5 blocks |
-| Bob Coins used (est. 24 coins/hr) | 209 coins |
-
-*Session time derived from git commit timestamps. Gaps > 60 min treated as step-aways; overnight (> 6h) treated as sleep. The 5 blocks span: 15:15–16:47 day 1, 18:56–23:28 day 1, single-commit day 2 morning, 16:35–17:10 day 2, 17:45–19:12 day 2.*
+| Session | Date Range | Active Hrs | Description |
+|---|---|---|---|
+| Platform Development | 2026-07-24 → 2026-07-26 | 8.7 hrs | Core system + mobile client v1.0–v1.3 |
+| Demo Shop (BTT) | 2026-07-26 → 2026-07-27 | 3.8 hrs | Bob's Tiny Treasures full demo scenario |
+| **Combined** | 2026-07-24 → 2026-07-27 | **12.5 hrs** | |
 
 ### Your Investment
 
 | Item | Hrs | Rate | Value |
 |---|---|---|---|
-| Your time (IBM Architect) | 8.7 | $250/hr | $2,175 |
-| Bob Coins (209 × $0.50) | — | — | $104 |
-| **Total investment** | | | **$2,279** |
+| Your time (IBM Architect) | 12.5 | $250/hr | $3,125 |
+| Bob Coins (300 × $0.50) | — | — | $150 |
+| **Total investment** | | | **$3,275** |
 
 ### Value Delivered — Three-Way Comparison
 
-| | **You + Bob** | **IBM Dev Team (7-person Blended)** | **Industry Standard** |
+| | **You + Bob** | **Traditional Dev Team (7-person)** | **Industry Standard** |
 |---|---|---|---|
-| Total investment | $2,279 | $193,812 | $167,910 |
-| Professional value delivered | $193,812 | $193,812 | $167,910 |
-| Your active time | 8.7 hrs | — | — |
-| Calendar duration | ~5.8 weeks | ~5.8 weeks | ~5.8 weeks |
+| Total investment | $3,275 | $306,720 | $271,782 |
+| Professional value delivered | $306,720 | $306,720 | $271,782 |
+| Your active time | 12.5 hrs | — | — |
+| Calendar duration | ~9.5 weeks | ~9.5 weeks | ~9.5 weeks |
 | Team size | 2 (you + Bob) | 7 | varies |
 | Domain expertise | ✅ You own it | ❌ Requires full briefing | ❌ Requires full briefing |
 | IBM product knowledge | ✅ Native | ⚠ Partial | ❌ None |
 | Customer context | ✅ You own it | ❌ Lost in handoff | ❌ Lost in handoff |
 | Code quality / maintainability | ✅ Production-ready | ✅ Production-ready | ⚠ Variable |
-| **Value multiplier vs IBM Dev Team** | **85×** | 1× | — |
-| **Value multiplier vs Industry Std** | **74×** | — | 1× |
+| **Value multiplier vs IBM Blended** | **94×** | 1× | — |
+| **Value multiplier vs Industry Std** | **83×** | — | 1× |
 
 ### Value Multiplier
 
-> **85× value multiplier** — every dollar of your total investment ($2,279) returned $85 in equivalent professional value at IBM Blended rates. Every hour of your active time, combined with Bob, delivered the output equivalent of ~125 professional development hours.
+> **94× value multiplier** — every dollar of your total investment ($3,275) returned $94 in equivalent professional value at IBM Blended rates. Every hour of your active time, combined with Bob, delivered the output equivalent of ~142 professional development hours.
 
 ### Pipeline Value (fill in after customer presentation)
 
 | Field | Value |
 |---|---|
 | Estimated pipeline value influenced | *(fill in after presentation)* |
-| Total investment in this demo | $2,279 |
+| Total investment in this demo | $3,275 |
 | **Pipeline value multiplier** | *(calculate after above)* |
 
-*When you close or influence a deal with this demo, divide the pipeline value by $2,279 to compute your pipeline value multiplier. Example: a $500K influenced deal = 219× pipeline ROI.*
-
-### What Makes This Partnership Valuable
-
-| Dimension | You + Bob | Traditional Dev Team |
-|---|---|---|
-| **Speed to first demo** | Hours–days | Weeks–months |
-| **Total investment** | $2,279 | $193,812 |
-| **Who holds the vision** | You — directly translated | PM/BA layer required |
-| **IBM product narrative** | Native — you live it | Must be taught |
-| **Customer need awareness** | Yours — no translation loss | Brief → interpret → build |
-| **Iteration speed** | Instant — ask Bob, get code | Sprint cycles |
-| **Risk of vision drift** | Minimal — you steer every turn | High — handoff gaps |
-| **Best suited for** | PoCs, demos, Art of the Possible | Production scaled systems |
+*Example: a $500K influenced deal = 153× pipeline ROI on a $3,275 investment.*
 
 ---
 
 ## Accuracy & Caveats
 
-This is a **planning-level estimate** with a confidence band of **±25 %** (range: $146,109–$244,515 adjusted). Accuracy improves with:
-
-- A completed technical spike on the highest-risk work items.
-- Finalised and signed-off requirements.
-- Confirmed team availability and no competing project obligations.
-- A detailed sprint/iteration plan with story-point velocity data.
+This is a **planning-level estimate** with a confidence band of **±25 %** (range: $203,837 – $371,128 adjusted). The codebase is fully delivered and readable, which tightens the estimate compared to a typical planning-level exercise.
 
 This estimate was produced by reading every source file in the repository directly. Session time figures are derived from git commit timestamps. Active time excludes gaps > 60 minutes and overnight sleep periods.
 

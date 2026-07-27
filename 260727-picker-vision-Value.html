@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Picker Vision — Development Estimate (Internal)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#ffffff;--surface:#f4f4f4;--surface2:#e0e0e0;--border:#e0e0e0;
+    --text:#161616;--muted:#525252;--accent:#0f62fe;--accent2:#8a3ffc;
+    --red:#da1e28;--green:#24a148;--yellow:#f1c21b;--teal:#007d79;
+    --header-bg:#161616;--header-text:#ffffff;
+    --badge-plan:#0043ce;--badge-code:#6929c4;
+    --badge-xs:#525252;--badge-s:#0e6027;--badge-m:#0043ce;--badge-l:#7e3e00;--badge-xl:#a2191f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;background:var(--bg);color:var(--text)}
+  .ibm-header{background:var(--header-bg);color:var(--header-text);padding:0 24px;height:48px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+  .ibm-header-left{display:flex;align-items:center;gap:16px}
+  .ibm-wordmark{font-size:20px;font-weight:700;letter-spacing:-0.5px;color:#fff}
+  .ibm-header-title{font-size:14px;color:#c6c6c6;font-weight:300;border-left:1px solid #393939;padding-left:16px}
+  .ibm-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:2px;text-transform:uppercase;letter-spacing:0.5px;background:#da1e28;color:#fff}
+  .page{max-width:900px;margin:0 auto;padding:0 24px 48px}
+  .hero{padding:32px 0 24px;border-bottom:1px solid var(--border);margin-bottom:24px}
+  .hero-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px}
+  .hero-title{font-size:28px;font-weight:700;line-height:1.2;color:var(--text);margin-bottom:12px}
+  .hero-title sup{font-size:14px;font-weight:400;color:var(--accent)}
+  .hero-subtitle{font-size:15px;color:var(--muted);font-weight:300;max-width:640px}
+  .hero-meta{display:flex;gap:24px;margin-top:20px;flex-wrap:wrap}
+  .hero-meta-item{display:flex;flex-direction:column}
+  .hero-meta-label{font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)}
+  .hero-meta-value{font-size:18px;font-weight:600;color:var(--text);font-family:'IBM Plex Mono',monospace}
+  .tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:28px}
+  .tab{padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit;text-transform:uppercase;letter-spacing:0.5px}
+  .tab:hover{color:var(--text)}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+  .card-row{display:grid;gap:16px;margin-bottom:24px}
+  .card-row-4{grid-template-columns:repeat(4,1fr)}
+  .card-row-3{grid-template-columns:repeat(3,1fr)}
+  .card-row-2{grid-template-columns:repeat(2,1fr)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:16px}
+  .card-label{font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:6px}
+  .card-value{font-size:22px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--text)}
+  .card-sub{font-size:12px;color:var(--muted);margin-top:4px}
+  .card.accent{border-left:3px solid var(--accent)}
+  .card.green{border-left:3px solid var(--green)}
+  .card.purple{border-left:3px solid var(--accent2)}
+  .card.red{border-left:3px solid var(--red)}
+  .section-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:12px;margin-top:28px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px}
+  th{background:var(--surface);font-weight:600;text-align:left;padding:8px 10px;border:1px solid var(--border);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.3px}
+  td{padding:7px 10px;border:1px solid var(--border);vertical-align:middle}
+  tr:nth-child(even) td{background:#fafafa}
+  tr.subtotal td{background:var(--surface);font-weight:700;font-size:12px;color:var(--muted)}
+  tr.total td{background:#161616;color:#fff;font-weight:700}
+  tr.group-header td{background:#e8e8e8;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.3px;color:var(--muted)}
+  .badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 6px;border-radius:2px;text-transform:uppercase;letter-spacing:0.3px;color:#fff}
+  .badge-plan{background:var(--badge-plan)}.badge-code{background:var(--badge-code)}
+  .badge-xs{background:var(--badge-xs)}.badge-s{background:var(--badge-s)}.badge-m{background:var(--badge-m)}.badge-l{background:var(--badge-l)}.badge-xl{background:var(--badge-xl)}
+  .scenario-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+  .scenario-btn{padding:6px 14px;font-size:12px;font-weight:600;font-family:inherit;border:1.5px solid var(--border);border-radius:3px;cursor:pointer;background:var(--bg);color:var(--muted);transition:all 0.15s}
+  .scenario-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .scenario-btn:hover:not(.active){border-color:var(--accent);color:var(--accent)}
+  .scenario-label{font-size:12px;color:var(--muted);margin-right:4px}
+  .rate-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:20px}
+  .rate-item{display:flex;flex-direction:column;gap:4px}
+  .rate-item label{font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted)}
+  .rate-item input{width:100%;padding:5px 8px;font-size:12px;font-family:'IBM Plex Mono',monospace;border:1px solid var(--border);border-radius:3px;background:var(--surface);color:var(--text)}
+  .rate-item input:focus{outline:1px solid var(--accent);border-color:var(--accent)}
+  .gantt-wrap{overflow-x:auto}
+  .bar-container{margin-bottom:16px}
+  .bar-label-row{display:flex;justify-content:space-between;margin-bottom:4px}
+  .bar-label{font-size:12px;font-weight:600}
+  .bar-pct{font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+  .bar-track{height:20px;background:var(--surface2);border-radius:2px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:2px;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:600;color:#fff}
+  .pull-quote{border-left:3px solid var(--accent2);padding:14px 18px;background:#f6f3ff;margin-bottom:24px;border-radius:0 4px 4px 0}
+  .pull-quote p{font-size:14px;line-height:1.7;color:#3d2885;font-style:italic}
+  .roi-inputs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+  .roi-input-item{display:flex;flex-direction:column;gap:4px}
+  .roi-input-item label{font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted)}
+  .roi-input-item input{padding:6px 10px;font-size:13px;font-family:'IBM Plex Mono',monospace;border:1px solid var(--border);border-radius:3px;background:var(--surface);color:var(--text)}
+  .roi-input-item input:focus{outline:1px solid var(--accent);border-color:var(--accent)}
+  .value-headline{background:#161616;color:#fff;padding:20px 24px;border-radius:4px;margin:24px 0;font-size:15px;line-height:1.7}
+  .coverage-bar{height:28px;border-radius:3px;overflow:hidden;display:flex;margin:12px 0}
+  .coverage-plan{background:var(--badge-plan);display:flex;align-items:center;padding-left:10px;font-size:11px;font-weight:600;color:#fff}
+  .coverage-code{background:var(--badge-code);display:flex;align-items:center;padding-left:10px;font-size:11px;font-weight:600;color:#fff}
+  .pipeline-panel{background:#fff8f0;border:1.5px solid #f1c21b;border-radius:4px;padding:16px 20px;margin-top:20px}
+  .pipeline-panel .pipeline-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#7e3e00;margin-bottom:10px}
+  .pipeline-multiplier{font-size:36px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:#7e3e00}
+  .callout{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px 18px;margin:16px 0}
+  .callout.warning{border-left:3px solid var(--yellow);background:#fff8f0}
+  details{margin-bottom:12px}
+  summary{cursor:pointer;font-size:13px;font-weight:600;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:4px;list-style:none;display:flex;align-items:center;gap:8px}
+  summary::before{content:'▶';font-size:10px;transition:transform 0.15s}
+  details[open] summary::before{transform:rotate(90deg)}
+  .rec-body{padding:12px 14px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;font-size:13px;line-height:1.7}
+  .rec-body p{margin-bottom:8px}
+  .qual-table td:first-child{font-weight:600;width:200px}
+  .qual-table td.yes{color:var(--green);font-weight:600}
+  .qual-table td.no{color:var(--red)}
+  .qual-table td.warn{color:#c57a00}
+  .page-footer{margin-top:48px;padding-top:16px;border-top:1px solid var(--border);text-align:center;font-size:11px;color:var(--muted)}
+  @media(max-width:640px){
+    .card-row-4,.card-row-3{grid-template-columns:repeat(2,1fr)}
+    .card-row-2{grid-template-columns:1fr}
+    .rate-grid{grid-template-columns:repeat(3,1fr)}
+    .roi-inputs{grid-template-columns:1fr 1fr}
+    .tab{padding:8px 12px;font-size:11px}
+  }
+</style>
+</head>
+<body>
+<div class="ibm-header">
+  <div class="ibm-header-left">
+    <span class="ibm-wordmark">IBM</span>
+    <span class="ibm-header-title">Picker Vision — Development Estimate</span>
+  </div>
+  <span class="ibm-badge">Internal Use</span>
+</div>
+
+<div class="page">
+  <div class="hero">
+    <div class="hero-label">Art of the Possible — IBM Bob AI-Assisted Delivery</div>
+    <h1 class="hero-title">1 IBM Architect<sup> and Bob</sup> built a production warehouse vision system</h1>
+    <p class="hero-subtitle">Picker Vision — AI-powered barcode pick-assist, mobile AR scanner, Bob's Tiny Treasures demo shop, K8s deployment. 70 commits · 4 days.</p>
+    <div class="hero-meta">
+      <div class="hero-meta-item"><span class="hero-meta-label">WBS Base Hours</span><span class="hero-meta-value">1,770</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">IBM Blended Value</span><span class="hero-meta-value">$306,720</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">Your Investment</span><span class="hero-meta-value">$3,275</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">Value Multiplier</span><span class="hero-meta-value" style="color:var(--green)">94×</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">Active Hours</span><span class="hero-meta-value">12.5 hrs</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">Date</span><span class="hero-meta-value" style="font-size:14px">2026-07-27</span></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('cost',this)">Cost</button>
+    <button class="tab" onclick="switchTab('timeline',this)">Timeline</button>
+    <button class="tab" onclick="switchTab('coverage',this)">Plan vs Codebase</button>
+    <button class="tab" onclick="switchTab('roi',this)">ROI &amp; Value</button>
+  </div>
+
+  <!-- ── TAB: COST ── -->
+  <div id="tab-cost" class="tab-panel active">
+    <div class="section-title">Rate Scenario</div>
+    <div class="scenario-bar">
+      <span class="scenario-label">Select scenario:</span>
+      <button class="scenario-btn" onclick="setScenario('IBM US')">IBM US</button>
+      <button class="scenario-btn active" onclick="setScenario('IBM Blended')">IBM Blended</button>
+      <button class="scenario-btn" onclick="setScenario('IBM Offshore')">IBM Offshore</button>
+      <button class="scenario-btn" onclick="setScenario('Industry Standard')">Industry Standard</button>
+    </div>
+    <div class="section-title">Rate Overrides ($/hr)</div>
+    <div class="rate-grid">
+      <div class="rate-item"><label>MGR</label><input type="number" id="r-MGR" value="175" oninput="recalc()"></div>
+      <div class="rate-item"><label>ARC</label><input type="number" id="r-ARC" value="200" oninput="recalc()"></div>
+      <div class="rate-item"><label>DES</label><input type="number" id="r-DES" value="140" oninput="recalc()"></div>
+      <div class="rate-item"><label>SRD</label><input type="number" id="r-SRD" value="180" oninput="recalc()"></div>
+      <div class="rate-item"><label>MDD</label><input type="number" id="r-MDD" value="140" oninput="recalc()"></div>
+      <div class="rate-item"><label>JRD</label><input type="number" id="r-JRD" value="100" oninput="recalc()"></div>
+    </div>
+    <div class="card-row card-row-4">
+      <div class="card accent"><div class="card-label">Base Cost</div><div class="card-value" id="c-base">$255,600</div><div class="card-sub">1,770 hrs × blended rate</div></div>
+      <div class="card"><div class="card-label">Contingency (20%)</div><div class="card-value" id="c-cont">$51,120</div><div class="card-sub">+354 hrs buffer</div></div>
+      <div class="card green"><div class="card-label">Adjusted Total</div><div class="card-value" id="c-total">$306,720</div><div class="card-sub">2,124 adjusted hrs</div></div>
+      <div class="card"><div class="card-label">Schedule</div><div class="card-value">~9.5 wks</div><div class="card-sub">47.4 calendar days</div></div>
+    </div>
+
+    <div class="section-title">WBS — Group A: Platform Development</div>
+    <table>
+      <thead><tr><th>ID</th><th>Work Item</th><th>Source</th><th>Tier</th><th>MGR</th><th>ARC</th><th>DES</th><th>SRD</th><th>MDD</th><th>JRD</th><th>Hrs</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr class="group-header"><td colspan="12">A1 — Plan + Code Items</td></tr>
+        <tr><td>P09</td><td>Pi: Fix registration — LAN IP probe, set_stream/control_url</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-s">S</span></td><td>1</td><td>1</td><td>0</td><td>4</td><td>8</td><td>4</td><td>18</td><td class="cost-cell" data-hrs="18"></td></tr>
+        <tr><td>P10</td><td>Pi: All-products active scoring refactor</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-xs">XS</span></td><td>0.5</td><td>0.5</td><td>0</td><td>1</td><td>2</td><td>0</td><td>4</td><td class="cost-cell" data-hrs="4"></td></tr>
+        <tr><td>P17</td><td>Versioning: VERSION files, configmap keys, VERSIONS.md</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-s">S</span></td><td>1</td><td>1</td><td>0</td><td>4</td><td>8</td><td>4</td><td>18</td><td class="cost-cell" data-hrs="18"></td></tr>
+        <tr><td>P18</td><td>Log ring buffer: log_ring.py + /logs all services + pi proxy</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>0</td><td>8</td><td>16</td><td>8</td><td>37</td><td class="cost-cell" data-hrs="37"></td></tr>
+        <tr><td>P19</td><td>Health &amp; telemetry: /health counters + /api/telemetry + SSE</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>0</td><td>8</td><td>16</td><td>8</td><td>37</td><td class="cost-cell" data-hrs="37"></td></tr>
+        <tr><td>P24</td><td>WebUI: HealthStrip + SystemView + useSystemHealth</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-l">L</span></td><td>4</td><td>8</td><td>8</td><td>16</td><td>32</td><td>16</td><td>84</td><td class="cost-cell" data-hrs="84"></td></tr>
+        <tr><td>P30</td><td>Barcode PDF: Code 128 height + QR landscape layout + version bumps</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-s">S</span></td><td>1</td><td>1</td><td>0</td><td>4</td><td>8</td><td>4</td><td>18</td><td class="cost-cell" data-hrs="18"></td></tr>
+        <tr class="subtotal"><td colspan="10">A1 Sub-total</td><td>216</td><td class="cost-cell" data-hrs="216"></td></tr>
+        <tr class="group-header"><td colspan="12">A2 — Code-Only Items (unplanned gap)</td></tr>
+        <tr><td>P01</td><td>Pi: Barcode detector (QR + 1D, OpenCV dual-engine)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>0</td><td>8</td><td>16</td><td>8</td><td>37</td><td class="cost-cell" data-hrs="37"></td></tr>
+        <tr><td>P02</td><td>Pi: Staging detector (Canny edges, quad-fit, polygon assoc.)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>0</td><td>8</td><td>16</td><td>8</td><td>37</td><td class="cost-cell" data-hrs="37"></td></tr>
+        <tr><td>P03</td><td>Pi: Frame annotator (OpenCV draw overlays, locked staging)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-s">S</span></td><td>1</td><td>1</td><td>0</td><td>4</td><td>8</td><td>4</td><td>18</td><td class="cost-cell" data-hrs="18"></td></tr>
+        <tr><td>P04</td><td>Pi: MJPEG streamer (HTTP server, JPEG encode, multi-client)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-s">S</span></td><td>1</td><td>1</td><td>0</td><td>4</td><td>8</td><td>4</td><td>18</td><td class="cost-cell" data-hrs="18"></td></tr>
+        <tr><td>P05</td><td>Pi: Camera probe (V4L2 device probe, index fallback)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-xs">XS</span></td><td>0.5</td><td>0.5</td><td>0</td><td>1</td><td>2</td><td>0</td><td>4</td><td class="cost-cell" data-hrs="4"></td></tr>
+        <tr><td>P06</td><td>Pi: Event publisher (offline JSONL buffer, backoff, heartbeat)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-l">L</span></td><td>4</td><td>8</td><td>0</td><td>16</td><td>32</td><td>16</td><td>76</td><td class="cost-cell" data-hrs="76"></td></tr>
+        <tr><td>P07</td><td>Pi: Vision service (capture loop, FastAPI control, threading)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-l">L</span></td><td>4</td><td>8</td><td>0</td><td>16</td><td>32</td><td>16</td><td>76</td><td class="cost-cell" data-hrs="76"></td></tr>
+        <tr><td>P08</td><td>Pi: Deployment infra (config_loader, network_utils, Dockerfile)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>0</td><td>8</td><td>16</td><td>8</td><td>37</td><td class="cost-cell" data-hrs="37"></td></tr>
+        <tr><td>P11</td><td>Order Service: SQLAlchemy ORM models + seed data</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>0</td><td>8</td><td>16</td><td>8</td><td>37</td><td class="cost-cell" data-hrs="37"></td></tr>
+        <tr><td>P12</td><td>Order Service: Adapter pattern (BaseAdapter, LocalAdapter, SapAdapter)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>0</td><td>8</td><td>16</td><td>8</td><td>37</td><td class="cost-cell" data-hrs="37"></td></tr>
+        <tr><td>P13</td><td>Order Service: FastAPI CRUD (7 endpoints)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>0</td><td>8</td><td>16</td><td>8</td><td>37</td><td class="cost-cell" data-hrs="37"></td></tr>
+        <tr><td>P14</td><td>Event Processor: enrichment pipeline (async, Redis pub/sub)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-l">L</span></td><td>4</td><td>8</td><td>0</td><td>16</td><td>32</td><td>16</td><td>76</td><td class="cost-cell" data-hrs="76"></td></tr>
+        <tr><td>P15</td><td>API Gateway: picker registry, proxy routing, WS proxy, CORS</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-l">L</span></td><td>4</td><td>8</td><td>0</td><td>16</td><td>32</td><td>16</td><td>76</td><td class="cost-cell" data-hrs="76"></td></tr>
+        <tr><td>P16</td><td>WebSocket Hub: Redis pubsub, supervisor+operator WS feeds</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-l">L</span></td><td>4</td><td>8</td><td>0</td><td>16</td><td>32</td><td>16</td><td>76</td><td class="cost-cell" data-hrs="76"></td></tr>
+        <tr><td>P20</td><td>WebUI: types.ts (shared detection, order, telemetry interfaces)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-s">S</span></td><td>1</td><td>1</td><td>2</td><td>4</td><td>8</td><td>4</td><td>20</td><td class="cost-cell" data-hrs="20"></td></tr>
+        <tr><td>P21</td><td>WebUI: Operator View (VideoPanel, SVG overlay, PickList)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-l">L</span></td><td>4</td><td>8</td><td>8</td><td>16</td><td>32</td><td>16</td><td>84</td><td class="cost-cell" data-hrs="84"></td></tr>
+        <tr><td>P22</td><td>WebUI: Supervisor View (SupervisorView, useSupervisorSocket)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>4</td><td>8</td><td>16</td><td>8</td><td>41</td><td class="cost-cell" data-hrs="41"></td></tr>
+        <tr><td>P23</td><td>WebUI: Stream stats + StreamMeter (MJPEG byte count, sparkline)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-s">S</span></td><td>1</td><td>1</td><td>2</td><td>4</td><td>8</td><td>4</td><td>20</td><td class="cost-cell" data-hrs="20"></td></tr>
+        <tr><td>P25</td><td>WebUI Mobile: MobilePickerView + AR canvas overlay</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-l">L</span></td><td>4</td><td>8</td><td>8</td><td>16</td><td>32</td><td>16</td><td>84</td><td class="cost-cell" data-hrs="84"></td></tr>
+        <tr><td>P26</td><td>WebUI Mobile: useMobileCamera (getUserMedia, device enum)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-s">S</span></td><td>1</td><td>1</td><td>2</td><td>4</td><td>8</td><td>4</td><td>20</td><td class="cost-cell" data-hrs="20"></td></tr>
+        <tr><td>P27</td><td>WebUI Mobile: useBarcodeScanner (BarcodeDetector + ZXing, rAF)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>0</td><td>8</td><td>16</td><td>8</td><td>37</td><td class="cost-cell" data-hrs="37"></td></tr>
+        <tr><td>P28</td><td>WebUI Mobile: useMobilePickerSession (WS, heartbeat, coalesce)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>0</td><td>8</td><td>16</td><td>8</td><td>37</td><td class="cost-cell" data-hrs="37"></td></tr>
+        <tr><td>P29</td><td>WebUI Mobile: MobilePickList + MobileControls</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-s">S</span></td><td>1</td><td>1</td><td>2</td><td>4</td><td>8</td><td>4</td><td>20</td><td class="cost-cell" data-hrs="20"></td></tr>
+        <tr><td>P31</td><td>K8s: 9 base manifests (6 services, Redis, MetalLB, nginx)</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-l">L</span></td><td>4</td><td>8</td><td>0</td><td>16</td><td>32</td><td>0</td><td>60</td><td class="cost-cell" data-hrs="60"></td></tr>
+        <tr><td>P32</td><td>K8s: Overlay (test env) + kustomization</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-s">S</span></td><td>1</td><td>1</td><td>0</td><td>4</td><td>8</td><td>0</td><td>14</td><td class="cost-cell" data-hrs="14"></td></tr>
+        <tr><td>P33</td><td>Infra: docker-compose.yml + 6 Dockerfiles</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>0</td><td>8</td><td>16</td><td>4</td><td>33</td><td class="cost-cell" data-hrs="33"></td></tr>
+        <tr><td>P34</td><td>Infra: OpenAPI spec + README</td><td><span class="badge badge-code">code</span></td><td><span class="badge badge-s">S</span></td><td>1</td><td>1</td><td>0</td><td>4</td><td>8</td><td>0</td><td>14</td><td class="cost-cell" data-hrs="14"></td></tr>
+        <tr class="subtotal"><td colspan="10">A2 Sub-total</td><td>873</td><td class="cost-cell" data-hrs="873"></td></tr>
+        <tr class="subtotal"><td colspan="10">Group A Total</td><td>1,089</td><td class="cost-cell" data-hrs="1089"></td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">WBS — Group B: Mobile UX &amp; Debug Diagnostics</div>
+    <table>
+      <thead><tr><th>ID</th><th>Work Item</th><th>Source</th><th>Tier</th><th>MGR</th><th>ARC</th><th>DES</th><th>SRD</th><th>MDD</th><th>JRD</th><th>Hrs</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr><td>M01</td><td>Mobile auth, management UI, user/cart-type CRUD, lite picker mode</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-l">L</span></td><td>4</td><td>8</td><td>8</td><td>16</td><td>32</td><td>16</td><td>84</td><td class="cost-cell" data-hrs="84"></td></tr>
+        <tr><td>M02</td><td>Portrait layout fix (100dvh, 55dvh camera, safe-area, resolution)</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>4</td><td>8</td><td>16</td><td>8</td><td>41</td><td class="cost-cell" data-hrs="41"></td></tr>
+        <tr><td>M03</td><td>Detection ghosting fix (lastScan expiry, rAF guard, onDetectRef)</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>0</td><td>8</td><td>16</td><td>8</td><td>37</td><td class="cost-cell" data-hrs="37"></td></tr>
+        <tr><td>M04</td><td>Debug snapshot feed (useDebugSnapshot, /api/debug/snapshot, nginx)</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>0</td><td>8</td><td>16</td><td>8</td><td>37</td><td class="cost-cell" data-hrs="37"></td></tr>
+        <tr class="subtotal"><td colspan="10">Group B Total</td><td>199</td><td class="cost-cell" data-hrs="199"></td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">WBS — Group C: Demo Shop — Bob's Tiny Treasures</div>
+    <table>
+      <thead><tr><th>ID</th><th>Work Item</th><th>Source</th><th>Tier</th><th>MGR</th><th>ARC</th><th>DES</th><th>SRD</th><th>MDD</th><th>JRD</th><th>Hrs</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr><td>B01</td><td>Data model extensions (OrderTote, ToteLayer, ToteLineAssignment)</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-s">S</span></td><td>1</td><td>1</td><td>0</td><td>4</td><td>8</td><td>4</td><td>18</td><td class="cost-cell" data-hrs="18"></td></tr>
+        <tr><td>B02</td><td>BTT fixture &amp; seed (seed_btt.py, 9 products, 3 zones, 3 orders, validation)</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>0</td><td>8</td><td>16</td><td>8</td><td>37</td><td class="cost-cell" data-hrs="37"></td></tr>
+        <tr><td>B03</td><td>Warehouse Setup Wizard — backend (7 CRUD endpoints)</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>4</td><td>8</td><td>16</td><td>8</td><td>41</td><td class="cost-cell" data-hrs="41"></td></tr>
+        <tr><td>B04</td><td>Warehouse Setup Wizard — BttSetupPanel (Grid/Inventory/Scenarios tabs)</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-l">L</span></td><td>4</td><td>8</td><td>8</td><td>16</td><td>32</td><td>16</td><td>84</td><td class="cost-cell" data-hrs="84"></td></tr>
+        <tr><td>B05</td><td>Pack &amp; Verify — backend (packer.py bin-packing engine, 3 endpoints, 240-line test suite)</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>0</td><td>8</td><td>16</td><td>8</td><td>37</td><td class="cost-cell" data-hrs="37"></td></tr>
+        <tr><td>B06</td><td>Pack Wizard UI (PackWizard.tsx step modal, mobile picker integration)</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-l">L</span></td><td>4</td><td>8</td><td>8</td><td>16</td><td>32</td><td>16</td><td>84</td><td class="cost-cell" data-hrs="84"></td></tr>
+        <tr><td>B07</td><td>Label Sheet Generator (ReportLab PDF engine + BttLabelsPanel designer, 3 barcode types)</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-xl">XL</span></td><td>8</td><td>16</td><td>12</td><td>24</td><td>48</td><td>32</td><td>140</td><td class="cost-cell" data-hrs="140"></td></tr>
+        <tr><td>B08</td><td>Brand logo (SVG robot+gems), K8s BTT overlay, CI pipeline extension</td><td><span class="badge badge-plan">plan+code</span></td><td><span class="badge badge-m">M</span></td><td>2</td><td>3</td><td>4</td><td>8</td><td>16</td><td>8</td><td>41</td><td class="cost-cell" data-hrs="41"></td></tr>
+        <tr class="subtotal"><td colspan="10">Group C Total</td><td>482</td><td class="cost-cell" data-hrs="482"></td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">Grand Total</div>
+    <table>
+      <thead><tr><th>Group</th><th>Hrs</th><th>Base Cost</th></tr></thead>
+      <tbody>
+        <tr><td>A — Platform Development</td><td>1,089</td><td class="cost-cell" data-hrs="1089"></td></tr>
+        <tr><td>B — Mobile UX &amp; Debug</td><td>199</td><td class="cost-cell" data-hrs="199"></td></tr>
+        <tr><td>C — Demo Shop (BTT)</td><td>482</td><td class="cost-cell" data-hrs="482"></td></tr>
+        <tr class="total"><td>Grand Total</td><td>1,770</td><td id="grand-total-cost">$255,600</td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">Role Summary</div>
+    <table>
+      <thead><tr><th>Role</th><th>Count</th><th>Total Hrs</th><th>% Effort</th><th>Total Cost</th></tr></thead>
+      <tbody>
+        <tr><td>Manager (MGR)</td><td>1</td><td>101</td><td>5.7%</td><td class="cost-cell" data-hrs="101" data-role="MGR"></td></tr>
+        <tr><td>Architect (ARC)</td><td>1</td><td>169</td><td>9.5%</td><td class="cost-cell" data-hrs="169" data-role="ARC"></td></tr>
+        <tr><td>UI Designer (DES)</td><td>1</td><td>90</td><td>5.1%</td><td class="cost-cell" data-hrs="90" data-role="DES"></td></tr>
+        <tr><td>Senior Developer (SRD)</td><td>1</td><td>352</td><td>19.9%</td><td class="cost-cell" data-hrs="352" data-role="SRD"></td></tr>
+        <tr><td>Mid-Level Developer (MDD)</td><td>2</td><td>706</td><td>39.9%</td><td class="cost-cell" data-hrs="706" data-role="MDD"></td></tr>
+        <tr><td>Junior Developer (JRD)</td><td>2</td><td>352</td><td>19.9%</td><td class="cost-cell" data-hrs="352" data-role="JRD"></td></tr>
+        <tr class="total"><td colspan="3">TOTAL</td><td>100%</td><td id="role-total-cost">$255,600</td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">Scenario Comparison</div>
+    <table>
+      <thead><tr><th>Scenario</th><th>Base Cost</th><th>+20% Contingency</th><th>Adjusted Total</th></tr></thead>
+      <tbody>
+        <tr><td>IBM US</td><td>$320,490</td><td>$64,098</td><td>$384,588</td></tr>
+        <tr><td>IBM Blended</td><td>$255,600</td><td>$51,120</td><td>$306,720</td></tr>
+        <tr><td>IBM Offshore</td><td>$175,950</td><td>$35,190</td><td>$211,140</td></tr>
+        <tr><td>Industry Standard</td><td>$226,485</td><td>$45,297</td><td>$271,782</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── TAB: TIMELINE ── -->
+  <div id="tab-timeline" class="tab-panel">
+    <div class="card-row card-row-4">
+      <div class="card accent"><div class="card-label">Total Duration</div><div class="card-value">~9.5 wks</div><div class="card-sub">47.4 calendar days</div></div>
+      <div class="card"><div class="card-label">Team Capacity/Day</div><div class="card-value">44.8 hrs</div><div class="card-sub">8 heads × 7h × 80%</div></div>
+      <div class="card"><div class="card-label">Adjusted Hours</div><div class="card-value">2,124</div><div class="card-sub">1,770 × 1.20</div></div>
+      <div class="card green"><div class="card-label">Start → End</div><div class="card-value" style="font-size:13px">Jul 24 → Oct 3</div><div class="card-sub">2025 baseline</div></div>
+    </div>
+
+    <div class="section-title">Phase Gantt (inline SVG)</div>
+    <div class="gantt-wrap">
+      <svg width="840" height="300" viewBox="0 0 840 300" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;display:block">
+        <defs><pattern id="vgrid" width="84" height="300" patternUnits="userSpaceOnUse"><line x1="84" y1="0" x2="84" y2="300" stroke="#e0e0e0" stroke-width="1"/></pattern></defs>
+        <rect x="140" y="0" width="700" height="300" fill="url(#vgrid)"/>
+        <text x="182" y="18" font-size="10" fill="#525252" font-family="IBM Plex Mono,monospace" text-anchor="middle">Wk 1</text>
+        <text x="266" y="18" font-size="10" fill="#525252" font-family="IBM Plex Mono,monospace" text-anchor="middle">Wk 2</text>
+        <text x="350" y="18" font-size="10" fill="#525252" font-family="IBM Plex Mono,monospace" text-anchor="middle">Wk 3–4</text>
+        <text x="476" y="18" font-size="10" fill="#525252" font-family="IBM Plex Mono,monospace" text-anchor="middle">Wk 5–6</text>
+        <text x="602" y="18" font-size="10" fill="#525252" font-family="IBM Plex Mono,monospace" text-anchor="middle">Wk 7–8</text>
+        <text x="728" y="18" font-size="10" fill="#525252" font-family="IBM Plex Mono,monospace" text-anchor="middle">Wk 9–10</text>
+        <!-- Discovery 3d -->
+        <text x="130" y="52" font-size="11" fill="#161616" font-weight="600" font-family="IBM Plex Sans,sans-serif" text-anchor="end">Discovery</text>
+        <rect x="140" y="36" width="44" height="22" fill="#0f62fe" rx="2"/>
+        <text x="162" y="51" font-size="10" fill="#fff" font-family="IBM Plex Sans,sans-serif" text-anchor="middle">3d</text>
+        <!-- Design 6d -->
+        <text x="130" y="92" font-size="11" fill="#161616" font-weight="600" font-family="IBM Plex Sans,sans-serif" text-anchor="end">Design</text>
+        <rect x="140" y="76" width="89" height="22" fill="#8a3ffc" rx="2"/>
+        <text x="185" y="91" font-size="10" fill="#fff" font-family="IBM Plex Sans,sans-serif" text-anchor="middle">6d</text>
+        <!-- Build 27d (segments: ARC, SRD, MDD, JRD) -->
+        <text x="130" y="132" font-size="11" fill="#161616" font-weight="600" font-family="IBM Plex Sans,sans-serif" text-anchor="end">Build</text>
+        <rect x="195" y="116" width="56" height="22" fill="#0f62fe" rx="2"/>
+        <rect x="251" y="116" width="100" height="22" fill="#0043ce" rx="0"/>
+        <rect x="351" y="116" width="130" height="22" fill="#0e6027" rx="0"/>
+        <rect x="481" y="116" width="80" height="22" fill="#6929c4" rx="0"/>
+        <rect x="561" y="116" width="32" height="22" fill="#0043ce" rx="2"/>
+        <text x="394" y="131" font-size="10" fill="#fff" font-family="IBM Plex Sans,sans-serif" text-anchor="middle">Build — 27 days</text>
+        <!-- Test 8d -->
+        <text x="130" y="172" font-size="11" fill="#161616" font-weight="600" font-family="IBM Plex Sans,sans-serif" text-anchor="end">Test</text>
+        <rect x="575" y="156" width="118" height="22" fill="#007d79" rx="2"/>
+        <text x="634" y="171" font-size="10" fill="#fff" font-family="IBM Plex Sans,sans-serif" text-anchor="middle">8d</text>
+        <!-- Deploy 3d -->
+        <text x="130" y="212" font-size="11" fill="#161616" font-weight="600" font-family="IBM Plex Sans,sans-serif" text-anchor="end">Deploy</text>
+        <rect x="693" y="196" width="44" height="22" fill="#da1e28" rx="2"/>
+        <text x="715" y="211" font-size="10" fill="#fff" font-family="IBM Plex Sans,sans-serif" text-anchor="middle">3d</text>
+        <!-- Milestones -->
+        <line x1="140" y1="232" x2="140" y2="258" stroke="#161616" stroke-width="1.5" stroke-dasharray="3,2"/>
+        <circle cx="140" cy="258" r="4" fill="#161616"/>
+        <text x="140" y="275" font-size="10" fill="#161616" font-family="IBM Plex Sans,sans-serif" text-anchor="middle" font-weight="600">Start</text>
+        <line x1="229" y1="232" x2="229" y2="258" stroke="#8a3ffc" stroke-width="1.5" stroke-dasharray="3,2"/>
+        <circle cx="229" cy="258" r="4" fill="#8a3ffc"/>
+        <text x="229" y="275" font-size="10" fill="#8a3ffc" font-family="IBM Plex Sans,sans-serif" text-anchor="middle" font-weight="600">Design</text>
+        <line x1="593" y1="232" x2="593" y2="258" stroke="#0043ce" stroke-width="1.5" stroke-dasharray="3,2"/>
+        <circle cx="593" cy="258" r="4" fill="#0043ce"/>
+        <text x="593" y="275" font-size="10" fill="#0043ce" font-family="IBM Plex Sans,sans-serif" text-anchor="middle" font-weight="600">Build Done</text>
+        <circle cx="837" cy="258" r="4" fill="#24a148"/>
+        <text x="820" y="275" font-size="10" fill="#24a148" font-family="IBM Plex Sans,sans-serif" text-anchor="middle" font-weight="600">Go-Live</text>
+      </svg>
+    </div>
+
+    <div class="section-title">Role Legend</div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px">
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="width:14px;height:14px;background:#0f62fe;border-radius:2px;display:inline-block"></span>MGR</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="width:14px;height:14px;background:#8a3ffc;border-radius:2px;display:inline-block"></span>ARC</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="width:14px;height:14px;background:#6929c4;border-radius:2px;display:inline-block"></span>DES</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="width:14px;height:14px;background:#0043ce;border-radius:2px;display:inline-block"></span>SRD</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="width:14px;height:14px;background:#0e6027;border-radius:2px;display:inline-block"></span>MDD ×2</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="width:14px;height:14px;background:#007d79;border-radius:2px;display:inline-block"></span>JRD ×2</span>
+    </div>
+
+    <div class="section-title">How We Actually Built This — Bob Effort by Category</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px">70 commits · Bob Effort Score = (files_changed × 3) + (lines_added ÷ 10) + (lines_deleted ÷ 20) · Total score: 4,507</p>
+    <div class="bar-container">
+      <div class="bar-label-row"><span class="bar-label">Building — 22 Functionality commits</span><span class="bar-pct">60% · score 2,705</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:60%;background:#0043ce">Building</div></div>
+    </div>
+    <div class="bar-container">
+      <div class="bar-label-row"><span class="bar-label">Iteration / Fix — 41 Iteration + Issue commits</span><span class="bar-pct">34% · score 1,537</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:34%;background:#6929c4">Iteration / Fix</div></div>
+    </div>
+    <div class="bar-container">
+      <div class="bar-label-row"><span class="bar-label">Planning — 7 Planning commits</span><span class="bar-pct">6% · score 265</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:6%;background:#007d79">Plan</div></div>
+    </div>
+  </div>
+
+  <!-- ── TAB: PLAN vs CODEBASE ── -->
+  <div id="tab-coverage" class="tab-panel">
+    <div class="card-row card-row-4">
+      <div class="card accent"><div class="card-label">Plan Hours</div><div class="card-value">332</div><div class="card-sub">15 items · 4 plan files</div></div>
+      <div class="card purple"><div class="card-label">Code-Only Hours</div><div class="card-value">1,438</div><div class="card-sub">30 unplanned items</div></div>
+      <div class="card"><div class="card-label">Total Hours</div><div class="card-value">1,770</div><div class="card-sub">45 work items</div></div>
+      <div class="card red"><div class="card-label">Plan Coverage</div><div class="card-value">19%</div><div class="card-sub">Plans: 1 in 5 hrs</div></div>
+    </div>
+    <div class="section-title">Coverage Split</div>
+    <div class="coverage-bar">
+      <div class="coverage-plan" style="width:19%">Plan+Code 19%</div>
+      <div class="coverage-code" style="width:81%">Code-Only 81% — unplanned gap</div>
+    </div>
+    <div class="callout warning" style="margin-top:16px">
+      <strong>⚠ Critical Finding:</strong> Plan documents covered only 332 of 1,770 hours (19%). The codebase contains the full delivered scope including the Pi vision pipeline, 4 server services, desktop + mobile web UIs, K8s manifests, and Dockerfiles — none of which appeared in any plan. <strong>Exception:</strong> The BTT demo shop (Group C) achieved 100% plan coverage — the model for future work.
+    </div>
+
+    <div class="section-title">Cost Delta — Plans vs Full Codebase</div>
+    <div class="card-row card-row-3">
+      <div class="card accent"><div class="card-label">Plan-Only Estimate (IBM Blended)</div><div class="card-value">$47,867</div><div class="card-sub">332 hrs × blended rate</div></div>
+      <div class="card"><div class="card-label">Full Codebase (IBM Blended adj.)</div><div class="card-value">$306,720</div><div class="card-sub">1,770 hrs × 1.2</div></div>
+      <div class="card red"><div class="card-label">Unplanned Cost Delta</div><div class="card-value">$258,853</div><div class="card-sub">what plans left out</div></div>
+    </div>
+
+    <div class="section-title">Key Unplanned Gap Items</div>
+    <table>
+      <thead><tr><th>ID</th><th>Work Item</th><th>Tier</th><th>Hrs</th><th>Cost (IBM Blended)</th><th>Why It Matters</th></tr></thead>
+      <tbody>
+        <tr><td>P06</td><td>Pi: Event publisher</td><td><span class="badge badge-l">L</span></td><td>76</td><td>$10,963</td><td>Offline resilience — entire WS feed depends on it</td></tr>
+        <tr><td>P07</td><td>Pi: Vision service</td><td><span class="badge badge-l">L</span></td><td>76</td><td>$10,963</td><td>Orchestrates entire Pi pipeline</td></tr>
+        <tr><td>P14</td><td>Event Processor</td><td><span class="badge badge-l">L</span></td><td>76</td><td>$10,963</td><td>Enrichment + Redis pub/sub backbone</td></tr>
+        <tr><td>P15</td><td>API Gateway</td><td><span class="badge badge-l">L</span></td><td>76</td><td>$10,963</td><td>Single ingress; all routing passes through it</td></tr>
+        <tr><td>P16</td><td>WebSocket Hub</td><td><span class="badge badge-l">L</span></td><td>76</td><td>$10,963</td><td>Real-time supervisor + operator feeds</td></tr>
+        <tr><td>P21</td><td>WebUI: Operator View</td><td><span class="badge badge-l">L</span></td><td>84</td><td>$12,117</td><td>Primary operator experience</td></tr>
+        <tr><td>P25</td><td>Mobile AR View</td><td><span class="badge badge-l">L</span></td><td>84</td><td>$12,117</td><td>The demo's "wow" moment</td></tr>
+        <tr><td>P31</td><td>K8s: 9 base manifests</td><td><span class="badge badge-l">L</span></td><td>60</td><td>$8,657</td><td>Production-grade deployment target</td></tr>
+        <tr><td colspan="3"><em>+ 22 further code-only items (Pi detectors, services, mobile hooks, infra)</em></td><td>430</td><td>$62,006</td><td></td></tr>
+        <tr class="subtotal"><td colspan="3">Code-Only Sub-total</td><td>1,438</td><td>$207,212</td><td></td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">Plan Coverage by Group</div>
+    <table>
+      <thead><tr><th>Group</th><th>Plan+Code Hrs</th><th>Code-Only Hrs</th><th>Total Hrs</th><th>Coverage %</th></tr></thead>
+      <tbody>
+        <tr><td>A — Platform Dev</td><td>216</td><td>873</td><td>1,089</td><td>20%</td></tr>
+        <tr><td>B — Mobile UX</td><td>116</td><td>83</td><td>199</td><td>58%</td></tr>
+        <tr><td>C — Demo Shop (BTT)</td><td>482</td><td>0</td><td>482</td><td style="color:var(--green);font-weight:700">100%</td></tr>
+        <tr class="total"><td>Overall</td><td>814</td><td>956</td><td>1,770</td><td>46%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── TAB: ROI & VALUE ── -->
+  <div id="tab-roi" class="tab-panel">
+    <div class="pull-quote">
+      <p>Art of the Possible: you bring deep IBM product knowledge, industry expertise, and a precise vision of what your client needs. Bob translates that vision into production-quality code, demos, and documentation — multiplying the value you deliver to IBM customers. Together we are a high-value team: your domain mastery and customer insight combined with Bob's ability to build, analyse, and document at speed. The result is experiences that delight IBM customers, accelerate pipeline, and demonstrate what is possible when human expertise and AI work as one.</p>
+    </div>
+
+    <div class="section-title">Your Investment — Editable Inputs</div>
+    <div class="roi-inputs">
+      <div class="roi-input-item"><label>Your Hourly Rate ($)</label><input type="number" id="roi-rate" value="250" oninput="recalcROI()"></div>
+      <div class="roi-input-item"><label>Your Active Hours</label><input type="number" id="roi-hours" value="12.5" step="0.5" oninput="recalcROI()"></div>
+      <div class="roi-input-item"><label>Bob Coins / Active Hour</label><input type="number" id="roi-coins-hr" value="24" oninput="recalcROI()"></div>
+      <div class="roi-input-item"><label>Coin Rate (USD)</label><input type="number" id="roi-coin-rate" value="0.50" step="0.01" oninput="recalcROI()"></div>
+      <div class="roi-input-item"><label>Deal Influence Value ($)</label><input type="number" id="roi-deal" value="0" oninput="recalcROI()"></div>
+      <div class="roi-input-item"><label>WBS Base Hours</label><input type="number" id="roi-wbs" value="1770" oninput="recalcROI()"></div>
+    </div>
+
+    <div class="section-title">Session Summary</div>
+    <div class="card-row card-row-4">
+      <div class="card accent"><div class="card-label">Active Hours</div><div class="card-value" id="roi-c-hours">12.5</div><div class="card-sub">git-derived · 2 sessions</div></div>
+      <div class="card"><div class="card-label">Your Time Cost</div><div class="card-value" id="roi-c-timecost">$3,125</div><div class="card-sub">12.5 hrs × $250/hr</div></div>
+      <div class="card purple"><div class="card-label">Bob Cost</div><div class="card-value" id="roi-c-bobcost">$150</div><div class="card-sub">300 coins × $0.50</div></div>
+      <div class="card green"><div class="card-label">Leverage Ratio</div><div class="card-value" id="roi-c-leverage">141.6×</div><div class="card-sub">WBS hrs ÷ active hrs</div></div>
+    </div>
+    <div class="card-row card-row-2">
+      <div class="card green"><div class="card-label">Total Investment</div><div class="card-value" id="roi-c-total">$3,275</div><div class="card-sub">time + coins</div></div>
+      <div class="card accent"><div class="card-label">Value Multiplier (IBM Blended)</div><div class="card-value" id="roi-c-multiplier" style="color:var(--green)">94×</div><div class="card-sub">$306,720 ÷ $3,275</div></div>
+    </div>
+
+    <div class="section-title">Three-Way Value Comparison</div>
+    <table>
+      <thead><tr><th>Dimension</th><th>You + Bob</th><th>IBM Dev Team (7-person Blended)</th><th>Industry Standard</th></tr></thead>
+      <tbody>
+        <tr><td>Total investment</td><td id="cmp-invest" style="font-weight:700;color:var(--green)">$3,275</td><td>$306,720</td><td>$271,782</td></tr>
+        <tr><td>Professional value delivered</td><td>$306,720</td><td>$306,720</td><td>$271,782</td></tr>
+        <tr><td>Your active hours</td><td id="cmp-hours">12.5 hrs</td><td>—</td><td>—</td></tr>
+        <tr><td>Calendar duration</td><td>~9.5 weeks</td><td>~9.5 weeks</td><td>~9.5 weeks</td></tr>
+        <tr><td>Team size</td><td>2 (you + Bob)</td><td>7</td><td>varies</td></tr>
+        <tr><td>Domain expertise</td><td class="yes">✔ You own it</td><td class="no">✘ Full briefing required</td><td class="no">✘ Full briefing required</td></tr>
+        <tr><td>IBM product knowledge</td><td class="yes">✔ Native</td><td class="warn">⚠ Partial</td><td class="no">✘ None</td></tr>
+        <tr><td>Customer context</td><td class="yes">✔ You own it</td><td class="no">✘ Lost in handoff</td><td class="no">✘ Lost in handoff</td></tr>
+        <tr><td>Value multiplier vs IBM Blended</td><td id="cmp-mult" style="font-weight:700;color:var(--green);font-family:'IBM Plex Mono',monospace">94×</td><td>1×</td><td>—</td></tr>
+        <tr><td>Value multiplier vs Industry Std</td><td id="cmp-mult-ind" style="font-weight:700;color:var(--green);font-family:'IBM Plex Mono',monospace">83×</td><td>—</td><td>1×</td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title">Qualitative Trade-off</div>
+    <table class="qual-table">
+      <thead><tr><th>Dimension</th><th>You + Bob</th><th>Traditional Dev Team</th></tr></thead>
+      <tbody>
+        <tr><td>Speed to first demo</td><td class="yes">Hours–days</td><td class="no">Weeks–months</td></tr>
+        <tr><td>Cost</td><td class="yes">Your time + coins</td><td class="no">$130k–$240k</td></tr>
+        <tr><td>Who holds the vision</td><td class="yes">You — directly translated</td><td class="warn">PM/BA layer required</td></tr>
+        <tr><td>IBM product narrative</td><td class="yes">Native — you live it</td><td class="warn">Must be taught</td></tr>
+        <tr><td>Customer need awareness</td><td class="yes">Yours — no translation loss</td><td class="no">Brief → interpret → build</td></tr>
+        <tr><td>Iteration speed</td><td class="yes">Instant — ask Bob, get code</td><td class="no">Sprint cycles</td></tr>
+        <tr><td>Risk of scope drift</td><td class="yes">Low — you steer every turn</td><td class="no">High — handoff gaps</td></tr>
+        <tr><td>Recommended for</td><td class="yes">PoCs, demos, Art of the Possible</td><td class="warn">Production scaled systems</td></tr>
+      </tbody>
+    </table>
+
+    <div class="pipeline-panel" id="pipeline-panel" style="display:none">
+      <div class="pipeline-title">Pipeline Value Influenced</div>
+      <div style="display:flex;gap:32px;margin-bottom:12px">
+        <div><div class="card-label">Pipeline value</div><div class="pipeline-multiplier" id="pp-deal">—</div></div>
+        <div><div class="card-label">Investment</div><div class="pipeline-multiplier" id="pp-invest" style="font-size:24px">$3,275</div></div>
+        <div><div class="card-label">Pipeline ROI</div><div class="pipeline-multiplier" id="pp-roi" style="color:var(--green)">—</div></div>
+      </div>
+      <div class="pull-quote" style="background:#fff8f0;border-left-color:#f1c21b"><p id="pp-quote" style="color:#7e3e00"></p></div>
+    </div>
+
+    <div class="value-headline" id="value-headline">
+      This demo was built by <strong>1 IBM Architect working with Bob AI</strong> in <strong>12.5 active hours</strong> at a total investment of <strong>$3,275</strong> — delivering <strong>$306,720</strong> of equivalent professional value at IBM Blended rates. That is a <strong>94× value multiplier</strong> on every dollar invested.
+    </div>
+  </div>
+
+  <!-- Recommendations -->
+  <div class="section-title" style="margin-top:32px">Recommendations</div>
+  <details><summary>Biggest Risk Items</summary>
+    <div class="rec-body">
+      <p><strong>P06 + P07 (Pi event publisher + vision service, L+L, 152 hrs):</strong> Offline JSONL buffer and threading model on headless Pi hardware are hardest to regression-test in CI.</p>
+      <p><strong>B07 (Label Sheet Generator, XL, 140 hrs):</strong> Dual print mode, 3 barcode types, ReportLab PDF with embedded SVG. ±0.5mm Avery alignment hard to validate without physical prints.</p>
+      <p><strong>B05 + B06 (Pack engine + wizard, M+L, 121 hrs):</strong> Bin-packing and multi-step tote wizard are tightly coupled — any data model change breaks both layers.</p>
+    </div>
+  </details>
+  <details><summary>Staffing Bottleneck</summary>
+    <div class="rec-body"><p>MDD ×2 carry <strong>706 hrs (39.9%)</strong> — dominant critical-path resource. SRD at 352 hrs (19.9%) is #2. Together they hold 60% of total project load.</p></div>
+  </details>
+  <details><summary>Contingency Guidance</summary>
+    <div class="rec-body"><p>20% is appropriate. Platform is stable. Residual risks: Pi hardware reliability in live demo environments, Label PDF Avery alignment (physical validation required), BTT is demo-scale — production hardening / real SAP integration is a separate, larger effort.</p></div>
+  </details>
+  <details><summary>Plan Coverage Gap — ⚠ Critical</summary>
+    <div class="rec-body"><p>Plans covered only <strong>19% of total hours</strong>. BTT (Group C) is the exception at 100% coverage. Future cycles should follow the BTT model: plan first, build second. Plans must cover full delivered scope — not only incremental deltas.</p></div>
+  </details>
+  <details><summary>Accuracy &amp; Confidence Band</summary>
+    <div class="rec-body"><p>±25% confidence band → <strong>$230,040 – $383,400</strong> (adjusted IBM Blended). Codebase is fully delivered and readable, tightening the estimate vs. a pre-build exercise. Would tighten further with: production hardening requirements, physical print test results for label PDF, Pi threading spike under load.</p></div>
+  </details>
+</div>
+
+<div style="max-width:900px;margin:0 auto;padding:0 24px">
+  <div class="page-footer">
+    <p>Generated by <a href="https://www.ibm.com/watsonx" style="color:var(--accent)">IBM Bob AI</a> · <code>dev-estimator</code> skill · 2026-07-27 · Planning-level estimate ±25% · Internal use only</p>
+    <p style="margin-top:6px">Made with IBM Bob</p>
+  </div>
+</div>
+
+<script>
+var SCENARIOS={
+  'IBM US':{MGR:225,ARC:250,DES:175,SRD:225,MDD:175,JRD:125},
+  'IBM Blended':{MGR:175,ARC:200,DES:140,SRD:180,MDD:140,JRD:100},
+  'IBM Offshore':{MGR:120,ARC:145,DES:95,SRD:130,MDD:95,JRD:65},
+  'Industry Standard':{MGR:150,ARC:175,DES:120,SRD:160,MDD:120,JRD:85}
+};
+var ROLE_HRS={MGR:101,ARC:169,DES:90,SRD:352,MDD:706,JRD:352};
+function fmt(n){return'$'+Math.round(n).toLocaleString('en-US')}
+function getRates(){return{MGR:+document.getElementById('r-MGR').value,ARC:+document.getElementById('r-ARC').value,DES:+document.getElementById('r-DES').value,SRD:+document.getElementById('r-SRD').value,MDD:+document.getElementById('r-MDD').value,JRD:+document.getElementById('r-JRD').value}}
+function recalc(){
+  var r=getRates();
+  var base=Object.keys(ROLE_HRS).reduce(function(s,k){return s+ROLE_HRS[k]*r[k]},0);
+  var cont=base*0.20,total=base+cont;
+  document.getElementById('c-base').textContent=fmt(base);
+  document.getElementById('c-cont').textContent=fmt(cont);
+  document.getElementById('c-total').textContent=fmt(total);
+  document.getElementById('grand-total-cost').textContent=fmt(base);
+  document.getElementById('role-total-cost').textContent=fmt(base);
+  var blended=base/1770;
+  document.querySelectorAll('.cost-cell:not([data-role])').forEach(function(td){td.textContent=fmt(+td.dataset.hrs*blended)});
+  document.querySelectorAll('.cost-cell[data-role]').forEach(function(td){td.textContent=fmt(+td.dataset.hrs*r[td.dataset.role])});
+  recalcROI();
+}
+function setScenario(name){
+  var s=SCENARIOS[name];
+  ['MGR','ARC','DES','SRD','MDD','JRD'].forEach(function(k){document.getElementById('r-'+k).value=s[k]});
+  document.querySelectorAll('.scenario-btn').forEach(function(b){b.classList.toggle('active',b.textContent===name)});
+  recalc();
+}
+function recalcROI(){
+  var rate=+document.getElementById('roi-rate').value||250;
+  var hours=+document.getElementById('roi-hours').value||12.5;
+  var coinsHr=+document.getElementById('roi-coins-hr').value||24;
+  var coinRate=+document.getElementById('roi-coin-rate').value||0.50;
+  var deal=+document.getElementById('roi-deal').value||0;
+  var wbs=+document.getElementById('roi-wbs').value||1770;
+  var timeCost=hours*rate,totalCoins=Math.round(hours*coinsHr),bobCost=totalCoins*coinRate,totalInvest=timeCost+bobCost;
+  var leverage=(wbs/hours).toFixed(1);
+  var blBase=Object.keys(ROLE_HRS).reduce(function(s,k){return s+ROLE_HRS[k]*SCENARIOS['IBM Blended'][k]},0);
+  var blAdj=blBase*1.2;
+  var indBase=Object.keys(ROLE_HRS).reduce(function(s,k){return s+ROLE_HRS[k]*SCENARIOS['Industry Standard'][k]},0);
+  var indAdj=indBase*1.2;
+  var multBl=Math.round(blAdj/totalInvest),multInd=Math.round(indAdj/totalInvest);
+  document.getElementById('roi-c-hours').textContent=hours;
+  document.getElementById('roi-c-timecost').textContent=fmt(timeCost);
+  document.getElementById('roi-c-bobcost').textContent=fmt(bobCost);
+  document.getElementById('roi-c-leverage').textContent=leverage+'×';
+  document.getElementById('roi-c-total').textContent=fmt(totalInvest);
+  document.getElementById('roi-c-multiplier').textContent=multBl+'×';
+  document.getElementById('cmp-invest').textContent=fmt(totalInvest);
+  document.getElementById('cmp-hours').textContent=hours+' hrs';
+  document.getElementById('cmp-mult').textContent=multBl+'×';
+  document.getElementById('cmp-mult-ind').textContent=multInd+'×';
+  document.getElementById('value-headline').innerHTML=
+    'This demo was built by <strong>1 IBM Architect working with Bob AI</strong> in <strong>'+hours+
+    ' active hours</strong> at a total investment of <strong>'+fmt(totalInvest)+
+    '</strong> — delivering <strong>'+fmt(blAdj)+
+    '</strong> of equivalent professional value at IBM Blended rates. That is a <strong>'+multBl+
+    '× value multiplier</strong> on every dollar invested.';
+  var panel=document.getElementById('pipeline-panel');
+  if(deal>0){
+    panel.style.display='block';
+    var pRoi=Math.round(deal/totalInvest);
+    document.getElementById('pp-deal').textContent=fmt(deal);
+    document.getElementById('pp-invest').textContent=fmt(totalInvest);
+    document.getElementById('pp-roi').textContent=pRoi+'×';
+    document.getElementById('pp-quote').textContent='Every $1 invested in this demo created $'+pRoi+' of IBM pipeline value.';
+  }else{panel.style.display='none'}
+}
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active')});
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+recalc();
+</script>
+</body>
+</html>
