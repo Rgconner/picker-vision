@@ -175,7 +175,7 @@ function InventoryPanel() {
     }
   }, [step]);
 
-  useBarcodeScanner(videoRef, scanning, handleScan);
+  const { unsupported: scannerUnsupported } = useBarcodeScanner(videoRef, scanning, handleScan);
 
   async function handleConfirmQty() {
     if (!pendingShelf || !pendingProduct) return;
@@ -249,6 +249,13 @@ function InventoryPanel() {
       </div>
 
       {/* Flash */}
+      {scannerUnsupported && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#f1c21b]/30 text-xs text-[#f1c21b]"
+             style={{ background: 'rgba(241,194,27,0.08)' }}>
+          <span>⚠</span>
+          <span>Native barcode scanner unavailable — performance may be compromised. Use Chrome on Android.</span>
+        </div>
+      )}
       {flash && (
         <div className="text-sm text-center text-[#f59e0b] animate-pulse">{flash}</div>
       )}

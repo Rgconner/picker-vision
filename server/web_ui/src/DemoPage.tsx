@@ -15,7 +15,7 @@
 
 import React, { useEffect } from 'react';
 import { useAuth } from './useAuth';
-import { qrSvg } from './qrSvg';
+import { dmSvg } from './dmSvg';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -88,7 +88,7 @@ function ProductLabel({ barcode, short, size, sizeColour }: typeof PRODUCTS[0]) 
       <div style={{ width: '5pt', height: '5pt', borderRadius: '50%', background: sizeColour, flexShrink: 0 }} />
       <div
         style={{ width: '0.75in', height: '0.75in', flexShrink: 0 }}
-        dangerouslySetInnerHTML={{ __html: qrSvg(barcode, 72) }}
+        dangerouslySetInnerHTML={{ __html: dmSvg(barcode, 72) }}
       />
       <div style={{ fontSize: '4.5pt', fontWeight: 700, fontFamily: 'Courier New, monospace', color: '#161616', textAlign: 'center', lineHeight: 1.2, wordBreak: 'break-all' }}>
         {barcode}
@@ -108,7 +108,7 @@ function StagingLabel({ code, label, accent }: typeof STAGING[0]) {
       </div>
       <div
         style={{ width: '0.65in', height: '0.65in', flexShrink: 0 }}
-        dangerouslySetInnerHTML={{ __html: qrSvg(`STAGING:${code}`, 62) }}
+        dangerouslySetInnerHTML={{ __html: dmSvg(`STAGING:${code}`, 62) }}
       />
       <div style={{ fontSize: '5pt', fontWeight: 700, fontFamily: 'Courier New, monospace', color: accent, letterSpacing: '0.5pt' }}>
         {code}
@@ -125,7 +125,7 @@ function ShelfLabel({ code }: { code: string }) {
       </div>
       <div
         style={{ width: '0.65in', height: '0.65in', flexShrink: 0 }}
-        dangerouslySetInnerHTML={{ __html: qrSvg(`SHELF:${code}`, 62) }}
+        dangerouslySetInnerHTML={{ __html: dmSvg(`SHELF:${code}`, 62) }}
       />
       <div style={{ fontSize: '6pt', fontWeight: 700, fontFamily: 'Courier New, monospace', color: '#161616' }}>
         {code}
@@ -214,7 +214,7 @@ export function DemoPage() {
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
             {[
-              { icon: '📱', title: 'A smartphone', desc: 'Any modern browser — Chrome or Safari. No app install.' },
+              { icon: '📱', title: 'A smartphone', desc: 'Chrome on Android, or the native Camera app on iPhone. No app install.' },
               { icon: '🏷️', title: 'These labels', desc: 'On-screen is fine. Point your phone at your laptop.' },
               { icon: '⏱️', title: 'About 2 minutes', desc: 'Scan a few items, confirm delivery, see it in real time.' },
             ].map((c) => (
@@ -224,6 +224,33 @@ export function DemoPage() {
                 <div style={{ fontSize: '12px', color: '#57606a', lineHeight: 1.5 }}>{c.desc}</div>
               </div>
             ))}
+          </div>
+
+          {/* Works best on */}
+          <div style={{ marginTop: '12px', background: '#12151f', border: '1px solid #2d3142', borderRadius: '8px', padding: '14px 16px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#57606a', marginBottom: '10px' }}>
+              Works best on
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              {[
+                { brand: 'Samsung', icon: '🤖', models: 'Galaxy S20 or newer · Galaxy A53 or newer', note: 'Use Chrome' },
+                { brand: 'Google',  icon: '🔵', models: 'Pixel 4a or newer', note: 'Use Chrome' },
+                { brand: 'Apple',   icon: '🍎', models: 'iPhone 12 or newer · iOS 16+', note: 'Use Safari or native Camera' },
+                { brand: 'Other Android', icon: '📲', models: 'Android 12+ · Chrome 97+', note: 'Most 2022+ devices' },
+              ].map((d) => (
+                <div key={d.brand} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: '18px', flexShrink: 0, lineHeight: 1.2 }}>{d.icon}</span>
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#e2e8f0' }}>{d.brand}</div>
+                    <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.4 }}>{d.models}</div>
+                    <div style={{ fontSize: '10px', color: '#57606a', marginTop: '2px' }}>{d.note}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #2d3142', fontSize: '11px', color: '#57606a' }}>
+              The scanner uses the device's native barcode detection — no camera permission is sent to any server.
+            </div>
           </div>
         </section>
 

@@ -177,7 +177,8 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     publish(result);
   }, [scanning, publish]);
 
-  useBarcodeScanner(videoRef as React.RefObject<HTMLVideoElement | null>, scanning, handleDetect);
+  const { unsupported: scannerUnsupported } =
+    useBarcodeScanner(videoRef as React.RefObject<HTMLVideoElement | null>, scanning, handleDetect);
 
   // Debug snapshot — posts composite JPEG every 2 s when ?debug=1
   useDebugSnapshot(
@@ -224,6 +225,17 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   const stagingRegions = pickerState?.staging_regions ?? [];
 
   // ── Shared sub-sections ────────────────────────────────────────────────────
+
+  const scannerWarning = scannerUnsupported ? (
+    <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-[#f1c21b]/30"
+         style={{ background: 'rgba(241,194,27,0.08)' }}>
+      <span className="text-[#f1c21b] text-lg shrink-0">⚠</span>
+      <span className="text-[#f1c21b] text-xs">
+        Native barcode scanner not available on this device — scanning disabled.
+        Performance may be compromised. Use Chrome on Android for best results.
+      </span>
+    </div>
+  ) : null;
 
   const joinBanner = showJoinBanner ? (
     <div className="shrink-0 flex items-center gap-3 px-3 py-2 border-b border-[#f1c21b]/30 bg-[#f1c21b]/8"
@@ -342,6 +354,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
         {/* Left column — camera + controls (55 %) */}
         <div className="flex flex-col overflow-hidden border-r border-[#2d3142]" style={{ width: '55%' }}>
           {header}
+          {scannerWarning}
           {joinBanner}
           <NextItemBanner orders={orders} />
           {/* Camera fills the remaining vertical space */}
@@ -371,6 +384,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
       style={{ height: '100dvh', paddingBottom: 'env(safe-area-inset-bottom, 0px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       {header}
+      {scannerWarning}
       {joinBanner}
       <NextItemBanner orders={orders} />
       {/* Camera takes up to 55 dvh — leaves ~45 dvh for controls + pick list */}

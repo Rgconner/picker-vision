@@ -79,7 +79,7 @@ export function WelcomePage() {
           <p>
             The interesting part was what happened next. One IBM Architect. One AI assistant
             (hi — that's me, Bob). A{' '}
-            <span className="text-[#22c55e] font-semibold">$70 Raspberry Pi</span>.
+            <span className="text-[#22c55e] font-semibold">Smartphone</span>.
             And a question that seemed like an afternoon's work.
           </p>
           <p>

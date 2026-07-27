@@ -1,30 +1,28 @@
 /**
  * useBarcodeScanner — scans frames from a <video> element for barcodes.
  *
- * Strategy (in priority order):
- *   1. Native BarcodeDetector API (Chrome on Android — GPU-accelerated, fastest)
- *   2. ZXing-js (pure JS fallback — works everywhere including Firefox, Safari, Vuzix)
+ * Uses the native BarcodeDetector API exclusively.
+ * Requires Chrome on Android (or any browser that ships BarcodeDetector).
+ * If the API is unavailable or data_matrix is not in supported formats,
+ * scanning is disabled and engineReady stays false — the caller should
+ * surface a "unsupported browser" message.
  *
- * Returns detected barcodes as lightweight scan results.  Scanning runs on a
- * requestAnimationFrame loop driven by the caller-supplied videoRef.
- *
- * The caller controls scanning via the `scanning` flag.
+ * Scanning runs on a requestAnimationFrame loop. The caller controls
+ * scanning via the `scanning` flag.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface ScanResult {
   value: string;
-  symbology: string;   // 'qr_code' | 'code_128' | 'ean_13' | etc.
+  symbology: string;
   type: 'product' | 'staging';
   stagingCode: string | null;
-  /** Bounding box in VIDEO pixel coordinates */
   bbox: { x: number; y: number; w: number; h: number } | null;
-  /** Corner points in VIDEO pixel coordinates (4 pts) */
   corners: { x: number; y: number }[] | null;
 }
 
-// Minimal type shim for the native BarcodeDetector (not in all TS libs yet)
+// Type shim — BarcodeDetector is not in all TS lib versions yet
 interface NativeBarcodeDetector {
   detect(image: HTMLVideoElement | HTMLCanvasElement): Promise<NativeBarcode[]>;
 }
@@ -39,59 +37,18 @@ declare const BarcodeDetector: {
   getSupportedFormats(): Promise<string[]>;
 };
 
-// ZXing dynamic import — only loaded when native API is absent
-let _zxingReader: { decodeFromVideoElement(el: HTMLVideoElement): Promise<{ getText(): string; getBarcodeFormat(): number }> } | null = null;
-
-async function loadZXing() {
-  if (_zxingReader) return _zxingReader;
-  try {
-    const zxing = await import('@zxing/library');
-    const hints = new Map();
-    const formats = [
-      zxing.BarcodeFormat.CODE_128,
-      zxing.BarcodeFormat.QR_CODE,
-      zxing.BarcodeFormat.EAN_13,
-      zxing.BarcodeFormat.DATA_MATRIX,
-      zxing.BarcodeFormat.EAN_8,
-      zxing.BarcodeFormat.CODE_39,
-    ];
-    hints.set(zxing.DecodeHintType.POSSIBLE_FORMATS, formats);
-    _zxingReader = new zxing.BrowserMultiFormatReader(hints);
-    return _zxingReader;
-  } catch {
-    return null;
-  }
-}
-
 function nativeResultToScan(b: NativeBarcode): ScanResult {
-  const value = b.rawValue;
+  const value     = b.rawValue;
   const isStaging = value.startsWith('STAGING:');
-  const corners = b.cornerPoints?.map((p) => ({ x: p.x, y: p.y })) ?? null;
-  const bb = b.boundingBox;
+  const corners   = b.cornerPoints?.map((p) => ({ x: p.x, y: p.y })) ?? null;
+  const bb        = b.boundingBox;
   return {
     value,
-    symbology: b.format,
-    type: isStaging ? 'staging' : 'product',
+    symbology:   b.format,
+    type:        isStaging ? 'staging' : 'product',
     stagingCode: isStaging ? value.slice(8, 12).toUpperCase() : null,
-    bbox: bb ? { x: Math.round(bb.x), y: Math.round(bb.y), w: Math.round(bb.width), h: Math.round(bb.height) } : null,
+    bbox:        bb ? { x: Math.round(bb.x), y: Math.round(bb.y), w: Math.round(bb.width), h: Math.round(bb.height) } : null,
     corners,
-  };
-}
-
-function zxingResultToScan(text: string, formatNum: number): ScanResult {
-  const isStaging = text.startsWith('STAGING:');
-  // Map ZXing format numbers to names (most common subset)
-  const fmtNames: Record<number, string> = {
-    11: 'qr_code', 1: 'aztec', 4: 'code_128', 6: 'code_39',
-    8: 'data_matrix', 3: 'ean_13', 2: 'ean_8',
-  };
-  return {
-    value: text,
-    symbology: fmtNames[formatNum] ?? `format_${formatNum}`,
-    type: isStaging ? 'staging' : 'product',
-    stagingCode: isStaging ? text.slice(8, 12).toUpperCase() : null,
-    bbox: null,
-    corners: null,
   };
 }
 
@@ -100,104 +57,77 @@ export function useBarcodeScanner(
   scanning: boolean,
   onDetect: (result: ScanResult) => void,
 ) {
-  const rafRef        = useRef<number>(0);
-  const nativeRef     = useRef<NativeBarcodeDetector | null>(null);
-  const useNativeRef  = useRef<boolean | null>(null);
+  const detectorRef   = useRef<NativeBarcodeDetector | null>(null);
   const lastValueRef  = useRef<string>('');
   const lastTimeRef   = useRef<number>(0);
-  const inFlightRef   = useRef<boolean>(false);  // prevents concurrent native detect() calls
-  const DEBOUNCE_MS   = 800; // same barcode must wait this long before re-firing
+  const inFlightRef   = useRef<boolean>(false);
+  const rafRef        = useRef<number>(0);
+  const DEBOUNCE_MS   = 800;
 
-  // Stable ref for onDetect — prevents ZXing continuous loop from re-registering
-  // every time the parent component re-renders and produces a new callback reference.
   const onDetectRef = useRef(onDetect);
   useEffect(() => { onDetectRef.current = onDetect; }, [onDetect]);
 
-  const [engineReady, setEngineReady] = useState(false);
+  const [engineReady, setEngineReady]       = useState(false);
+  const [unsupported, setUnsupported]       = useState(false);
+  const [supportedFormats, setSupportedFormats] = useState<string[]>([]);
 
-  // Initialise whichever engine is available
+  // Initialise native BarcodeDetector
   useEffect(() => {
     async function init() {
-      if (typeof BarcodeDetector !== 'undefined') {
-        try {
-          const formats = await BarcodeDetector.getSupportedFormats();
-          const want = ['qr_code', 'code_128', 'ean_13', 'data_matrix', 'code_39', 'ean_8'].filter(
-            (f) => formats.includes(f),
-          );
-          // Only use native BarcodeDetector if it supports data_matrix —
-          // otherwise fall through to ZXing which handles it everywhere.
-          if (want.includes('data_matrix')) {
-            nativeRef.current = new BarcodeDetector({ formats: want });
-            useNativeRef.current = true;
-            setEngineReady(true);
-            return;
-          }
-          // data_matrix not supported natively — log for diagnostics and fall through
-          console.info('[BarcodeDetector] data_matrix not in supported formats:', formats, '— falling back to ZXing');
-        } catch { /* fall through */ }
+      if (typeof BarcodeDetector === 'undefined') {
+        console.warn('[BarcodeDetector] API not available in this browser');
+        setUnsupported(true);
+        return;
       }
-      // ZXing fallback — handles data_matrix on all browsers including iOS Safari
-      const reader = await loadZXing();
-      useNativeRef.current = reader !== null ? false : null;
-      setEngineReady(reader !== null);
+      try {
+        const formats = await BarcodeDetector.getSupportedFormats();
+        setSupportedFormats(formats);
+
+        // Request all useful formats the device supports
+        const want = [
+          'data_matrix', 'qr_code', 'code_128', 'ean_13', 'ean_8', 'code_39',
+        ].filter((f) => formats.includes(f));
+
+        if (!want.includes('data_matrix')) {
+          console.warn('[BarcodeDetector] data_matrix not supported on this device. Supported:', formats);
+          setUnsupported(true);
+          return;
+        }
+
+        detectorRef.current = new BarcodeDetector({ formats: want });
+        console.info('[BarcodeDetector] ready with formats:', want);
+        setEngineReady(true);
+      } catch (e) {
+        console.warn('[BarcodeDetector] init failed:', e);
+        setUnsupported(true);
+      }
     }
     init();
   }, []);
 
   const scan = useCallback(async () => {
-    const video = videoRef.current;
-    if (!video || video.readyState < 2) return;
-
+    const video    = videoRef.current;
+    const detector = detectorRef.current;
+    if (!video || video.readyState < 2 || !detector) return;
     try {
-      const now = Date.now();
-      if (useNativeRef.current && nativeRef.current) {
-        const results = await nativeRef.current.detect(video);
-        for (const r of results) {
-          if (r.rawValue && (r.rawValue !== lastValueRef.current || now - lastTimeRef.current > DEBOUNCE_MS)) {
-            lastValueRef.current = r.rawValue;
-            lastTimeRef.current  = now;
-            onDetectRef.current(nativeResultToScan(r));
-          }
+      const results = await detector.detect(video);
+      const now     = Date.now();
+      for (const r of results) {
+        if (
+          r.rawValue &&
+          (r.rawValue !== lastValueRef.current || now - lastTimeRef.current > DEBOUNCE_MS)
+        ) {
+          lastValueRef.current = r.rawValue;
+          lastTimeRef.current  = now;
+          onDetectRef.current(nativeResultToScan(r));
         }
-      } else if (useNativeRef.current === false && _zxingReader) {
-        // ZXing is continuous — the reader calls back on its own; no manual frame needed
       }
     } catch { /* ignore mid-scan errors */ }
   }, [videoRef]);
 
-  // rAF scanning loop for native API; ZXing manages its own loop
+  // rAF loop — await scan() before scheduling next frame to prevent overlapping calls
   useEffect(() => {
     if (!scanning || !engineReady) return;
-    if (useNativeRef.current === false) {
-      // ZXing continuous decode — use onDetectRef so re-registration doesn't happen
-      // when the parent re-renders (the ref always points to the latest callback).
-      const video = videoRef.current;
-      if (!video || !_zxingReader) return;
-      let stopped = false;
-      (async () => {
-        try {
-          // @ts-expect-error — ZXing reader type is dynamically loaded
-          await (_zxingReader as { decodeFromVideoElementContinuously: (el: HTMLVideoElement, cb: (r: unknown, e: unknown) => void) => void })
-            .decodeFromVideoElementContinuously(video, (result: unknown) => {
-              if (stopped || !result) return;
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const r = result as any;
-              const text: string = r.getText?.() ?? '';
-              const fmt: number  = r.getBarcodeFormat?.() ?? -1;
-              const now = Date.now();
-              if (text && (text !== lastValueRef.current || now - lastTimeRef.current > DEBOUNCE_MS)) {
-                lastValueRef.current = text;
-                lastTimeRef.current  = now;
-                onDetectRef.current(zxingResultToScan(text, fmt));
-              }
-            });
-        } catch { /* ignore */ }
-      })();
-      return () => { stopped = true; (_zxingReader as unknown as { reset?: () => void })?.reset?.(); };
-    }
-
-    // Native rAF loop — await scan() before scheduling the next frame so that
-    // overlapping detect() calls cannot race past the debounce check.
     let active = true;
     async function loop() {
       if (!active) return;
@@ -213,7 +143,7 @@ export function useBarcodeScanner(
       active = false;
       cancelAnimationFrame(rafRef.current);
     };
-  }, [scanning, engineReady, scan, videoRef]);
+  }, [scanning, engineReady, scan]);
 
-  return { engineReady, useNative: useNativeRef.current };
+  return { engineReady, unsupported, supportedFormats };
 }
