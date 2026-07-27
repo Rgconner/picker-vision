@@ -15,7 +15,16 @@ data:
       root /usr/share/nginx/html;
       index index.html;
 
+      # / → welcome page (WelcomePage.tsx, rendered by index.html SPA)
+      # /app and /app/* → picker system login + full app
+      # /mobile and /mobile/* → standalone mobile picker view
+      # All three are handled by the same index.html SPA; the JS router
+      # in main.tsx reads window.location.pathname to pick the right component.
       location / {
+        try_files $uri $uri/ /index.html;
+      }
+
+      location /app {
         try_files $uri $uri/ /index.html;
       }
 
@@ -121,6 +130,10 @@ data:
       index index.html;
 
       location / {
+        try_files $uri $uri/ /index.html;
+      }
+
+      location /app {
         try_files $uri $uri/ /index.html;
       }
 
