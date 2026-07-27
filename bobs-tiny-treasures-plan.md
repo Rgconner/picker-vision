@@ -127,7 +127,7 @@ OrderTote ──< ToteLineAssignment >── OrderLine
   calls `create_all`; new models need to be imported here.
 
 ### Status
-[ ] pending
+[x] done
 
 ---
 
@@ -223,7 +223,7 @@ picking before they are split into totes).
   fits. Delivery zone codes (`TINY`, `WOND`, `CHRM`) are 4 chars. Both fine.
 
 ### Status
-[ ] pending
+[x] done
 
 ---
 
