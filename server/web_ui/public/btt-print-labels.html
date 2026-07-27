@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bob's Tiny Treasures — Print Labels</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'IBM Plex Sans','Segoe UI',sans-serif;background:#d0d0d0;color:#161616}
+
+  /* ── screen chrome ── */
+  .bar{background:#161616;color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between}
+  .bar h1{font-size:14px;font-weight:600}
+  .bar p{font-size:11px;color:#a8b2c1}
+  .print-btn{background:#0f62fe;color:#fff;border:none;padding:7px 18px;font-size:12px;font-weight:600;border-radius:2px;cursor:pointer;font-family:inherit}
+  .note{background:#f4f4f4;border-bottom:1px solid #ccc;padding:8px 20px;font-size:11px;color:#525252}
+
+  /* ── sheet ── */
+  .sheet{width:8.5in;background:#fff;margin:20px auto;padding:0.35in 0.35in 0.35in;page-break-after:always}
+  .sheet:last-child{page-break-after:auto}
+  .sheet-hdr{font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#aaa;text-align:center;margin-bottom:8pt;padding-bottom:5pt;border-bottom:0.5pt solid #e0e0e0}
+
+  /* ── PRODUCT LABELS
+       Data Matrix symbol sizes:
+         S (1×1 in product) → 1×1 cm symbol
+         M (2×1 in product) → 1.5×1.5 cm symbol  (≥1.5 cm on every side)
+         L (2×2 in product) → 1.5×1.5 cm symbol
+       Cell contains: size dot · DM symbol · barcode text · short name ── */
+  .prod-grid{display:flex;flex-wrap:wrap;gap:6pt}
+
+  .prod-cell{
+    display:inline-flex;flex-direction:column;align-items:center;
+    border:1pt dashed #999;border-radius:2pt;
+    padding:3pt;gap:2pt;
+    width:min-content;
+  }
+  /* S: 1×1 cm symbol */
+  .prod-cell.sz-S .prod-dm{width:1cm;height:1cm;flex-shrink:0}
+  .prod-cell.sz-S .prod-dm svg{width:1cm;height:1cm;display:block;image-rendering:pixelated}
+  /* M & L: 1.5×1.5 cm symbol */
+  .prod-cell.sz-M .prod-dm,
+  .prod-cell.sz-L .prod-dm{width:1.5cm;height:1.5cm;flex-shrink:0}
+  .prod-cell.sz-M .prod-dm svg,
+  .prod-cell.sz-L .prod-dm svg{width:1.5cm;height:1.5cm;display:block;image-rendering:pixelated}
+
+  .prod-sku{font-size:5pt;font-weight:700;font-family:'Courier New',monospace;color:#161616;text-align:center;line-height:1.2;word-break:break-all}
+  .prod-name-short{font-size:4.5pt;color:#444;text-align:center;line-height:1.2}
+  .prod-size-dot{width:5pt;height:5pt;border-radius:50%;flex-shrink:0}
+  .dot-S{background:#0e6027}.dot-M{background:#0043ce}.dot-L{background:#a2191f}
+
+  /* ── TOTE LABELS
+       Data Matrix 2×2 cm symbol ─── */
+  .tote-grid{display:flex;flex-wrap:wrap;gap:6pt}
+  .tote-cell{
+    display:inline-flex;flex-direction:column;align-items:center;
+    border:1pt dashed #999;border-radius:2pt;
+    padding:4pt;gap:3pt;
+    width:min-content;
+  }
+  .tote-dm{width:2cm;height:2cm;flex-shrink:0}
+  .tote-dm svg{width:2cm;height:2cm;display:block;image-rendering:pixelated}
+  .tote-code{font-size:10pt;font-weight:700;font-family:'Courier New',monospace;color:#161616;letter-spacing:1pt}
+  .tote-word{font-size:4.5pt;text-transform:uppercase;letter-spacing:.5pt;color:#888;font-weight:700}
+
+  /* ── print ── */
+  @media print{
+    body{background:#fff}
+    .bar,.note{display:none}
+    .sheet{margin:0;page-break-after:always;padding:0.3in}
+    .sheet:last-child{page-break-after:auto}
+  }
+  @page{size:letter portrait;margin:0}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div><h1>Bob's Tiny Treasures — Print Labels</h1><p>Sheet 1–2: Product labels (2 sets × 9) &nbsp;·&nbsp; Sheet 3–4: Tote labels (0001–0072)</p></div>
+  <button class="print-btn" onclick="window.print()">Print / Save PDF</button>
+</div>
+<div class="note">
+  Print: Letter · Portrait · 100% scale · Include backgrounds ✓ &nbsp;·&nbsp;
+  Data Matrix ECC200 · S products = 1×1 cm · M/L products = 1.5×1.5 cm · Totes = 2×2 cm &nbsp;·&nbsp; Cut on dashed lines
+</div>
+
+<!-- Sheet 1: products set 1 -->
+<div class="sheet">
+  <div class="sheet-hdr">Bob's Tiny Treasures — Product Labels — Set 1 of 2 · bobstinytreasures.snwbd.com</div>
+  <div class="prod-grid" id="pg1"></div>
+</div>
+
+<!-- Sheet 2: products set 2 -->
+<div class="sheet">
+  <div class="sheet-hdr">Bob's Tiny Treasures — Product Labels — Set 2 of 2 · bobstinytreasures.snwbd.com</div>
+  <div class="prod-grid" id="pg2"></div>
+</div>
+
+<!-- Sheet 3: totes 0001–0036 -->
+<div class="sheet">
+  <div class="sheet-hdr">Bob's Tiny Treasures — Tiny Tote Labels — 0001–0036 · bobstinytreasures.snwbd.com</div>
+  <div class="tote-grid" id="tg1"></div>
+</div>
+
+<!-- Sheet 4: totes 0037–0072 -->
+<div class="sheet">
+  <div class="sheet-hdr">Bob's Tiny Treasures — Tiny Tote Labels — 0037–0072 · bobstinytreasures.snwbd.com</div>
+  <div class="tote-grid" id="tg2"></div>
+</div>
+
+<script>
+"use strict";
+/* ================================================================
+   Data Matrix ECC200 encoder — ISO/IEC 16022
+   GF(256) primitive polynomial: x^8+x^5+x^3+x^2+1 = 0x12D
+   Encoding: ASCII mode (handles all BTT/TOTE payloads)
+   Symbol sizes: 10×10 through 24×24 (square ECC200 symbols)
+   ================================================================ */
+
+/* ── GF(256) tables ── */
+var GF_EXP=new Array(512), GF_LOG=new Array(256);
+(function(){
+  var x=1;
+  for(var i=0;i<255;i++){
+    GF_EXP[i]=x; GF_LOG[x]=i;
+    x<<=1; if(x&256) x^=0x12D;
+  }
+  for(var i=255;i<512;i++) GF_EXP[i]=GF_EXP[i-255];
+})();
+function gmul(a,b){ return(a&&b)?GF_EXP[GF_LOG[a]+GF_LOG[b]]:0; }
+
+/* ── Reed-Solomon ── */
+function rsGenPoly(n){
+  var g=[1];
+  for(var i=0;i<n;i++){
+    var t=[1,GF_EXP[i]], r=new Array(g.length+1).fill(0);
+    for(var j=0;j<g.length;j++)
+      for(var k=0;k<t.length;k++)
+        r[j+k]^=gmul(g[j],t[k]);
+    g=r;
+  }
+  return g;
+}
+function rsEncode(data,ecCount){
+  var g=rsGenPoly(ecCount), msg=data.slice();
+  for(var i=0;i<ecCount;i++) msg.push(0);
+  for(var i=0;i<data.length;i++){
+    var c=msg[i];
+    if(c) for(var j=0;j<g.length;j++) msg[i+j]^=gmul(g[j],c);
+  }
+  return msg.slice(data.length);
+}
+
+/* ── Symbol parameters [rows, cols, datawords, ecwords] ── */
+var PARAMS=[
+  [10,10, 3, 5],
+  [12,12, 5, 7],
+  [14,14, 8,10],
+  [16,16,12,12],
+  [18,18,18,14],
+  [20,20,22,18],
+  [22,22,30,20],
+  [24,24,36,24],
+];
+
+/* ── ASCII encode ── */
+function dmEncode(text){
+  var cw=[], i=0;
+  while(i<text.length){
+    var c=text.charCodeAt(i);
+    if(c>=48&&c<=57&&i+1<text.length){
+      var c2=text.charCodeAt(i+1);
+      if(c2>=48&&c2<=57){ cw.push((c-48)*10+(c2-48)+130); i+=2; continue; }
+    }
+    cw.push(c+1); i++;
+  }
+  return cw;
+}
+
+function pickParams(cw){
+  for(var i=0;i<PARAMS.length;i++) if(cw.length<=PARAMS[i][2]) return PARAMS[i];
+  return PARAMS[PARAMS.length-1];
+}
+
+function padData(cw,capacity){
+  var out=cw.slice();
+  if(out.length<capacity) out.push(129);
+  while(out.length<capacity){
+    var r=(((149*(out.length+1))%253)+130)%254;
+    out.push(r);
+  }
+  return out;
+}
+
+/* ── ECC200 module placement ── */
+function buildMatrix(rows,cols,data){
+  var mat=[];
+  for(var r=0;r<rows;r++) mat.push(new Array(cols).fill(-1));
+
+  /* Finder borders */
+  for(var i=0;i<rows;i++){
+    mat[i][0]=1;
+    mat[i][cols-1]=(i%2===0)?1:0;
+  }
+  for(var j=0;j<cols;j++){
+    mat[rows-1][j]=1;
+    mat[0][j]=(j%2===0)?1:0;
+  }
+
+  var used=[];
+  for(var r=0;r<rows;r++) used.push(new Array(cols).fill(false));
+  for(var i=0;i<rows;i++){ used[i][0]=true; used[i][cols-1]=true; }
+  for(var j=0;j<cols;j++){ used[0][j]=true; used[rows-1][j]=true; }
+
+  function setMod(r,c,bit){
+    if(r<0) r+=rows; if(c<0) c+=cols;
+    if(r<0||r>=rows||c<0||c>=cols) return;
+    if(used[r][c]) return;
+    used[r][c]=true; mat[r][c]=bit;
+  }
+
+  /* Standard Utah 8-cell shape */
+  function utah(r,c,b){
+    setMod(r-2,c-2,(b>>7)&1); setMod(r-2,c-1,(b>>6)&1);
+    setMod(r-1,c-2,(b>>5)&1); setMod(r-1,c-1,(b>>4)&1);
+    setMod(r-1,c,  (b>>3)&1); setMod(r,  c-2,(b>>2)&1);
+    setMod(r,  c-1,(b>>1)&1); setMod(r,  c,  (b>>0)&1);
+  }
+
+  /* Corner patterns */
+  function corner1(b){
+    setMod(rows-1,0,(b>>7)&1); setMod(rows-1,1,(b>>6)&1);
+    setMod(rows-1,2,(b>>5)&1); setMod(0,cols-2,(b>>4)&1);
+    setMod(0,cols-1,(b>>3)&1); setMod(1,cols-1,(b>>2)&1);
+    setMod(2,cols-1,(b>>1)&1); setMod(3,cols-1,(b>>0)&1);
+  }
+  function corner2(b){
+    setMod(rows-3,0,(b>>7)&1); setMod(rows-2,0,(b>>6)&1);
+    setMod(rows-1,0,(b>>5)&1); setMod(0,cols-4,(b>>4)&1);
+    setMod(0,cols-3,(b>>3)&1); setMod(0,cols-2,(b>>2)&1);
+    setMod(0,cols-1,(b>>1)&1); setMod(1,cols-1,(b>>0)&1);
+  }
+  function corner3(b){
+    setMod(rows-3,0,(b>>7)&1); setMod(rows-2,0,(b>>6)&1);
+    setMod(rows-1,0,(b>>5)&1); setMod(0,cols-2,(b>>4)&1);
+    setMod(0,cols-1,(b>>3)&1); setMod(1,cols-1,(b>>2)&1);
+    setMod(2,cols-1,(b>>1)&1); setMod(3,cols-1,(b>>0)&1);
+  }
+  function corner4(b){
+    setMod(rows-1,0,  (b>>7)&1); setMod(rows-1,cols-1,(b>>6)&1);
+    setMod(0,cols-3,(b>>5)&1);   setMod(0,cols-2,(b>>4)&1);
+    setMod(0,cols-1,(b>>3)&1);   setMod(1,cols-3,(b>>2)&1);
+    setMod(1,cols-2,(b>>1)&1);   setMod(1,cols-1,(b>>0)&1);
+  }
+
+  var cwIdx=0;
+  function nextByte(){ return cwIdx<data.length?data[cwIdx++]:0; }
+
+  var r=4, c=0;
+  do {
+    if(r===rows&&c===0)                       corner1(nextByte());
+    if(r===rows-2&&c===0&&cols%4!==0)         corner2(nextByte());
+    if(r===rows-2&&c===0&&cols%8===4)         corner3(nextByte());
+    if(r===rows+4&&c===2&&cols%8===0)         corner4(nextByte());
+    do {
+      if(r<rows&&c>=0&&!used[r][c]) utah(r,c,nextByte());
+      r-=2; c+=2;
+    } while(r>=0&&c<cols);
+    r+=1; c+=3;
+    do {
+      if(r>=0&&c<cols&&!used[r][c]) utah(r,c,nextByte());
+      r+=2; c-=2;
+    } while(r<rows&&c>=0);
+    r+=3; c+=1;
+  } while(r<rows||c<cols);
+
+  /* Fill any untouched interior cells */
+  for(var ri=1;ri<rows-1;ri++)
+    for(var ci=1;ci<cols-1;ci++)
+      if(mat[ri][ci]===-1) mat[ri][ci]=0;
+
+  return mat;
+}
+
+/* ── Public: text → inline SVG string ── */
+function dmSVG(text, cssSize){
+  var cw     = dmEncode(text);
+  var par    = pickParams(cw);
+  var rows=par[0], cols=par[1], dcap=par[2], eccap=par[3];
+  var padded = padData(cw, dcap);
+  var ec     = rsEncode(padded, eccap);
+  var mat    = buildMatrix(rows, cols, padded.concat(ec));
+  var cell   = cssSize/rows;
+  var p=[
+    '<svg xmlns="http://www.w3.org/2000/svg"',
+    ' viewBox="0 0 ',cssSize,' ',cssSize,'"',
+    ' width="',cssSize,'" height="',cssSize,'">',
+    '<rect width="',cssSize,'" height="',cssSize,'" fill="#fff"/>',
+  ];
+  for(var r=0;r<rows;r++)
+    for(var c=0;c<cols;c++)
+      if(mat[r][c]===1)
+        p.push('<rect x="',(c*cell).toFixed(2),'" y="',(r*cell).toFixed(2),
+               '" width="',cell.toFixed(2),'" height="',cell.toFixed(2),'" fill="#000"/>');
+  p.push('</svg>');
+  return p.join('');
+}
+
+/* ── Products ── */
+var PROD=[
+  {b:'BTT-00101',sku:'BTT-S-001',short:'Goblin Gem',       sz:'S'},
+  {b:'BTT-00102',sku:'BTT-S-002',short:'Sapphire Sprite',  sz:'S'},
+  {b:'BTT-00103',sku:'BTT-S-003',short:'Rascal Ruby',      sz:'S'},
+  {b:'BTT-00201',sku:'BTT-M-001',short:'Purple Prism',     sz:'M'},
+  {b:'BTT-00202',sku:'BTT-M-002',short:'Trickster Token',  sz:'M'},
+  {b:'BTT-00203',sku:'BTT-M-003',short:"Captain's Cube",   sz:'M'},
+  {b:'BTT-00301',sku:'BTT-L-001',short:'Magenta Monolith', sz:'L'},
+  {b:'BTT-00302',sku:'BTT-L-002',short:'White Whopper',    sz:'L'},
+  {b:'BTT-00303',sku:'BTT-L-003',short:'Diamond Dynamo',   sz:'L'},
+];
+
+/* CSS px sizes per size class (used for SVG viewBox; CSS constrains physical size) */
+var DM_PX={S:38, M:57, L:57}; /* 38≈1cm, 57≈1.5cm at 96dpi */
+
+function buildProdGrid(id){
+  var g=document.getElementById(id);
+  PROD.forEach(function(p){
+    var px=DM_PX[p.sz];
+    var d=document.createElement('div');
+    d.className='prod-cell sz-'+p.sz;
+    d.innerHTML=
+      '<div class="prod-size-dot dot-'+p.sz+'"></div>'+
+      '<div class="prod-dm">'+dmSVG(p.b,px)+'</div>'+
+      '<div class="prod-sku">'+p.b+'</div>'+
+      '<div class="prod-name-short">'+p.short+'</div>';
+    g.appendChild(d);
+  });
+}
+buildProdGrid('pg1');
+buildProdGrid('pg2');
+
+/* ── Tote labels ── */
+function buildToteGrid(id,from,to){
+  var g=document.getElementById(id);
+  for(var n=from;n<=to;n++){
+    var code=String(n).padStart(4,'0');
+    var d=document.createElement('div');d.className='tote-cell';
+    d.innerHTML=
+      '<div class="tote-word">Tiny Tote</div>'+
+      '<div class="tote-dm">'+dmSVG('TOTE:'+code,76)+'</div>'+
+      '<div class="tote-code">'+code+'</div>';
+    g.appendChild(d);
+  }
+}
+buildToteGrid('tg1',1,36);
+buildToteGrid('tg2',37,72);
+</script>
+</body>
+</html>
