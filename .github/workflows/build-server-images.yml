@@ -89,7 +89,7 @@ jobs:
   deploy:
     name: Deploy to k8s
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, picker-vision]
     if: github.event_name != 'pull_request'
     permissions:
       contents: read
@@ -98,54 +98,57 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
-
-      - name: Set up kustomize
-        uses: imranismail/setup-kustomize@v2
-
-      - name: Configure kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+      # kubectl and kustomize are already installed on the self-hosted runner.
+      # Kubeconfig is at the default ~/.kube/config location — no secret needed.
 
       # Short SHA tag — same format as docker/metadata-action produces above
+      # All run: blocks use PowerShell (Windows self-hosted runner).
       - name: Resolve image tag
         id: tag
-        run: echo "sha=sha-$(echo '${{ github.sha }}' | cut -c1-7)" >> $GITHUB_OUTPUT
+        shell: powershell
+        run: |
+          $sha7 = "${{ github.sha }}".Substring(0,7)
+          "sha=sha-$sha7" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       # ── Production deploy (main) ──────────────────────────────────────────────
       # MetalLB config is cluster-level infrastructure — applied once at setup,
-      # not on every push.  The runner only has namespace-scoped rights.
+      # not on every push.  The runner has direct LAN access to the cluster.
 
       - name: Apply production manifests
         if: github.ref_name == 'main'
-        run: kubectl apply -k k8s/
+        shell: powershell
+        run: |
+          & "C:\Users\RussConner\kubectl.exe" apply -k k8s/
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Pin production deployments to SHA tag
         if: github.ref_name == 'main'
+        shell: powershell
         run: |
-          TAG="${{ steps.tag.outputs.sha }}"
-          NS=picker-vision
-          for svc in api-gateway order-service event-processor websocket-hub web-ui; do
-            kubectl set image deployment/${svc} ${svc}=ghcr.io/rgconner/picker-vision/${svc}:${TAG} -n ${NS}
-          done
+          $tag = "${{ steps.tag.outputs.sha }}"
+          $ns  = "picker-vision"
+          foreach ($svc in @("api-gateway","order-service","event-processor","websocket-hub","web-ui")) {
+            & "C:\Users\RussConner\kubectl.exe" set image deployment/$svc ${svc}=ghcr.io/rgconner/picker-vision/${svc}:$tag -n $ns
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       - name: Wait for production rollout
         if: github.ref_name == 'main'
+        shell: powershell
         run: |
-          for deploy in api-gateway order-service event-processor websocket-hub web-ui; do
-            kubectl rollout status deployment/${deploy} -n picker-vision --timeout=300s
-          done
+          foreach ($d in @("api-gateway","order-service","event-processor","websocket-hub","web-ui")) {
+            & "C:\Users\RussConner\kubectl.exe" rollout status deployment/$d -n picker-vision --timeout=300s
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       - name: Show production external IPs
         if: github.ref_name == 'main'
+        shell: powershell
         run: |
-          echo "### Production External IPs (MetalLB)" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          kubectl get svc -n picker-vision -o wide | grep LoadBalancer >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          "### Production External IPs (MetalLB)" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          '```'                                   | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          & "C:\Users\RussConner\kubectl.exe" get svc -n picker-vision -o wide | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          '```'                                   | Out-File $env:GITHUB_STEP_SUMMARY -Append
 
       # ── Test deploy (feature/mobile-web-client) ───────────────────────────────
       # MetalLB pool is cluster-level infrastructure — applied once at setup.
@@ -153,28 +156,36 @@ jobs:
 
       - name: Apply test manifests
         if: github.ref_name == 'feature/mobile-web-client'
-        run: kubectl apply -k k8s/overlays/test/
+        shell: powershell
+        run: |
+          & "C:\Users\RussConner\kubectl.exe" apply -k k8s/overlays/test/
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Pin test deployments to SHA tag
         if: github.ref_name == 'feature/mobile-web-client'
+        shell: powershell
         run: |
-          TAG="${{ steps.tag.outputs.sha }}"
-          NS=picker-vision-test
-          for svc in api-gateway order-service event-processor websocket-hub web-ui; do
-            kubectl set image deployment/${svc} ${svc}=ghcr.io/rgconner/picker-vision/${svc}:${TAG} -n ${NS}
-          done
+          $tag = "${{ steps.tag.outputs.sha }}"
+          $ns  = "picker-vision-test"
+          foreach ($svc in @("api-gateway","order-service","event-processor","websocket-hub","web-ui")) {
+            & "C:\Users\RussConner\kubectl.exe" set image deployment/$svc ${svc}=ghcr.io/rgconner/picker-vision/${svc}:$tag -n $ns
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       - name: Wait for test rollout
         if: github.ref_name == 'feature/mobile-web-client'
+        shell: powershell
         run: |
-          for deploy in api-gateway order-service event-processor websocket-hub web-ui; do
-            kubectl rollout status deployment/${deploy} -n picker-vision-test --timeout=300s
-          done
+          foreach ($d in @("api-gateway","order-service","event-processor","websocket-hub","web-ui")) {
+            & "C:\Users\RussConner\kubectl.exe" rollout status deployment/$d -n picker-vision-test --timeout=300s
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       - name: Show test external IPs
         if: github.ref_name == 'feature/mobile-web-client'
+        shell: powershell
         run: |
-          echo "### Test External IPs (MetalLB)" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          kubectl get svc -n picker-vision-test -o wide | grep LoadBalancer >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          "### Test External IPs (MetalLB)" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          '```'                             | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          & "C:\Users\RussConner\kubectl.exe" get svc -n picker-vision-test -o wide | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          '```'                             | Out-File $env:GITHUB_STEP_SUMMARY -Append
