@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/mobile-web-client
+      - feature/bobs-tiny-treasures
     paths:
       - "server/**"
       - "k8s/**"
@@ -192,3 +193,34 @@ jobs:
           '```'                             | Out-File $env:GITHUB_STEP_SUMMARY -Append
           & "C:\Users\RussConner\kubectl.exe" get svc -n picker-vision-test -o wide | Out-File $env:GITHUB_STEP_SUMMARY -Append
           '```'                             | Out-File $env:GITHUB_STEP_SUMMARY -Append
+
+      # ── Bob's Tiny Treasures deploy (feature/bobs-tiny-treasures) ─────────────
+      # This overlay already pins branch tags in kustomization, so do not rewrite
+      # deployments to SHA tags here.
+
+      - name: Apply Bob's Tiny Treasures manifests
+        if: github.ref_name == 'feature/bobs-tiny-treasures'
+        shell: powershell
+        run: |
+          & "C:\Users\RussConner\kubectl.exe" apply -f k8s/overlays/bobs-tiny-treasures/metallb-l2.yaml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "C:\Users\RussConner\kubectl.exe" apply -k k8s/overlays/bobs-tiny-treasures/
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Wait for Bob's Tiny Treasures rollout
+        if: github.ref_name == 'feature/bobs-tiny-treasures'
+        shell: powershell
+        run: |
+          foreach ($d in @("api-gateway","order-service","event-processor","websocket-hub","web-ui")) {
+            & "C:\Users\RussConner\kubectl.exe" rollout status deployment/$d -n picker-vision-btt --timeout=300s
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+      - name: Show Bob's Tiny Treasures external IPs
+        if: github.ref_name == 'feature/bobs-tiny-treasures'
+        shell: powershell
+        run: |
+          "### Bob's Tiny Treasures External IPs (MetalLB)" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          '```'                                              | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          & "C:\Users\RussConner\kubectl.exe" get svc -n picker-vision-btt -o wide | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          '```'                                              | Out-File $env:GITHUB_STEP_SUMMARY -Append
