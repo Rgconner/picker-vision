@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scanner Diagnostics</title>
+<style>
+  body{font-family:'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;padding:20px;max-width:480px;margin:0 auto}
+  h1{font-size:16px;font-weight:700;margin-bottom:16px;color:#be95ff}
+  .card{background:#1a1d27;border:1px solid #2d3142;border-radius:8px;padding:14px;margin-bottom:12px}
+  .label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#57606a;font-weight:700;margin-bottom:6px}
+  .value{font-size:13px;color:#e2e8f0;font-family:monospace;word-break:break-all}
+  .ok{color:#22c55e}.warn{color:#f1c21b}.err{color:#ef4444}
+  .fmt{display:inline-block;background:#2d3142;border-radius:4px;padding:2px 8px;margin:2px;font-size:11px;font-family:monospace}
+  .fmt.hit{background:#0a2d14;color:#22c55e;border:1px solid #22c55e}
+  button{background:#6929c4;color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-bottom:10px}
+  #log{font-size:11px;font-family:monospace;color:#94a3b8;white-space:pre-wrap;max-height:200px;overflow-y:auto}
+  video{width:100%;border-radius:6px;background:#000;display:block}
+</style>
+</head>
+<body>
+<h1>Scanner Diagnostics</h1>
+
+<div class="card">
+  <div class="label">BarcodeDetector API</div>
+  <div class="value" id="api-status">Checking…</div>
+</div>
+
+<div class="card">
+  <div class="label">Supported formats</div>
+  <div id="formats">Checking…</div>
+</div>
+
+<div class="card">
+  <div class="label">data_matrix support</div>
+  <div class="value" id="dm-status">Checking…</div>
+</div>
+
+<div class="card">
+  <div class="label">Live scan test — point at any Data Matrix code</div>
+  <video id="vid" autoplay playsinline muted></video>
+  <div style="margin-top:8px">
+    <button onclick="startScan()">Start Camera + Scan</button>
+  </div>
+  <div class="label" style="margin-top:8px">Scan results</div>
+  <div id="log">No scans yet…</div>
+</div>
+
+<script>
+const WANT = ['data_matrix','qr_code','code_128','ean_13','ean_8','code_39','aztec'];
+let detector = null;
+let rafId = null;
+let scanning = false;
+
+async function init() {
+  const apiEl = document.getElementById('api-status');
+  const fmtEl = document.getElementById('formats');
+  const dmEl  = document.getElementById('dm-status');
+
+  if (typeof BarcodeDetector === 'undefined') {
+    apiEl.textContent = '✗ Not available';
+    apiEl.className = 'value err';
+    fmtEl.textContent = 'N/A';
+    dmEl.textContent = '✗ Not available — native scanning will not work';
+    dmEl.className = 'value err';
+    return;
+  }
+
+  apiEl.textContent = '✓ Available';
+  apiEl.className = 'value ok';
+
+  const supported = await BarcodeDetector.getSupportedFormats();
+  fmtEl.innerHTML = supported.map(f =>
+    WANT.includes(f)
+      ? `<span class="fmt hit">${f}</span>`
+      : `<span class="fmt">${f}</span>`
+  ).join('');
+
+  if (supported.includes('data_matrix')) {
+    dmEl.textContent = '✓ Supported — scanner will use native detection';
+    dmEl.className = 'value ok';
+    const formats = WANT.filter(f => supported.includes(f));
+    detector = new BarcodeDetector({ formats });
+    log('Detector ready with: ' + formats.join(', '));
+  } else {
+    dmEl.textContent = '✗ NOT supported on this device/browser — this is why scanning fails';
+    dmEl.className = 'value err';
+    log('PROBLEM: data_matrix not in BarcodeDetector.getSupportedFormats()');
+    log('Supported formats: ' + supported.join(', '));
+  }
+}
+
+async function startScan() {
+  const vid = document.getElementById('vid');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }, audio: false
+    });
+    vid.srcObject = stream;
+    await vid.play();
+    scanning = true;
+    log('Camera started — scanning…');
+    scanLoop();
+  } catch(e) {
+    log('Camera error: ' + e);
+  }
+}
+
+async function scanLoop() {
+  if (!scanning) return;
+  const vid = document.getElementById('vid');
+  if (detector && vid.readyState >= 2) {
+    try {
+      const results = await detector.detect(vid);
+      if (results.length > 0) {
+        results.forEach(r => log('✓ SCANNED: ' + r.format + ' → ' + r.rawValue));
+      }
+    } catch(e) {
+      log('detect() error: ' + e);
+    }
+  }
+  rafId = requestAnimationFrame(scanLoop);
+}
+
+function log(msg) {
+  const el = document.getElementById('log');
+  el.textContent = new Date().toLocaleTimeString() + ' ' + msg + '\n' + el.textContent;
+}
+
+init();
+</script>
+</body>
+</html>
