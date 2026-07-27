@@ -14,6 +14,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import type { AuthState, UserRole } from './useAuth';
+import { BttSetupPanel } from './BttSetupPanel';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -56,7 +57,6 @@ interface WorkflowConfig {
   mid_pick_validate_after: number;
 }
 
-type Tab = 'users' | 'carts' | 'ai' | 'workflow';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -555,7 +555,9 @@ interface Props {
   auth: AuthState;
 }
 
-const TABS: { id: Tab; label: string }[] = [
+type Tab = 'users' | 'carts' | 'ai' | 'workflow' | 'btt-setup';
+
+const BASE_TABS: { id: Tab; label: string }[] = [
   { id: 'users',    label: 'Users' },
   { id: 'carts',    label: 'Cart Types' },
   { id: 'ai',       label: 'AI Settings' },
@@ -563,20 +565,35 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export function ManagementView({ auth }: Props) {
-  const [tab, setTab] = useState<Tab>('users');
+  const [tab, setTab]             = useState<Tab>('users');
+  const [isBtt, setIsBtt]         = useState(false);
+
+  // Fetch instance profile once on mount — gates the BTT Setup tab
+  useEffect(() => {
+    fetch('/api/order/instance-profile')
+      .then(r => r.ok ? r.json() : { profile: '' })
+      .then(d => { if (d.profile === 'bobs-tiny-treasures') setIsBtt(true); })
+      .catch(() => {/* vanilla — no BTT tab */});
+  }, []);
+
+  const tabs = isBtt
+    ? [...BASE_TABS, { id: 'btt-setup' as Tab, label: '🏪 BTT Setup' }]
+    : BASE_TABS;
 
   return (
     <div className="flex flex-col h-full overflow-hidden p-4 gap-3 max-w-4xl mx-auto w-full">
 
       {/* Tab bar */}
-      <div className="flex gap-1 shrink-0">
-        {TABS.map((t) => (
+      <div className="flex gap-1 flex-wrap shrink-0">
+        {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
               tab === t.id
-                ? 'bg-[#06b6d4] text-black'
+                ? t.id === 'btt-setup'
+                  ? 'bg-[#f59e0b] text-black'
+                  : 'bg-[#06b6d4] text-black'
                 : 'bg-[#1a1d27] border border-[#2d3142] text-[#94a3b8] hover:text-[#e2e8f0]'
             }`}
           >
@@ -587,10 +604,11 @@ export function ManagementView({ auth }: Props) {
 
       {/* Panel — fills remaining height, no outer scroll */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        {tab === 'users'    && <UsersPanel auth={auth} />}
-        {tab === 'carts'    && <CartTypesPanel />}
-        {tab === 'ai'       && <AiPanel />}
-        {tab === 'workflow' && <WorkflowPanel />}
+        {tab === 'users'     && <UsersPanel auth={auth} />}
+        {tab === 'carts'     && <CartTypesPanel />}
+        {tab === 'ai'        && <AiPanel />}
+        {tab === 'workflow'  && <WorkflowPanel />}
+        {tab === 'btt-setup' && isBtt && <BttSetupPanel />}
       </div>
     </div>
   );

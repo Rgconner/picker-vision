@@ -427,10 +427,211 @@ async def update_workflow_config(request: Request):
         if not row:
             row = _WorkflowConfig(); s.add(row)
         for k in ("batch_mode", "validation_threshold", "voice_enabled_default",
-                  "haptic_enabled_default", "mid_pick_validate_after"):
+                  "haptic_enabled_default", "mid_pick_validate_after", "instance_profile"):
             if k in body:
                 setattr(row, k, body[k])
         s.commit()
         return _row_to_dict(row)
+    finally:
+        s.close()
+
+
+# ---------------------------------------------------------------------------
+# Bob's Tiny Treasures — warehouse setup & scenario management endpoints
+# ---------------------------------------------------------------------------
+
+import json as _json
+from models import (
+    StagingContainer as _StagingContainer,
+    WarehouseScenario as _WarehouseScenario,
+)
+
+_ROW_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+_SCRATCH_ID  = "scratch"
+_TOTE_CAP_KG = 0.1
+
+
+@app.get("/instance-profile", tags=["btt"])
+def get_instance_profile():
+    """Return the active instance profile (empty string = vanilla)."""
+    s = _SessionLocal()
+    try:
+        row = s.query(_WorkflowConfig).first()
+        profile = row.instance_profile if row else ""
+        return {"profile": profile}
+    finally:
+        s.close()
+
+
+@app.post("/warehouse/grid", tags=["btt"])
+async def generate_warehouse_grid(request: Request):
+    """Generate shelf StagingContainers for a rows×cols grid.
+
+    Deletes any existing SHELF:* containers first, then creates fresh ones.
+    Body: {"rows": int, "cols": int}
+    """
+    body = await request.json()
+    rows = int(body.get("rows", 3))
+    cols = int(body.get("cols", 3))
+    if not (1 <= rows <= 26 and 1 <= cols <= 9):
+        raise HTTPException(status_code=422, detail="rows must be 1-26, cols must be 1-9")
+
+    s = _SessionLocal()
+    try:
+        # Remove existing shelf locations (staging_type == "area" and qr starts SHELF:)
+        existing = s.query(_StagingContainer).filter(
+            _StagingContainer.qr_payload.like("SHELF:%")
+        ).all()
+        for sc in existing:
+            s.delete(sc)
+        s.flush()
+
+        created = []
+        for r in range(rows):
+            for c in range(1, cols + 1):
+                code = f"{_ROW_LETTERS[r]}{c}"
+                sc = _StagingContainer(
+                    code         = code,
+                    label        = f"Shelf {_ROW_LETTERS[r]}{c}",
+                    staging_type = "area",
+                    qr_payload   = f"SHELF:{code}",
+                    status       = "available",
+                )
+                s.add(sc)
+                created.append(_row_to_dict(sc))
+        s.commit()
+        return {"created": len(created), "shelves": created}
+    finally:
+        s.close()
+
+
+@app.post("/warehouse/inventory", tags=["btt"])
+async def record_inventory(request: Request):
+    """Upsert a stock assignment on the scratch WarehouseScenario.
+
+    Body: {"location_code": str, "product_barcode": str, "qty": int}
+    If the scratch scenario does not exist it is created with a default 3×3 grid.
+    """
+    body = await request.json()
+    location_code   = body.get("location_code", "").upper()
+    product_barcode = body.get("product_barcode", "").upper()
+    qty             = int(body.get("qty", 1))
+
+    if not location_code or not product_barcode:
+        raise HTTPException(status_code=422, detail="location_code and product_barcode required")
+
+    s = _SessionLocal()
+    try:
+        scratch = s.get(_WarehouseScenario, _SCRATCH_ID)
+        if scratch is None:
+            scratch = _WarehouseScenario(
+                id         = _SCRATCH_ID,
+                name       = "scratch",
+                grid_rows  = 3,
+                grid_cols  = 3,
+                payload    = "[]",
+            )
+            s.add(scratch)
+            s.flush()
+
+        items: list = _json.loads(scratch.payload)
+        # Upsert: replace any existing entry for this location
+        items = [i for i in items if i.get("location_code") != location_code]
+        items.append({
+            "location_code":   location_code,
+            "product_barcode": product_barcode,
+            "qty_on_hand":     qty,
+        })
+        scratch.payload = _json.dumps(items)
+        s.commit()
+        return {"location_code": location_code, "product_barcode": product_barcode,
+                "qty_on_hand": qty, "total_assigned": len(items)}
+    finally:
+        s.close()
+
+
+@app.get("/warehouse/scenarios", tags=["btt"])
+def list_scenarios():
+    """List all saved WarehouseScenarios (excludes the scratch row)."""
+    s = _SessionLocal()
+    try:
+        rows = s.query(_WarehouseScenario).filter(
+            _WarehouseScenario.id != _SCRATCH_ID
+        ).order_by(_WarehouseScenario.created_at.desc()).all()
+        return [_row_to_dict(r) for r in rows]
+    finally:
+        s.close()
+
+
+@app.post("/warehouse/scenarios", status_code=201, tags=["btt"])
+async def save_scenario(request: Request):
+    """Save the current scratch inventory as a named scenario.
+
+    Body: {"name": str}
+    Copies the scratch payload into a new (or replaced) named row.
+    """
+    body = await request.json()
+    name = (body.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=422, detail="name is required")
+
+    s = _SessionLocal()
+    try:
+        scratch = s.get(_WarehouseScenario, _SCRATCH_ID)
+        payload = scratch.payload if scratch else "[]"
+        grid_rows = scratch.grid_rows if scratch else 3
+        grid_cols = scratch.grid_cols if scratch else 3
+
+        # Replace existing scenario with same name if present
+        existing = s.query(_WarehouseScenario).filter(
+            _WarehouseScenario.name == name,
+            _WarehouseScenario.id   != _SCRATCH_ID,
+        ).first()
+        if existing:
+            existing.payload   = payload
+            existing.grid_rows = grid_rows
+            existing.grid_cols = grid_cols
+            s.commit()
+            return _row_to_dict(existing)
+
+        row = _WarehouseScenario(
+            id        = str(_uuid.uuid4()),
+            name      = name,
+            grid_rows = grid_rows,
+            grid_cols = grid_cols,
+            payload   = payload,
+        )
+        s.add(row)
+        s.commit()
+        return _row_to_dict(row)
+    finally:
+        s.close()
+
+
+@app.get("/warehouse/scenarios/{scenario_id}", tags=["btt"])
+def get_scenario(scenario_id: str):
+    """Load a saved scenario by ID."""
+    s = _SessionLocal()
+    try:
+        row = s.get(_WarehouseScenario, scenario_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Scenario not found")
+        return _row_to_dict(row)
+    finally:
+        s.close()
+
+
+@app.delete("/warehouse/scenarios/{scenario_id}", status_code=204, tags=["btt"])
+def delete_scenario(scenario_id: str):
+    """Delete a saved scenario. Cannot delete the scratch row."""
+    if scenario_id == _SCRATCH_ID:
+        raise HTTPException(status_code=400, detail="Cannot delete the scratch scenario")
+    s = _SessionLocal()
+    try:
+        row = s.get(_WarehouseScenario, scenario_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Scenario not found")
+        s.delete(row)
+        s.commit()
     finally:
         s.close()

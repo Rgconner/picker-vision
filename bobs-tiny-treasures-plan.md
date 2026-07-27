@@ -293,7 +293,7 @@ from it.
   reuse `_get_session()` pattern.
 
 ### Status
-[ ] pending
+[x] done
 
 ---
 
