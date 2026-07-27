@@ -24,7 +24,7 @@ if str(_SERVICE_ROOT) not in sys.path:
 import pathlib as _pathlib
 import time as _time
 from datetime import datetime as _dt, timezone as _tz
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
