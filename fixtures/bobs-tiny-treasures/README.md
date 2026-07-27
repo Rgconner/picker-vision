@@ -60,6 +60,8 @@ All orders fit within the **100 g Tiny Tote weight cap**.
 
 ### Users
 
+Reference file for demo login credentials: [`server/web_ui/src/demoCredentials.ts`](server/web_ui/src/demoCredentials.ts)
+
 | Name | Role | Credential |
 |------|------|-----------|
 | Bob (Owner) | Supervisor | password: `btt01` |
