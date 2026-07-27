@@ -1,11 +1,13 @@
 from pathlib import Path
 
 import qrcode
+from reportlab.graphics import renderPDF
 from reportlab.lib.colors import black
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
+from svglib.svglib import svg2rlg
 
 LOCATIONS = [
     'A1', 'A2', 'A3',
@@ -21,6 +23,10 @@ def make_qr(payload: str) -> ImageReader:
     return ImageReader(img.make_image(fill_color='black', back_color='white').get_image())
 
 
+LOGO_PATH = Path(__file__).with_name('logo.svg')
+LOGO = svg2rlg(str(LOGO_PATH)) if LOGO_PATH.exists() else None
+
+
 def draw_page(pdf: canvas.Canvas, location: str) -> None:
     width, height = letter
     margin = 0.5 * inch
@@ -33,10 +39,19 @@ def draw_page(pdf: canvas.Canvas, location: str) -> None:
     pdf.setLineWidth(3)
     pdf.rect(border_x, border_y, border_w, border_h)
 
-    pdf.setFont('Helvetica-Bold', 32)
-    pdf.drawCentredString(width / 2, height - 1.1 * inch, f'Stock Location {location}')
+    if LOGO is not None:
+        logo_width = 2.2 * inch
+        logo_scale = logo_width / LOGO.width
+        pdf.saveState()
+        pdf.translate((width - logo_width) / 2, height - 1.6 * inch)
+        pdf.scale(logo_scale, logo_scale)
+        renderPDF.draw(LOGO, pdf, 0, 0)
+        pdf.restoreState()
 
-    qr_size = 3.2 * inch
+    pdf.setFont('Helvetica-Bold', 32)
+    pdf.drawCentredString(width / 2, height - 2.1 * inch, f'Stock Location {location}')
+
+    qr_size = 1.6 * inch
     qr_x = (width - qr_size) / 2
     qr_y = 1.15 * inch
     pdf.drawImage(make_qr(f'SHELF:{location}'), qr_x, qr_y, qr_size, qr_size, preserveAspectRatio=True, mask='auto')
