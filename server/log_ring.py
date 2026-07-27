@@ -41,9 +41,13 @@ class _RingBufferHandler(logging.Handler):
             return
         self._emitting = True
         try:
+            # formatTime requires a Formatter; build a lightweight timestamp directly
+            import datetime as _dt
+            ts = _dt.datetime.fromtimestamp(record.created).strftime("%H:%M:%S.") + \
+                 f"{int(record.msecs):03d}"
             self._buf.append({
-                "ts":      record.created,          # float epoch — sortable
-                "time":    self.formatTime(record),  # human-readable
+                "ts":      record.created,
+                "time":    ts,
                 "level":   record.levelname,
                 "logger":  record.name,
                 "message": record.getMessage(),
