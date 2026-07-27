@@ -35,16 +35,20 @@ spec:
           image: ghcr.io/rgconner/picker-vision/order-service:feature-bobs-tiny-treasures
           imagePullPolicy: Always
           command:
-            - python
-            - fixtures/bobs-tiny-treasures/seed_btt.py
-            - --db
-            - $(DATABASE_URL)
+            - sh
+            - -c
+            - |
+              cd /app
+              DATABASE_URL="$DATABASE_URL" PYTHONPATH=/app python /work/seed_btt.py
           envFrom:
             - configMapRef:
                 name: picker-vision-config
           volumeMounts:
             - name: db-storage
               mountPath: /data
+            - name: seed-script
+              mountPath: /work
+              readOnly: true
           resources:
             requests:
               cpu: "50m"
@@ -56,3 +60,6 @@ spec:
         - name: db-storage
           persistentVolumeClaim:
             claimName: order-service-db
+        - name: seed-script
+          configMap:
+            name: btt-seed-script
