@@ -12,8 +12,10 @@ GET  /staging/{code}
 """
 
 import os
+import random
 import sys
 import pathlib
+import uuid
 
 # Ensure the service root is on sys.path so that models.py and seed_data.py
 # are importable regardless of how uvicorn is invoked.
@@ -25,10 +27,11 @@ import pathlib as _pathlib
 import time as _time
 from datetime import datetime as _dt, timezone as _tz
 from fastapi import FastAPI, HTTPException, Request
+from pydantic import BaseModel
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from models import Base, OrderTote, ToteLayer, ToteLineAssignment, WarehouseScenario  # noqa: F401 — imported for create_all side-effect
+from models import Base, Order, OrderLine, User, OrderTote, ToteLayer, ToteLineAssignment, WarehouseScenario  # noqa: F401
 from seed_data import run_seed
 from adapters import get_adapter
 
@@ -162,7 +165,14 @@ def get_order(order_id: str):
 )
 def mark_line_picked(order_id: str, line_id: str):
     try:
-        return _get_adapter().mark_picked(order_id, line_id)
+        result = _get_adapter().mark_picked(order_id, line_id)
+        # If the order just became complete, advance any watching demo session
+        if result.get("status") == "picked":
+            # Check if ALL lines are now picked by re-fetching the order
+            order = _get_adapter().get_order(order_id)
+            if order and order.get("status") == "complete":
+                _advance_demo_session(order_id)
+        return result
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
@@ -930,3 +940,187 @@ async def generate_labels(request: Request):
         media_type="application/pdf",
         headers={"Content-Disposition": 'attachment; filename="btt_labels.pdf"'},
     )
+
+
+# ===========================================================================
+# Demo loop — in-memory session store + endpoints
+# ===========================================================================
+#
+# Two modes:
+#   "personal"     — each picker_id gets their own independent loop; multiple
+#                    sessions can run concurrently (one per picker_id).
+#   "presentation" — a single shared loop using picker_id "demo-presenter";
+#                    only one presentation loop at a time.
+#
+# Mistake injection: when mistake_probability > 0, one order line per order
+# randomly gets its product_barcode swapped with a non-matching product so
+# that the error-handling workflow can be demonstrated live.
+# Default is 0 (disabled).  Suggested demo value: 0.2 (20 %).
+#
+# Safety cap: each session stops automatically after 20 orders.
+# ===========================================================================
+
+_BTT_PRODUCTS = [
+    "BTT-00101", "BTT-00102", "BTT-00103",
+    "BTT-00201", "BTT-00202", "BTT-00203",
+    "BTT-00301", "BTT-00302", "BTT-00303",
+]
+_BTT_STAGING = ["TINY", "WOND", "CHRM"]
+_DEMO_MAX_ORDERS = 20
+_PRESENTATION_PICKER_ID = "demo-presenter"
+
+# session_id → session dict
+_demo_sessions: dict[str, dict] = {}
+
+
+def _create_demo_order(session_data: dict, db_session) -> str:
+    """Create one randomized BTT demo order and return its id."""
+    session_id = session_data["session_id"]
+    seq = session_data["orders_completed"] + 1
+    picker_id = session_data["picker_id"]
+    mistake_prob = session_data.get("mistake_probability", 0.0)
+
+    reference = f"DEMO-{session_id[:6].upper()}-{seq:03d}"
+    customer  = f"Demo ({picker_id})"
+    staging_code = random.choice(_BTT_STAGING)
+
+    # Pick 2–8 products without replacement
+    n_lines = random.randint(2, min(8, len(_BTT_PRODUCTS)))
+    chosen = random.sample(_BTT_PRODUCTS, n_lines)
+
+    # Optionally inject one mistake: swap one line's barcode with a different product
+    mistake_idx: int | None = None
+    if mistake_prob > 0 and random.random() < mistake_prob and n_lines >= 2:
+        mistake_idx = random.randrange(n_lines)
+
+    order_id = str(uuid.uuid4())
+    order = Order(
+        id=order_id,
+        reference=reference,
+        customer=customer,
+        status="picking",
+        created_at=_dt.now(_tz.utc),
+    )
+    db_session.add(order)
+
+    for i, barcode in enumerate(chosen):
+        actual_barcode = barcode
+        if i == mistake_idx:
+            # Swap with a different product
+            others = [p for p in _BTT_PRODUCTS if p != barcode]
+            actual_barcode = random.choice(others)
+
+        line = OrderLine(
+            id=str(uuid.uuid4()),
+            order_id=order_id,
+            product_barcode=actual_barcode,
+            quantity=random.randint(1, 2),
+            quantity_picked=0,
+            staging_code=staging_code,
+            status="pending",
+        )
+        db_session.add(line)
+
+    db_session.commit()
+    return order_id
+
+
+def _advance_demo_session(completed_order_id: str) -> None:
+    """Called after an order is marked complete.  If a demo session is watching
+    that order, create the next order (unless the safety cap is reached)."""
+    db = _SessionLocal()
+    try:
+        for sid, s in list(_demo_sessions.items()):
+            if s.get("current_order_id") != completed_order_id:
+                continue
+            s["orders_completed"] += 1
+            if s["orders_completed"] >= _DEMO_MAX_ORDERS:
+                del _demo_sessions[sid]
+                return
+            new_order_id = _create_demo_order(s, db)
+            s["current_order_id"] = new_order_id
+    finally:
+        db.close()
+
+
+# ── Pydantic models ──────────────────────────────────────────────────────────
+
+class _DemoStartRequest(BaseModel):
+    mode: str                          # "personal" | "presentation"
+    picker_id: str | None = None       # required when mode="personal"
+    mistake_probability: float = 0.0   # 0.0 = off
+
+
+class _DemoStopRequest(BaseModel):
+    session_id: str | None = None      # omit to stop the presentation session
+
+
+# ── Endpoints ────────────────────────────────────────────────────────────────
+
+@app.post("/demo/start", tags=["demo"])
+def demo_start(req: _DemoStartRequest):
+    """Start (or restart) a demo order loop.
+
+    Personal mode: each picker_id runs its own independent loop.
+    Presentation mode: one shared loop using picker_id 'demo-presenter'.
+    Returns the session details including the first order_id.
+    """
+    db = _SessionLocal()
+    try:
+        if req.mode == "presentation":
+            picker_id = _PRESENTATION_PICKER_ID
+            # Stop any existing presentation session
+            for sid, s in list(_demo_sessions.items()):
+                if s["picker_id"] == _PRESENTATION_PICKER_ID:
+                    del _demo_sessions[sid]
+        elif req.mode == "personal":
+            if not req.picker_id:
+                raise HTTPException(status_code=400, detail="picker_id required for personal mode")
+            picker_id = req.picker_id
+            # Stop any existing personal session for this picker
+            for sid, s in list(_demo_sessions.items()):
+                if s["picker_id"] == picker_id and s["mode"] == "personal":
+                    del _demo_sessions[sid]
+        else:
+            raise HTTPException(status_code=400, detail="mode must be 'personal' or 'presentation'")
+
+        session_id = str(uuid.uuid4())[:8]
+        session_data: dict = {
+            "session_id":          session_id,
+            "picker_id":           picker_id,
+            "mode":                req.mode,
+            "orders_completed":    0,
+            "current_order_id":    None,
+            "mistake_probability": req.mistake_probability,
+        }
+        order_id = _create_demo_order(session_data, db)
+        session_data["current_order_id"] = order_id
+        _demo_sessions[session_id] = session_data
+
+        return {
+            "session_id":          session_id,
+            "picker_id":           picker_id,
+            "mode":                req.mode,
+            "current_order_id":    order_id,
+            "mistake_probability": req.mistake_probability,
+        }
+    finally:
+        db.close()
+
+
+@app.get("/demo/status", tags=["demo"])
+def demo_status():
+    """Return all active demo sessions."""
+    return list(_demo_sessions.values())
+
+
+@app.post("/demo/stop", status_code=204, tags=["demo"])
+def demo_stop(req: _DemoStopRequest):
+    """Stop a demo session.  Omit session_id to stop the presentation session."""
+    if req.session_id:
+        _demo_sessions.pop(req.session_id, None)
+    else:
+        # Stop presentation session
+        for sid, s in list(_demo_sessions.items()):
+            if s["picker_id"] == _PRESENTATION_PICKER_ID:
+                del _demo_sessions[sid]

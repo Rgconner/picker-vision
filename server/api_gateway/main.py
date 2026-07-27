@@ -398,6 +398,26 @@ async def api_staging(code: str):
     return await _proxy("GET", f"{ORDER_SERVICE_URL}/staging/{code}")
 
 
+# ── Demo loop proxies ────────────────────────────────────────────────────────
+
+@app.post("/api/demo/start")
+async def api_demo_start(request: Request):
+    return await _proxy("POST", f"{ORDER_SERVICE_URL}/demo/start", await request.json())
+
+@app.get("/api/demo/status")
+async def api_demo_status():
+    return await _proxy("GET", f"{ORDER_SERVICE_URL}/demo/status")
+
+@app.post("/api/demo/stop")
+async def api_demo_stop(request: Request):
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        pass
+    return await _proxy("POST", f"{ORDER_SERVICE_URL}/demo/stop", body or None)
+
+
 @app.get("/api/pickers")
 async def api_pickers():
     return _redis_list_pickers()

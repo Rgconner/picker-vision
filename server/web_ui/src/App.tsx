@@ -126,7 +126,7 @@ export default function App() {
       {/* Main content */}
       <main className={`flex-1 min-h-0 ${currentMode === 'mobile' ? 'overflow-hidden' : 'overflow-auto'}`}>
         {currentMode === 'operator'    && <OperatorView />}
-        {currentMode === 'supervisor'  && <SupervisorView />}
+        {currentMode === 'supervisor'  && <SupervisorView auth={auth} />}
         {currentMode === 'mobile'      && (
           <MobilePickerView
             defaultPickerId={auth.user.picker_id ?? auth.user.name}

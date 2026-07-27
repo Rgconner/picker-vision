@@ -79,6 +79,54 @@ USERS = [
         # pin: "8888"
         "pin_hash":  hashlib.sha256(b"8888").hexdigest(),
     },
+    {
+        "id":        "btt-pick-0003-0003-0003-0003-000000000003",
+        "name":      "Twinkle",
+        "role":      "picker",
+        "picker_id": "picker-twinkle",
+        # pin: "1111"
+        "pin_hash":  hashlib.sha256(b"1111").hexdigest(),
+    },
+    {
+        "id":        "btt-pick-0004-0004-0004-0004-000000000004",
+        "name":      "Dazzle",
+        "role":      "picker",
+        "picker_id": "picker-dazzle",
+        # pin: "2222"
+        "pin_hash":  hashlib.sha256(b"2222").hexdigest(),
+    },
+    {
+        "id":        "btt-pick-0005-0005-0005-0005-000000000005",
+        "name":      "Pebble",
+        "role":      "picker",
+        "picker_id": "picker-pebble",
+        # pin: "3333"
+        "pin_hash":  hashlib.sha256(b"3333").hexdigest(),
+    },
+    {
+        "id":        "btt-pick-0006-0006-0006-0006-000000000006",
+        "name":      "Fizz",
+        "role":      "picker",
+        "picker_id": "picker-fizz",
+        # pin: "4444"
+        "pin_hash":  hashlib.sha256(b"4444").hexdigest(),
+    },
+    {
+        "id":        "btt-pick-0007-0007-0007-0007-000000000007",
+        "name":      "Cosmo",
+        "role":      "picker",
+        "picker_id": "picker-cosmo",
+        # pin: "5555"
+        "pin_hash":  hashlib.sha256(b"5555").hexdigest(),
+    },
+    {
+        "id":        "btt-pick-0008-0008-0008-0008-000000000008",
+        "name":      "Blaze",
+        "role":      "picker",
+        "picker_id": "picker-blaze",
+        # pin: "6666"
+        "pin_hash":  hashlib.sha256(b"6666").hexdigest(),
+    },
 ]
 
 # ---------------------------------------------------------------------------

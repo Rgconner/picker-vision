@@ -1,9 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import type { PickerInfo } from './types';
+import type { AuthState } from './useAuth';
 import { useSupervisorSocket } from './useSupervisorSocket';
 import { VideoPanel } from './VideoPanel';
+import { DemoControls } from './DemoControls';
 
-export function SupervisorView() {
+interface Props {
+  auth: AuthState;
+}
+
+export function SupervisorView({ auth }: Props) {
   const { states, connected } = useSupervisorSocket();
   const [pickers, setPickers] = useState<PickerInfo[]>([]);
 
@@ -45,7 +51,11 @@ export function SupervisorView() {
   );
 
   return (
-    <div className="p-4 flex flex-col gap-4">
+    <div className="flex flex-col">
+      {/* Demo controls panel */}
+      <DemoControls auth={auth} />
+
+      <div className="p-4 flex flex-col gap-4">
       {/* Header row */}
       <div className="flex items-center gap-3">
         <span className="text-[#e2e8f0] font-semibold">Supervisor View</span>
@@ -107,6 +117,7 @@ export function SupervisorView() {
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }

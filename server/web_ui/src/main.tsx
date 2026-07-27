@@ -3,12 +3,13 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import { MobilePickerView } from './MobilePickerView'
 import { WelcomePage } from './WelcomePage'
-import { useAuth } from './useAuth'
+import { DemoPage } from './DemoPage'
 import './index.css'
 
 const path = window.location.pathname
 
-// /         → welcome / origin story page
+// /         → welcome / origin story landing page
+// /demo     → demo explainer + scannable labels (no login required)
 // /app      → full desktop picker-vision app (login → operator/supervisor/etc.)
 // /app/*    → same
 // /mobile   → standalone mobile picker view
@@ -17,15 +18,16 @@ const path = window.location.pathname
 
 const root = document.getElementById('root')!
 
-function WelcomeRoot() {
-  const auth = useAuth();
-  return <WelcomePage auth={auth} />;
-}
-
 if (path === '/' || path === '') {
   ReactDOM.createRoot(root).render(
     <React.StrictMode>
-      <WelcomeRoot />
+      <WelcomePage />
+    </React.StrictMode>
+  )
+} else if (path === '/demo') {
+  ReactDOM.createRoot(root).render(
+    <React.StrictMode>
+      <DemoPage />
     </React.StrictMode>
   )
 } else if (path.startsWith('/mobile')) {

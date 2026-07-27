@@ -4,24 +4,19 @@
  * Shown when a visitor lands on / (the root URL).
  * Keeps the origin story brief, sprinkles in some Bob flavour,
  * and offers three clear exits:
- *   1. Full origin story (external value-story page)
- *   2. See the App (→ /app as guest — no password, read-only)
- *   3. Shop (placeholder — coming soon)
+ *   1. See the App (→ /demo explainer, then into the live app)
+ *   2. Shop (placeholder — coming soon)
+ *   3. Full origin story (link)
  */
 
 import React from 'react';
-import type { AuthState } from './useAuth';
 
 const FULL_STORY_URL = '/origin-story';   // served as a static file from /usr/share/nginx/html
 const IBM_BOB_URL    = 'https://www.ibm.com/watsonx';
 
-interface Props {
-  auth: AuthState;
-}
-
-export function WelcomePage({ auth }: Props) {
+export function WelcomePage() {
   function seeTheApp() {
-    auth.loginAsGuest();
+    window.location.href = '/demo';
   }
 
   return (

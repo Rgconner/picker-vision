@@ -5,13 +5,27 @@
  * on a phone screen.  Buttons are full-width and touch-sized.
  *
  * Actions:
- *   Start    — re-register picker and clear local state
+ *   Start    — re-register picker and clear local state; if no demo loop is
+ *              running, also starts one (personal mode) for this picker.
  *   Stop     — clear local scan state
  *   Validate — trigger a validation snapshot against current order
+ *
+ * Demo button states (shown above the Start/Stop row when not scanning):
+ *   No session for this picker → "▶ Start Demo"  → POST /api/demo/start
+ *   Session exists, between orders → "↩ Resume"  → re-attaches to current order
+ *   Session active + scanning → button hidden (already in flow)
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { ValidationResult } from './types';
+
+interface DemoSession {
+  session_id:       string;
+  picker_id:        string;
+  mode:             string;
+  orders_completed: number;
+  current_order_id: string | null;
+}
 
 interface Props {
   pickerId:         string;
@@ -27,6 +41,7 @@ interface Props {
 }
 
 export function MobileControls({
+  pickerId,
   scanning,
   onStartStop,
   onValidate,
@@ -36,7 +51,52 @@ export function MobileControls({
   connected,
   compact = false,
 }: Props) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]         = useState(false);
+  const [demoSession, setDemoSession] = useState<DemoSession | null>(null);
+  const [demoLoading, setDemoLoading] = useState(false);
+
+  // Poll demo status for this picker every 4 s
+  useEffect(() => {
+    if (!pickerId) return;
+    async function fetchDemoStatus() {
+      try {
+        const res = await fetch('/api/demo/status');
+        if (!res.ok) return;
+        const sessions: DemoSession[] = await res.json();
+        const mine = sessions.find((s) => s.picker_id === pickerId) ?? null;
+        setDemoSession(mine);
+      } catch { /* ignore */ }
+    }
+    fetchDemoStatus();
+    const interval = setInterval(fetchDemoStatus, 4000);
+    return () => clearInterval(interval);
+  }, [pickerId]);
+
+  async function handleDemoStart() {
+    if (!pickerId) return;
+    setDemoLoading(true);
+    try {
+      await fetch('/api/demo/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'personal', picker_id: pickerId }),
+      });
+      const res = await fetch('/api/demo/status');
+      if (res.ok) {
+        const sessions: DemoSession[] = await res.json();
+        setDemoSession(sessions.find((s) => s.picker_id === pickerId) ?? null);
+      }
+      // Start scanning after demo loop is running
+      onStartStop(true);
+    } finally {
+      setDemoLoading(false);
+    }
+  }
+
+  async function handleDemoResume() {
+    // Re-attach by simply starting to scan — the server still has the order
+    onStartStop(true);
+  }
 
   async function handleValidate() {
     setLoading(true);
@@ -44,8 +104,37 @@ export function MobileControls({
     finally { setTimeout(() => setLoading(false), 800); }
   }
 
+  // Demo button state
+  const showDemoStart  = !scanning && !demoSession;
+  const showDemoResume = !scanning && !!demoSession;
+
   return (
     <>
+      {/* Demo action button — shown when not actively scanning */}
+      {(showDemoStart || showDemoResume) && (
+        <div className={`px-3 ${compact ? 'mb-1' : 'mb-2'}`}>
+          {showDemoStart ? (
+            <button
+              onClick={handleDemoStart}
+              disabled={demoLoading || !pickerId}
+              className={`w-full ${compact ? 'py-2 text-xs' : 'py-3 text-sm'} rounded-xl font-bold active:brightness-90 transition-all disabled:opacity-40`}
+              style={{ background: '#6929c4', color: '#fff' }}
+            >
+              {demoLoading ? 'Starting…' : '▶ Start Demo'}
+            </button>
+          ) : (
+            <button
+              onClick={handleDemoResume}
+              disabled={demoLoading}
+              className={`w-full ${compact ? 'py-2 text-xs' : 'py-3 text-sm'} rounded-xl font-bold active:brightness-90 transition-all disabled:opacity-40`}
+              style={{ background: '#1a1d27', border: '1px solid #6929c4', color: '#be95ff' }}
+            >
+              ↩ Resume Demo · Order #{(demoSession?.orders_completed ?? 0) + 1}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Last scan feedback strip */}
       {lastScanValue && (
         <div className={`mx-3 ${compact ? 'mb-1 px-2 py-1' : 'mb-2 px-3 py-2'} rounded-lg bg-[#1a1d27] border border-[#2d3142] flex items-center gap-2`}>
@@ -71,7 +160,7 @@ export function MobileControls({
             onClick={() => onStartStop(true)}
             className={`flex-1 ${compact ? 'py-2' : 'py-3'} rounded-xl bg-[#22c55e] text-black font-bold text-sm active:brightness-90 transition-all`}
           >
-            ▶ Start Scanning
+            ▶ Scan Items
           </button>
         )}
 

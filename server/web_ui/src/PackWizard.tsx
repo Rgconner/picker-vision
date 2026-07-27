@@ -14,6 +14,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { OrderTote, PackPlan, ToteLayer } from './types';
+import { qrSvg } from './qrSvg';
 
 // ── API helpers ────────────────────────────────────────────────────────────────
 
@@ -348,6 +349,28 @@ export function PackWizard({ orderId, orderRef, onClose, onPacked }: Props) {
               Layer {layer.layer_seq} of {totalLayers}
             </span>
           </div>
+
+          {/* Delivery zone QR — scan this to confirm drop-off destination */}
+          {tote.staging_code && (
+            <div className="flex items-center gap-4 rounded-xl bg-[#0f1117] border border-[#2d3142] p-3">
+              <div
+                className="rounded overflow-hidden shrink-0"
+                style={{ background: '#fff', padding: '4px', display: 'inline-block' }}
+                dangerouslySetInnerHTML={{ __html: qrSvg(`STAGING:${tote.staging_code}`, 80) }}
+              />
+              <div>
+                <p className="text-[#94a3b8] text-xs font-semibold uppercase tracking-wider mb-0.5">
+                  Delivery zone — scan to confirm
+                </p>
+                <p className="text-[#f59e0b] font-bold font-mono text-sm">
+                  STAGING:{tote.staging_code}
+                </p>
+                <p className="text-[#57606a] text-xs mt-0.5">
+                  Point your phone at this QR to confirm the drop-off location
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Layer instruction */}
           <div>
