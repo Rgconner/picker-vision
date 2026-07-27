@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: picker-vision-config
+data:
+  # Internal service URLs — namespace-qualified for picker-vision-btt
+  ORDER_SERVICE_URL: "http://order-service:8001"
+  EVENT_PROCESSOR_URL: "http://event-processor:8002"
+  WEBSOCKET_HUB_URL: "http://websocket-hub:8003"
+  API_GATEWAY_URL: "http://api-gateway:8000"
+  REDIS_URL: "redis://redis:6379"
+
+  # Component versions for BTT build
+  API_GATEWAY_VERSION: "1.2.0-btt"
+  ORDER_SERVICE_VERSION: "1.2.0-btt"
+  EVENT_PROCESSOR_VERSION: "1.2.0-btt"
+  WEBSOCKET_HUB_VERSION: "1.2.0-btt"
+  WEB_UI_VERSION: "1.2.0-btt"
+
+  # Order service
+  DATABASE_URL: "sqlite:////data/picker.db"
+  USE_SAP_ADAPTER: "false"
+
+  # Bob's Tiny Treasures instance profile — activates BTT-specific UI
+  INSTANCE_PROFILE: "bobs-tiny-treasures"
+
+  # API gateway
+  REQUIRE_API_KEY: "false"

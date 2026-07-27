@@ -557,7 +557,7 @@ order-service is ready. The existing `test` overlay is completely unaffected.
 - `seed_btt.py` (Sub-Task 2) accepts `--db` for in-cluster DB URL.
 
 ### Status
-[ ] pending
+[x] done
 
 ---
 
@@ -629,7 +629,7 @@ a minimal subset). Target viewBox `0 0 400 120`.
 - The existing app header uses `#1a1d27` background — the logo must look good on this.
 
 ### Status
-[ ] pending
+[x] done
 
 ---
 

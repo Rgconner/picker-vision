@@ -1,142 +1,192 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 130" role="img" aria-label="Bob's Tiny Treasures logo">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 130" role="img" aria-label="Bob's Tiny Treasures — Warehouse Edition">
   <title>Bob's Tiny Treasures</title>
   <defs>
-    <!-- Amber glow filter for the chat bubble -->
-    <filter id="amber-glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="3.5" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-    <!-- Subtle drop shadow for gems -->
-    <filter id="gem-shadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#000" flood-opacity="0.35"/>
-    </filter>
-    <!-- Gradient fill for the chat bubble face -->
-    <linearGradient id="bubble-fill" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%"   stop-color="#fbbf24"/>
-      <stop offset="100%" stop-color="#f59e0b"/>
+
+    <!-- ── Standard Bob palette ─────────────────────────────────────── -->
+    <!-- Chat-bubble body: IBM cyan-teal gradient (Bob's house colour) -->
+    <linearGradient id="btt-bubble" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#0891b2"/>
     </linearGradient>
-    <!-- Inner face-plate gradient -->
-    <linearGradient id="faceplate-fill" x1="0%" y1="0%" x2="0%" y2="100%">
+    <!-- Face-plate: deep navy, same as Bob's standard dark mode screen -->
+    <linearGradient id="btt-face" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%"   stop-color="#1e293b"/>
       <stop offset="100%" stop-color="#0f172a"/>
     </linearGradient>
+    <!-- Subtle radial highlight on the face -->
+    <radialGradient id="btt-face-hi" cx="40%" cy="30%" r="55%">
+      <stop offset="0%"   stop-color="#334155"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </radialGradient>
+
+    <!-- ── Bob body shadow ──────────────────────────────────────────── -->
+    <filter id="btt-drop" x="-15%" y="-15%" width="130%" height="145%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#00000060"/>
+    </filter>
+
+    <!-- ── Gem glow (soft bloom) ────────────────────────────────────── -->
+    <filter id="btt-gem" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- ── Pickaxe metal gradient ───────────────────────────────────── -->
+    <linearGradient id="btt-steel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#e2e8f0"/>
+      <stop offset="50%"  stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </linearGradient>
+    <!-- Handle wood gradient -->
+    <linearGradient id="btt-wood" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#d97706"/>
+      <stop offset="100%" stop-color="#92400e"/>
+    </linearGradient>
+
+    <!-- ── Sparkle (4-point star) ───────────────────────────────────── -->
+    <!-- reused via <use> for each sparkle point -->
+
   </defs>
 
-  <!-- ── Chat-bubble head (the AI face) ──────────────────────────────── -->
+  <!-- ═══════════════════════════════════════════════════════════════════
+       ICON — Standard Bob chat-bubble head, BTT-ified
+       Spans x: 0–130, y: 0–130 (centred around 65,60)
+       ═══════════════════════════════════════════════════════════════════ -->
 
-  <!-- Outer bubble body — rounded rectangle, amber gold -->
-  <rect x="14" y="10" width="100" height="84" rx="18" ry="18"
-        fill="url(#bubble-fill)" stroke="#d97706" stroke-width="2"
-        filter="url(#amber-glow)"/>
+  <!-- ── Chat bubble body ──────────────────────────────────────────── -->
+  <rect x="8" y="8" width="104" height="88" rx="20" ry="20"
+        fill="url(#btt-bubble)" stroke="#0e7490" stroke-width="1.5"
+        filter="url(#btt-drop)"/>
 
-  <!-- Speech-bubble tail pointing down-right -->
-  <path d="M 72 94 L 88 112 L 60 94 Z"
-        fill="#f59e0b" stroke="#d97706" stroke-width="1.5"
-        stroke-linejoin="round"/>
+  <!-- Speech-bubble tail — points down-right toward the pickaxe hand -->
+  <path d="M 78 96 L 100 118 L 66 96 Z"
+        fill="#0891b2" stroke="#0e7490" stroke-width="1.5" stroke-linejoin="round"/>
 
-  <!-- Inner dark screen / terminal area -->
-  <rect x="24" y="20" width="80" height="66" rx="12" ry="12"
-        fill="url(#faceplate-fill)" stroke="#334155" stroke-width="1.5"/>
+  <!-- ── Face-plate (dark inset screen) ───────────────────────────── -->
+  <rect x="18" y="18" width="84" height="70" rx="13" ry="13"
+        fill="url(#btt-face-hi)" stroke="#334155" stroke-width="1.5"/>
 
-  <!-- ── Face expression inside the dark screen ──────────────────────── -->
+  <!-- ── Eyes ─────────────────────────────────────────────────────── -->
+  <!-- Left eye — open, amber (standard Bob eye colour) -->
+  <circle cx="43" cy="45" r="9" fill="#f59e0b" stroke="#b45309" stroke-width="1.5"/>
+  <circle cx="45" cy="42" r="3"   fill="#fde68a" opacity="0.85"/>
+  <circle cx="43" cy="46" r="4"   fill="#92400e" opacity="0.55"/>
 
-  <!-- Left eye dot -->
-  <circle cx="47" cy="45" r="5" fill="#f59e0b"/>
-  <!-- Left eye glint -->
-  <circle cx="49" cy="43" r="1.5" fill="#fde68a" opacity="0.9"/>
+  <!-- Right eye — winking (closed arc + lashes) -->
+  <path d="M 68 41 Q 78 36 88 41"
+        stroke="#f59e0b" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+  <line x1="70" y1="43" x2="69" y2="48" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="78" y1="40" x2="78" y2="45" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="86" y1="43" x2="87" y2="48" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round"/>
 
-  <!-- Right eye dot -->
-  <circle cx="81" cy="45" r="5" fill="#f59e0b"/>
-  <!-- Right eye glint -->
-  <circle cx="83" cy="43" r="1.5" fill="#fde68a" opacity="0.9"/>
+  <!-- ── Smile ──────────────────────────────────────────────────────── -->
+  <path d="M 38 60 Q 60 76 82 60"
+        stroke="#f59e0b" stroke-width="2.8" stroke-linecap="round" fill="none"/>
 
-  <!-- Gentle smile — soft arc -->
-  <path d="M 44 60 Q 64 74 84 60"
-        stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"
-        fill="none"/>
+  <!-- ── Standard Bob "..." typing-indicator pill ─────────────────── -->
+  <rect x="36" y="72" width="48" height="12" rx="6"
+        fill="#0f172a" stroke="#334155" stroke-width="1"/>
+  <circle cx="48"  cy="78" r="3"   fill="#f59e0b" opacity="0.45"/>
+  <circle cx="60"  cy="78" r="3"   fill="#f59e0b" opacity="0.75"/>
+  <circle cx="72"  cy="78" r="3"   fill="#f59e0b"/>
 
-  <!-- ── "..." typing indicator — universally recognised as AI thinking ── -->
-  <!-- Three pulsing dots in a subtle pill at the bottom of the screen -->
-  <rect x="42" y="72" width="44" height="11" rx="5.5"
-        fill="#1e293b" stroke="#334155" stroke-width="1"/>
-  <circle cx="53"  cy="77.5" r="3" fill="#f59e0b" opacity="0.6"/>
-  <circle cx="64"  cy="77.5" r="3" fill="#f59e0b" opacity="0.8"/>
-  <circle cx="75"  cy="77.5" r="3" fill="#f59e0b"/>
+  <!-- ═══════════════════════════════════════════════════════════════════
+       PICKAXE — held below/right of the bubble (Bob's warehouse tool)
+       Head tip at (105, 112); handle swings lower-left
+       ═══════════════════════════════════════════════════════════════════ -->
 
-  <!-- ── Tiny Treasures gems — presented below / around the bubble ─────── -->
+  <!-- Handle (wood) -->
+  <line x1="58" y1="128" x2="108" y2="100"
+        stroke="url(#btt-wood)" stroke-width="5" stroke-linecap="round"/>
 
-  <!-- Green gem (left) — cube-faceted diamond -->
-  <g transform="translate(12, 116) rotate(-12)" filter="url(#gem-shadow)">
-    <polygon points="0,-11 10,0 0,11 -10,0"
+  <!-- Pickaxe head — two-sided, steel -->
+  <!-- Left spike (mining point) -->
+  <path d="M 88 92 L 76 80 L 84 78 L 100 95 Z"
+        fill="url(#btt-steel)" stroke="#475569" stroke-width="1"/>
+  <!-- Right spike (adze blade) -->
+  <path d="M 100 95 L 116 86 L 118 94 L 102 102 Z"
+        fill="url(#btt-steel)" stroke="#475569" stroke-width="1"/>
+  <!-- Centre collar connecting head to handle -->
+  <ellipse cx="99" cy="97" rx="6" ry="4"
+           transform="rotate(-28 99 97)"
+           fill="#64748b" stroke="#475569" stroke-width="1"/>
+  <!-- Steel highlight streak on left spike -->
+  <line x1="80" y1="83" x2="86" y2="87"
+        stroke="#f8fafc" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       GEMS — BTT bling scattered around Bob
+       Green · Blue · Red — same as BTT product families
+       Each: faceted diamond with highlight facet + outer glow
+       ═══════════════════════════════════════════════════════════════════ -->
+
+  <!-- Green gem — upper-left, floating (Goblin Gem family) -->
+  <g transform="translate(4,28) rotate(-18)" filter="url(#btt-gem)">
+    <polygon points="0,-14 13,0 0,14 -13,0"
              fill="#22c55e" stroke="#15803d" stroke-width="1.5"/>
-    <!-- Top facet highlight -->
-    <polygon points="0,-11 10,0 0,-2"
-             fill="#4ade80" opacity="0.55"/>
-    <!-- Shine streak -->
-    <line x1="-3" y1="-6" x2="1" y2="-9" stroke="white" stroke-width="1.3"
-          stroke-linecap="round" opacity="0.75"/>
+    <polygon points="0,-14 13,0 4,-4"  fill="#4ade80" opacity="0.75"/>
+    <line x1="-4" y1="-7" x2="0" y2="-11" stroke="white"
+          stroke-width="1.5" stroke-linecap="round" opacity="0.8"/>
   </g>
   <!-- Green sparkle arms -->
-  <line x1="4"  y1="100" x2="1"  y2="96" stroke="#86efac" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
-  <line x1="4"  y1="100" x2="8"  y2="96" stroke="#86efac" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
-  <line x1="4"  y1="100" x2="1"  y2="104" stroke="#86efac" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
-  <line x1="4"  y1="100" x2="8"  y2="104" stroke="#86efac" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
+  <line x1="4"  y1="13" x2="1"  y2="8"  stroke="#86efac" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/>
+  <line x1="4"  y1="13" x2="9"  y2="8"  stroke="#86efac" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/>
+  <line x1="4"  y1="13" x2="1"  y2="18" stroke="#86efac" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/>
+  <line x1="4"  y1="13" x2="9"  y2="18" stroke="#86efac" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/>
 
-  <!-- Blue gem (centre) — slightly above, floating -->
-  <g transform="translate(64, 112) rotate(8)" filter="url(#gem-shadow)">
-    <polygon points="0,-12 11,0 0,12 -11,0"
+  <!-- Blue gem — lower-left, largest (Sapphire Sprite family) -->
+  <g transform="translate(12,118) rotate(10)" filter="url(#btt-gem)">
+    <polygon points="0,-16 15,0 0,16 -15,0"
              fill="#3b82f6" stroke="#1d4ed8" stroke-width="1.5"/>
-    <polygon points="0,-12 11,0 0,-3"
-             fill="#93c5fd" opacity="0.5"/>
-    <line x1="-3" y1="-7" x2="2" y2="-10" stroke="white" stroke-width="1.3"
-          stroke-linecap="round" opacity="0.75"/>
+    <polygon points="0,-16 15,0 4,-4"  fill="#93c5fd" opacity="0.7"/>
+    <line x1="-4" y1="-8" x2="1" y2="-12" stroke="white"
+          stroke-width="1.5" stroke-linecap="round" opacity="0.8"/>
   </g>
   <!-- Blue sparkle arms -->
-  <line x1="64" y1="96"  x2="60" y2="92" stroke="#93c5fd" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
-  <line x1="64" y1="96"  x2="68" y2="92" stroke="#93c5fd" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
-  <line x1="64" y1="96"  x2="60" y2="100" stroke="#93c5fd" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
-  <line x1="64" y1="96"  x2="68" y2="100" stroke="#93c5fd" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
+  <line x1="12" y1="100" x2="8"  y2="95" stroke="#93c5fd" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/>
+  <line x1="12" y1="100" x2="17" y2="95" stroke="#93c5fd" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/>
+  <line x1="12" y1="100" x2="7"  y2="105" stroke="#93c5fd" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/>
+  <line x1="12" y1="100" x2="18" y2="105" stroke="#93c5fd" stroke-width="1.2" stroke-linecap="round" opacity="0.9"/>
 
-  <!-- Red gem (right) -->
-  <g transform="translate(116, 116) rotate(18)" filter="url(#gem-shadow)">
-    <polygon points="0,-11 10,0 0,11 -10,0"
+  <!-- Red gem — being struck off by pickaxe, flying right (Ruby family) -->
+  <g transform="translate(120,74) rotate(-25)" filter="url(#btt-gem)">
+    <polygon points="0,-12 11,0 0,12 -11,0"
              fill="#ef4444" stroke="#b91c1c" stroke-width="1.5"/>
-    <polygon points="0,-11 10,0 0,-2"
-             fill="#fca5a5" opacity="0.5"/>
-    <line x1="-3" y1="-6" x2="1" y2="-9" stroke="white" stroke-width="1.3"
-          stroke-linecap="round" opacity="0.75"/>
+    <polygon points="0,-12 11,0 3,-3"  fill="#fca5a5" opacity="0.7"/>
+    <line x1="-3" y1="-6" x2="1" y2="-10" stroke="white"
+          stroke-width="1.5" stroke-linecap="round" opacity="0.8"/>
   </g>
-  <!-- Red sparkle arms -->
-  <line x1="116" y1="101" x2="112" y2="97"  stroke="#fca5a5" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
-  <line x1="116" y1="101" x2="120" y2="97"  stroke="#fca5a5" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
-  <line x1="116" y1="101" x2="112" y2="105" stroke="#fca5a5" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
-  <line x1="116" y1="101" x2="120" y2="105" stroke="#fca5a5" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
+  <!-- Red sparkle arms — impact burst -->
+  <line x1="120" y1="60" x2="115" y2="54" stroke="#fca5a5" stroke-width="1.3" stroke-linecap="round" opacity="0.9"/>
+  <line x1="120" y1="60" x2="126" y2="54" stroke="#fca5a5" stroke-width="1.3" stroke-linecap="round" opacity="0.9"/>
+  <line x1="120" y1="60" x2="114" y2="62" stroke="#fca5a5" stroke-width="1.3" stroke-linecap="round" opacity="0.9"/>
+  <line x1="120" y1="60" x2="127" y2="63" stroke="#fca5a5" stroke-width="1.3" stroke-linecap="round" opacity="0.9"/>
+  <!-- Small impact chip trailing behind red gem -->
+  <circle cx="112" cy="68" r="2" fill="#ef4444" opacity="0.5"/>
+  <circle cx="116" cy="72" r="1.5" fill="#fca5a5" opacity="0.4"/>
 
-  <!-- ── Separator ──────────────────────────────────────────────────────── -->
-  <line x1="137" y1="18" x2="137" y2="118"
-        stroke="#334155" stroke-width="1" stroke-dasharray="3 4"/>
+  <!-- ═══════════════════════════════════════════════════════════════════
+       DIVIDER
+       ═══════════════════════════════════════════════════════════════════ -->
+  <line x1="142" y1="10" x2="142" y2="118"
+        stroke="#334155" stroke-width="1" stroke-dasharray="3 5" opacity="0.5"/>
 
-  <!-- ── Wordmark ──────────────────────────────────────────────────────── -->
+  <!-- ═══════════════════════════════════════════════════════════════════
+       WORDMARK
+       ═══════════════════════════════════════════════════════════════════ -->
 
-  <!-- "Bob's Tiny" — bold warm white -->
-  <text x="150" y="58"
-        font-family="-apple-system, 'Segoe UI', system-ui, sans-serif"
-        font-size="30" font-weight="800" fill="#f8fafc"
-        letter-spacing="-0.5">Bob's Tiny</text>
+  <!-- "Bob's Tiny" — warm white, Bob standard weight -->
+  <text x="156" y="55"
+        font-family="-apple-system,'Segoe UI',system-ui,Helvetica,Arial,sans-serif"
+        font-size="30" font-weight="800" fill="#f8fafc" letter-spacing="-0.5">Bob's Tiny</text>
 
-  <!-- "Treasures" — amber gold, slightly larger -->
-  <text x="150" y="95"
-        font-family="-apple-system, 'Segoe UI', system-ui, sans-serif"
-        font-size="36" font-weight="800" fill="#f59e0b"
-        letter-spacing="-1">Treasures</text>
+  <!-- "Treasures" — BTT amber gold, slightly larger -->
+  <text x="156" y="92"
+        font-family="-apple-system,'Segoe UI',system-ui,Helvetica,Arial,sans-serif"
+        font-size="36" font-weight="800" fill="#f59e0b" letter-spacing="-1">Treasures</text>
 
-  <!-- Tagline — muted slate, spaced caps -->
-  <text x="152" y="114"
-        font-family="-apple-system, 'Segoe UI', system-ui, sans-serif"
-        font-size="11" font-weight="400" fill="#94a3b8"
-        letter-spacing="2.5">WAREHOUSE  EDITION</text>
+  <!-- Tagline — muted slate, letter-spaced caps -->
+  <text x="158" y="112"
+        font-family="-apple-system,'Segoe UI',system-ui,Helvetica,Arial,sans-serif"
+        font-size="11" font-weight="400" fill="#94a3b8" letter-spacing="2.8">WAREHOUSE  EDITION</text>
 
 </svg>

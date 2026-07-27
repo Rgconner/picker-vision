@@ -1,0 +1,58 @@
+---
+# One-shot Job that seeds the BTT scenario data after the order-service is ready.
+# Runs once (restartPolicy: Never) — re-running is safe because seed_btt.py is
+# idempotent (guards on BTT product presence).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: seed-btt
+  namespace: picker-vision-btt
+  labels:
+    app.kubernetes.io/part-of: picker-vision
+    app.kubernetes.io/component: seed-job
+spec:
+  # Keep the completed pod available for log inspection (1 h), then clean up
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: seed-btt
+    spec:
+      restartPolicy: Never
+      # Wait for the order-service to pass its readiness probe before seeding
+      initContainers:
+        - name: wait-for-order-service
+          image: curlimages/curl:8.1.2
+          command:
+            - sh
+            - -c
+            - |
+              until curl -sf http://order-service:8001/health; do
+                echo "Waiting for order-service..."; sleep 5;
+              done
+      containers:
+        - name: seed-btt
+          image: ghcr.io/rgconner/picker-vision/order-service:feature-bobs-tiny-treasures
+          imagePullPolicy: Always
+          command:
+            - python
+            - fixtures/bobs-tiny-treasures/seed_btt.py
+            - --db
+            - $(DATABASE_URL)
+          envFrom:
+            - configMapRef:
+                name: picker-vision-config
+          volumeMounts:
+            - name: db-storage
+              mountPath: /data
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+      volumes:
+        - name: db-storage
+          persistentVolumeClaim:
+            claimName: order-service-db

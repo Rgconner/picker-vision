@@ -1,0 +1,13 @@
+---
+# Reuse the existing sandbox MetalLB pool (192.168.11.0/24).
+# The BTT overlay pins its own IPs (.213/.214) via per-service annotations.
+# This L2Advertisement is identical to the test overlay's — MetalLB is happy
+# to have multiple overlays referencing the same pool.
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: picker-vision-btt-l2
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - sandbox

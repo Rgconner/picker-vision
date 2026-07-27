@@ -1,0 +1,29 @@
+---
+# Self-signed CA issuer scoped to the BTT namespace.
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-issuer
+  namespace: picker-vision-btt
+spec:
+  selfSigned: {}
+---
+# TLS certificate for the web-ui.
+# SAN includes the fixed MetalLB IP so Chrome accepts it for direct LAN access.
+# Cloudflare tunnel uses the HTTP origin (port 80) — this cert is only for
+# on-site devices hitting 192.168.11.214 directly.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: web-ui-tls
+  namespace: picker-vision-btt
+spec:
+  secretName: web-ui-tls-secret
+  issuerRef:
+    name: selfsigned-issuer
+    kind: Issuer
+  commonName: picker-vision-btt
+  ipAddresses:
+    - 192.168.11.214
+  duration: 8760h    # 1 year
+  renewBefore: 720h  # renew 30 days before expiry

@@ -1,0 +1,22 @@
+---
+# Pin the web-ui LoadBalancer to .214 from the shared sandbox pool.
+# Cloudflare tunnel origin: http://192.168.11.214:80
+# Direct LAN access:        https://192.168.11.214 (self-signed cert)
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-ui
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: 192.168.11.214
+    metallb.universe.tf/address-pool: sandbox
+spec:
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+    - name: https
+      port: 443
+      targetPort: 443
+      protocol: TCP

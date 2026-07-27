@@ -458,48 +458,23 @@ function ScenariosPanel() {
 // ── Logo inline SVG ────────────────────────────────────────────────────────
 
 function BttLogo() {
+  // ST-6: logo.svg served as a static asset via the API gateway /static/ route.
+  // Falls back gracefully if the asset is unavailable (img with alt text).
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 130"
-         className="h-12 w-auto" role="img" aria-label="Bob's Tiny Treasures">
-      <defs>
-        <linearGradient id="btt-bf" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#fbbf24"/>
-          <stop offset="100%" stopColor="#f59e0b"/>
-        </linearGradient>
-        <linearGradient id="btt-fp" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#1e293b"/>
-          <stop offset="100%" stopColor="#0f172a"/>
-        </linearGradient>
-      </defs>
-      <rect x="14" y="10" width="100" height="84" rx="18" fill="url(#btt-bf)" stroke="#d97706" strokeWidth="2"/>
-      <path d="M 72 94 L 88 112 L 60 94 Z" fill="#f59e0b" stroke="#d97706" strokeWidth="1.5" strokeLinejoin="round"/>
-      <rect x="24" y="20" width="80" height="66" rx="12" fill="url(#btt-fp)" stroke="#334155" strokeWidth="1.5"/>
-      <circle cx="47" cy="45" r="5" fill="#f59e0b"/>
-      <circle cx="49" cy="43" r="1.5" fill="#fde68a" opacity="0.9"/>
-      <circle cx="81" cy="45" r="5" fill="#f59e0b"/>
-      <circle cx="83" cy="43" r="1.5" fill="#fde68a" opacity="0.9"/>
-      <path d="M 44 60 Q 64 74 84 60" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
-      <rect x="42" y="72" width="44" height="11" rx="5.5" fill="#1e293b" stroke="#334155" strokeWidth="1"/>
-      <circle cx="53" cy="77.5" r="3" fill="#f59e0b" opacity="0.6"/>
-      <circle cx="64" cy="77.5" r="3" fill="#f59e0b" opacity="0.8"/>
-      <circle cx="75" cy="77.5" r="3" fill="#f59e0b"/>
-      <g transform="translate(12,116) rotate(-12)">
-        <polygon points="0,-11 10,0 0,11 -10,0" fill="#22c55e" stroke="#15803d" strokeWidth="1.5"/>
-      </g>
-      <g transform="translate(64,112) rotate(8)">
-        <polygon points="0,-12 11,0 0,12 -11,0" fill="#3b82f6" stroke="#1d4ed8" strokeWidth="1.5"/>
-      </g>
-      <g transform="translate(116,116) rotate(18)">
-        <polygon points="0,-11 10,0 0,11 -10,0" fill="#ef4444" stroke="#b91c1c" strokeWidth="1.5"/>
-      </g>
-      <line x1="137" y1="18" x2="137" y2="118" stroke="#334155" strokeWidth="1" strokeDasharray="3 4"/>
-      <text x="150" y="58" fontFamily="-apple-system,'Segoe UI',system-ui,sans-serif"
-            fontSize="30" fontWeight="800" fill="#f8fafc" letterSpacing="-0.5">Bob's Tiny</text>
-      <text x="150" y="95" fontFamily="-apple-system,'Segoe UI',system-ui,sans-serif"
-            fontSize="36" fontWeight="800" fill="#f59e0b" letterSpacing="-1">Treasures</text>
-      <text x="152" y="114" fontFamily="-apple-system,'Segoe UI',system-ui,sans-serif"
-            fontSize="11" fontWeight="400" fill="#94a3b8" letterSpacing="2.5">WAREHOUSE  EDITION</text>
-    </svg>
+    <img
+      src="/static/bobs-tiny-treasures/logo.svg"
+      alt="Bob's Tiny Treasures"
+      className="h-12 w-auto"
+      onError={(e) => {
+        // If the static asset isn't served yet, render a simple text fallback
+        const img = e.currentTarget;
+        img.style.display = 'none';
+        const span = document.createElement('span');
+        span.className = 'text-[#f59e0b] font-bold text-sm';
+        span.textContent = "Bob's Tiny Treasures";
+        img.parentElement?.insertBefore(span, img);
+      }}
+    />
   );
 }
 
