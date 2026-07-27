@@ -67,10 +67,18 @@ function useIsLandscape(): boolean {
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export function MobilePickerView() {
-  const [pickerId, setPickerId]   = useState<string>(savedPickerId);
-  const [editId, setEditId]       = useState<string>(savedPickerId);
-  const [editMode, setEditMode]   = useState<boolean>(!savedPickerId());
+interface MobilePickerViewProps {
+  /** Pre-set from auth — overrides localStorage if provided */
+  defaultPickerId?: string;
+  /** When true the picker ID field is hidden (identity comes from auth) */
+  lockedPickerId?: boolean;
+}
+
+export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: MobilePickerViewProps) {
+  const initialId = defaultPickerId || savedPickerId();
+  const [pickerId, setPickerId]   = useState<string>(initialId);
+  const [editId, setEditId]       = useState<string>(initialId);
+  const [editMode, setEditMode]   = useState<boolean>(!initialId && !lockedPickerId);
   const [scanning, setScanning]   = useState<boolean>(false);
   const [orders, setOrders]       = useState<Order[]>([]);
   const [localValidation, setLocalValidation] = useState<ReturnType<typeof useMobilePickerSession>['validationResult']>(null);
@@ -152,7 +160,7 @@ export function MobilePickerView() {
 
   const header = (
     <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-[#2d3142] bg-[#1a1d27]">
-      {editMode ? (
+      {!lockedPickerId && editMode ? (
         <>
           <input
             autoFocus
@@ -174,12 +182,14 @@ export function MobilePickerView() {
         <>
           <span className="text-[#94a3b8] text-xs">Picker</span>
           <span className="font-semibold text-[#e2e8f0] text-sm flex-1 truncate">{pickerId}</span>
-          <button
-            onClick={() => setEditMode(true)}
-            className="text-[#57606a] text-xs px-2 py-1 rounded hover:text-[#94a3b8]"
-          >
-            ✎ Edit
-          </button>
+          {!lockedPickerId && (
+            <button
+              onClick={() => setEditMode(true)}
+              className="text-[#57606a] text-xs px-2 py-1 rounded hover:text-[#94a3b8]"
+            >
+              ✎ Edit
+            </button>
+          )}
         </>
       )}
     </div>

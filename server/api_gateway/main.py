@@ -318,6 +318,55 @@ async def ws_supervisor(websocket: WebSocket):
 # Order / Product / Staging proxies
 # ---------------------------------------------------------------------------
 
+@app.get("/api/users")
+async def api_users():
+    return await _proxy("GET", f"{ORDER_SERVICE_URL}/users")
+
+@app.post("/api/users")
+async def api_create_user(request: Request):
+    return await _proxy("POST", f"{ORDER_SERVICE_URL}/users", await request.json())
+
+@app.put("/api/users/{user_id}")
+async def api_update_user(user_id: str, request: Request):
+    return await _proxy("PUT", f"{ORDER_SERVICE_URL}/users/{user_id}", await request.json())
+
+@app.delete("/api/users/{user_id}")
+async def api_delete_user(user_id: str):
+    return await _proxy("DELETE", f"{ORDER_SERVICE_URL}/users/{user_id}")
+
+@app.get("/api/cart-types")
+async def api_cart_types():
+    return await _proxy("GET", f"{ORDER_SERVICE_URL}/cart-types")
+
+@app.post("/api/cart-types")
+async def api_create_cart_type(request: Request):
+    return await _proxy("POST", f"{ORDER_SERVICE_URL}/cart-types", await request.json())
+
+@app.put("/api/cart-types/{cart_id}")
+async def api_update_cart_type(cart_id: str, request: Request):
+    return await _proxy("PUT", f"{ORDER_SERVICE_URL}/cart-types/{cart_id}", await request.json())
+
+@app.delete("/api/cart-types/{cart_id}")
+async def api_delete_cart_type(cart_id: str):
+    return await _proxy("DELETE", f"{ORDER_SERVICE_URL}/cart-types/{cart_id}")
+
+@app.get("/api/ai-config")
+async def api_get_ai_config():
+    return await _proxy("GET", f"{ORDER_SERVICE_URL}/ai-config")
+
+@app.put("/api/ai-config")
+async def api_update_ai_config(request: Request):
+    return await _proxy("PUT", f"{ORDER_SERVICE_URL}/ai-config", await request.json())
+
+@app.get("/api/workflow-config")
+async def api_get_workflow_config():
+    return await _proxy("GET", f"{ORDER_SERVICE_URL}/workflow-config")
+
+@app.put("/api/workflow-config")
+async def api_update_workflow_config(request: Request):
+    return await _proxy("PUT", f"{ORDER_SERVICE_URL}/workflow-config", await request.json())
+
+
 @app.get("/api/orders")
 async def api_orders():
     return await _proxy("GET", f"{ORDER_SERVICE_URL}/orders")

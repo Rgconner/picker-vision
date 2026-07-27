@@ -221,3 +221,216 @@ def get_staging(code: str):
     if staging is None:
         raise HTTPException(status_code=404, detail=f"Staging container {code!r} not found")
     return staging
+
+
+# ---------------------------------------------------------------------------
+# Users — CRUD
+# ---------------------------------------------------------------------------
+
+import uuid as _uuid
+from models import User as _User, CartType as _CartType, AiConfig as _AiConfig, WorkflowConfig as _WorkflowConfig
+
+
+def _row_to_dict(row) -> dict:
+    return {c.name: getattr(row, c.name) for c in row.__table__.columns}
+
+
+@app.get("/users", tags=["users"])
+def list_users():
+    s = _SessionLocal()
+    try:
+        return [_row_to_dict(u) for u in s.query(_User).all()]
+    finally:
+        s.close()
+
+
+@app.get("/users/{user_id}", tags=["users"])
+def get_user(user_id: str):
+    s = _SessionLocal()
+    try:
+        u = s.query(_User).filter(_User.id == user_id).first()
+        if not u:
+            raise HTTPException(status_code=404, detail="User not found")
+        return _row_to_dict(u)
+    finally:
+        s.close()
+
+
+@app.post("/users", status_code=201, tags=["users"])
+async def create_user(request: Request):
+    body = await request.json()
+    s = _SessionLocal()
+    try:
+        u = _User(
+            id        = body.get("id") or str(_uuid.uuid4()),
+            name      = body["name"],
+            role      = body["role"],
+            picker_id = body.get("picker_id"),
+            pin_hash  = body["pin_hash"],
+        )
+        s.add(u); s.commit()
+        return _row_to_dict(u)
+    finally:
+        s.close()
+
+
+@app.put("/users/{user_id}", tags=["users"])
+async def update_user(user_id: str, request: Request):
+    body = await request.json()
+    s = _SessionLocal()
+    try:
+        u = s.query(_User).filter(_User.id == user_id).first()
+        if not u:
+            raise HTTPException(status_code=404, detail="User not found")
+        for k in ("name", "role", "picker_id", "pin_hash"):
+            if k in body:
+                setattr(u, k, body[k])
+        s.commit()
+        return _row_to_dict(u)
+    finally:
+        s.close()
+
+
+@app.delete("/users/{user_id}", status_code=204, tags=["users"])
+def delete_user(user_id: str):
+    s = _SessionLocal()
+    try:
+        u = s.query(_User).filter(_User.id == user_id).first()
+        if not u:
+            raise HTTPException(status_code=404, detail="User not found")
+        s.delete(u); s.commit()
+    finally:
+        s.close()
+
+
+# ---------------------------------------------------------------------------
+# Cart Types — CRUD
+# ---------------------------------------------------------------------------
+
+@app.get("/cart-types", tags=["cart-types"])
+def list_cart_types():
+    s = _SessionLocal()
+    try:
+        return [_row_to_dict(c) for c in s.query(_CartType).all()]
+    finally:
+        s.close()
+
+
+@app.post("/cart-types", status_code=201, tags=["cart-types"])
+async def create_cart_type(request: Request):
+    body = await request.json()
+    s = _SessionLocal()
+    try:
+        c = _CartType(
+            id          = body.get("id") or str(_uuid.uuid4()),
+            name        = body["name"],
+            max_weight  = float(body.get("max_weight", 0)),
+            weight_unit = body.get("weight_unit", "kg"),
+            length_cm   = float(body.get("length_cm", 0)),
+            width_cm    = float(body.get("width_cm", 0)),
+            height_cm   = float(body.get("height_cm", 0)),
+            dim_unit    = body.get("dim_unit", "cm"),
+            active      = bool(body.get("active", True)),
+        )
+        s.add(c); s.commit()
+        return _row_to_dict(c)
+    finally:
+        s.close()
+
+
+@app.put("/cart-types/{cart_id}", tags=["cart-types"])
+async def update_cart_type(cart_id: str, request: Request):
+    body = await request.json()
+    s = _SessionLocal()
+    try:
+        c = s.query(_CartType).filter(_CartType.id == cart_id).first()
+        if not c:
+            raise HTTPException(status_code=404, detail="Cart type not found")
+        for k in ("name", "max_weight", "weight_unit", "length_cm", "width_cm", "height_cm", "dim_unit", "active"):
+            if k in body:
+                setattr(c, k, body[k])
+        s.commit()
+        return _row_to_dict(c)
+    finally:
+        s.close()
+
+
+@app.delete("/cart-types/{cart_id}", status_code=204, tags=["cart-types"])
+def delete_cart_type(cart_id: str):
+    s = _SessionLocal()
+    try:
+        c = s.query(_CartType).filter(_CartType.id == cart_id).first()
+        if not c:
+            raise HTTPException(status_code=404, detail="Cart type not found")
+        s.delete(c); s.commit()
+    finally:
+        s.close()
+
+
+# ---------------------------------------------------------------------------
+# AI Config — singleton get/put
+# ---------------------------------------------------------------------------
+
+@app.get("/ai-config", tags=["config"])
+def get_ai_config():
+    s = _SessionLocal()
+    try:
+        row = s.query(_AiConfig).first()
+        if not row:
+            row = _AiConfig(); s.add(row); s.commit()
+        return _row_to_dict(row)
+    finally:
+        s.close()
+
+
+@app.put("/ai-config", tags=["config"])
+async def update_ai_config(request: Request):
+    body = await request.json()
+    s = _SessionLocal()
+    try:
+        row = s.query(_AiConfig).first()
+        if not row:
+            row = _AiConfig(); s.add(row)
+        for k in ("provider", "endpoint_url", "api_key", "model",
+                  "scan_mandatory_ai", "batch_strategy_ai",
+                  "validation_threshold_ai", "voice_mode_ai"):
+            if k in body:
+                setattr(row, k, body[k])
+        s.commit()
+        return _row_to_dict(row)
+    finally:
+        s.close()
+
+
+# ---------------------------------------------------------------------------
+# Workflow Config — singleton get/put
+# ---------------------------------------------------------------------------
+
+@app.get("/workflow-config", tags=["config"])
+def get_workflow_config():
+    s = _SessionLocal()
+    try:
+        row = s.query(_WorkflowConfig).first()
+        if not row:
+            row = _WorkflowConfig(); s.add(row); s.commit()
+        return _row_to_dict(row)
+    finally:
+        s.close()
+
+
+@app.put("/workflow-config", tags=["config"])
+async def update_workflow_config(request: Request):
+    body = await request.json()
+    s = _SessionLocal()
+    try:
+        row = s.query(_WorkflowConfig).first()
+        if not row:
+            row = _WorkflowConfig(); s.add(row)
+        for k in ("batch_mode", "validation_threshold", "voice_enabled_default",
+                  "haptic_enabled_default", "mid_pick_validate_after"):
+            if k in body:
+                setattr(row, k, body[k])
+        s.commit()
+        return _row_to_dict(row)
+    finally:
+        s.close()

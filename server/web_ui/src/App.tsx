@@ -3,13 +3,28 @@ import { OperatorView } from './OperatorView';
 import { SupervisorView } from './SupervisorView';
 import { SystemView } from './SystemView';
 import { MobilePickerView } from './MobilePickerView';
+import { ManagementView } from './ManagementView';
+import { LoginScreen } from './LoginScreen';
 import { HealthStrip } from './HealthStrip';
 import { useSystemHealth } from './useSystemHealth';
+import { useAuth } from './useAuth';
 
-type Mode = 'operator' | 'supervisor' | 'system' | 'mobile';
+// Supervisor sees all tabs; picker sees only Mobile
+type SupervisorMode = 'operator' | 'supervisor' | 'mobile' | 'system' | 'management';
+type PickerMode     = 'mobile';
+type Mode = SupervisorMode | PickerMode;
+
+const SUPERVISOR_TABS: { id: SupervisorMode; label: string }[] = [
+  { id: 'operator',   label: 'Operator' },
+  { id: 'supervisor', label: 'Supervisor' },
+  { id: 'mobile',     label: '📱 Mobile' },
+  { id: 'system',     label: 'System' },
+  { id: 'management', label: '⚙ Manage' },
+];
 
 export default function App() {
-  const [mode, setMode] = useState<Mode>('operator');
+  const auth = useAuth();
+  const [mode, setMode]               = useState<Mode>('mobile');
   const [focusService, setFocusService] = useState<string | null>(null);
   const { telemetry } = useSystemHealth();
 
@@ -17,6 +32,16 @@ export default function App() {
     setFocusService(name);
     setMode('system');
   }
+
+  // ── Not logged in — show full-screen login ─────────────────────────────────
+  if (!auth.user) {
+    return <LoginScreen auth={auth} />;
+  }
+
+  const isSupervisor = auth.user.role === 'supervisor';
+
+  // Pickers land on mobile and cannot navigate away
+  const currentMode = auth.user.role === 'picker' ? 'mobile' : mode;
 
   return (
     <div
@@ -32,56 +57,86 @@ export default function App() {
           Picker Vision
         </span>
 
-        {/* Mode tabs */}
-        <nav className="flex gap-1 ml-4">
-          {(['operator', 'supervisor', 'mobile', 'system'] as Mode[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => { setMode(m); if (m !== 'system') setFocusService(null); }}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all capitalize ${
-                mode === m
-                  ? 'bg-[#06b6d4] text-black'
-                  : 'text-[#94a3b8] hover:text-[#e2e8f0] hover:bg-[#2d3142]'
-              }`}
-            >
-              {m === 'mobile' ? '📱 Mobile' : m}
-            </button>
-          ))}
-        </nav>
+        {/* Mode tabs — supervisors see all; pickers see nothing (mobile is the only view) */}
+        {isSupervisor && (
+          <nav className="flex gap-1 ml-4">
+            {SUPERVISOR_TABS.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => { setMode(t.id); if (t.id !== 'system') setFocusService(null); }}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  currentMode === t.id
+                    ? t.id === 'management'
+                      ? 'bg-[#7c5cd8] text-white'
+                      : 'bg-[#06b6d4] text-black'
+                    : 'text-[#94a3b8] hover:text-[#e2e8f0] hover:bg-[#2d3142]'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </nav>
+        )}
 
-        {/* Version badges — pulled from live telemetry */}
+        {/* Right side: version badges + user pill + logout */}
         <div className="ml-auto flex items-center gap-2 text-xs text-[#94a3b8] flex-wrap justify-end">
-          {telemetry && Object.entries(telemetry.services).map(([name, svc]) => (
-            <span key={name} className="rounded-full border border-[#2d3142] px-2 py-0.5">
+          {isSupervisor && telemetry && Object.entries(telemetry.services).map(([name, svc]) => (
+            <span key={name} className="rounded-full border border-[#2d3142] px-2 py-0.5 hidden sm:inline">
               {name} <span className="text-[#57606a]">{svc.version ?? '—'}</span>
             </span>
           ))}
+
+          {/* Logged-in user pill */}
+          <span className={`rounded-full px-3 py-0.5 font-semibold ${
+            isSupervisor
+              ? 'bg-[#7c5cd8]/20 text-[#a78bfa] border border-[#7c5cd8]/30'
+              : 'bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20'
+          }`}>
+            {auth.user.name}
+          </span>
+
+          <button
+            onClick={auth.logout}
+            className="px-2 py-0.5 rounded-full border border-[#2d3142] text-[#57606a] hover:text-[#ef4444] hover:border-[#ef4444]/40 transition-all"
+            title="Sign out"
+          >
+            Sign out
+          </button>
         </div>
       </header>
 
-      {/* Persistent health strip */}
-      <HealthStrip telemetry={telemetry} onServiceClick={handleServiceClick} />
+      {/* Health strip — supervisors only */}
+      {isSupervisor && (
+        <HealthStrip telemetry={telemetry} onServiceClick={handleServiceClick} />
+      )}
 
-      {/* Main content — mobile view manages its own scroll, so suppress overflow there */}
-      <main className={`flex-1 min-h-0 ${mode === 'mobile' ? 'overflow-hidden' : 'overflow-auto'}`}>
-        {mode === 'operator'   && <OperatorView />}
-        {mode === 'supervisor' && <SupervisorView />}
-        {mode === 'mobile'     && <MobilePickerView />}
-        {mode === 'system'     && (
-          <SystemView
-            telemetry={telemetry}
-            focusService={focusService}
+      {/* Main content */}
+      <main className={`flex-1 min-h-0 ${currentMode === 'mobile' ? 'overflow-hidden' : 'overflow-auto'}`}>
+        {currentMode === 'operator'    && <OperatorView />}
+        {currentMode === 'supervisor'  && <SupervisorView />}
+        {currentMode === 'mobile'      && (
+          <MobilePickerView
+            defaultPickerId={auth.user.picker_id ?? auth.user.name}
+            lockedPickerId={auth.user.role === 'picker'}
           />
+        )}
+        {currentMode === 'system'      && (
+          <SystemView telemetry={telemetry} focusService={focusService} />
+        )}
+        {currentMode === 'management'  && isSupervisor && (
+          <ManagementView auth={auth} />
         )}
       </main>
 
-      {/* Footer */}
-      <footer
-        className="shrink-0 text-center text-xs py-2 border-t border-[#2d3142]"
-        style={{ color: '#57606a' }}
-      >
-        Picker Vision · v{telemetry?.services['api-gateway']?.version ?? '—'} · Powered by IBM Bob
-      </footer>
+      {/* Footer — supervisors only (pickers get full screen) */}
+      {isSupervisor && (
+        <footer
+          className="shrink-0 text-center text-xs py-2 border-t border-[#2d3142]"
+          style={{ color: '#57606a' }}
+        >
+          Picker Vision · v{telemetry?.services['api-gateway']?.version ?? '—'} · Powered by IBM Bob
+        </footer>
+      )}
     </div>
   );
 }
