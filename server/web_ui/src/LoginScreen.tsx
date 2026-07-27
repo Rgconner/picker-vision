@@ -84,6 +84,12 @@ export function LoginScreen({ auth }: Props) {
         >
           Supervisor
         </button>
+        <button
+          onClick={auth.loginAsGuest}
+          className="w-full py-3 rounded-2xl bg-transparent border border-[#2d3142] text-[#57606a] text-sm active:brightness-90 transition-all hover:border-[#f1c21b]/40 hover:text-[#f1c21b]"
+        >
+          See the App (read-only)
+        </button>
         {auth.error && (
           <p className="text-center text-[#ef4444] text-sm">{auth.error}</p>
         )}

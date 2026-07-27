@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import { MobilePickerView } from './MobilePickerView'
 import { WelcomePage } from './WelcomePage'
+import { useAuth } from './useAuth'
 import './index.css'
 
 const path = window.location.pathname
@@ -16,10 +17,15 @@ const path = window.location.pathname
 
 const root = document.getElementById('root')!
 
+function WelcomeRoot() {
+  const auth = useAuth();
+  return <WelcomePage auth={auth} />;
+}
+
 if (path === '/' || path === '') {
   ReactDOM.createRoot(root).render(
     <React.StrictMode>
-      <WelcomePage />
+      <WelcomeRoot />
     </React.StrictMode>
   )
 } else if (path.startsWith('/mobile')) {

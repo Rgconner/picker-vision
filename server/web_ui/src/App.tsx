@@ -39,8 +39,10 @@ export default function App() {
   }
 
   const isSupervisor = auth.user.role === 'supervisor';
+  const isGuest      = auth.user.role === 'guest';
 
   // Pickers land on mobile and cannot navigate away
+  // Guests see supervisor-style tabs but cannot manage
   const currentMode = auth.user.role === 'picker' ? 'mobile' : mode;
 
   return (
@@ -57,24 +59,26 @@ export default function App() {
           Picker Vision
         </span>
 
-        {/* Mode tabs — supervisors see all; pickers see nothing (mobile is the only view) */}
-        {isSupervisor && (
+        {/* Mode tabs — supervisors/guests see all (guests skip Management); pickers see nothing */}
+        {(isSupervisor || isGuest) && (
           <nav className="flex gap-1 ml-4">
-            {SUPERVISOR_TABS.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => { setMode(t.id); if (t.id !== 'system') setFocusService(null); }}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                  currentMode === t.id
-                    ? t.id === 'management'
-                      ? 'bg-[#7c5cd8] text-white'
-                      : 'bg-[#06b6d4] text-black'
-                    : 'text-[#94a3b8] hover:text-[#e2e8f0] hover:bg-[#2d3142]'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
+            {SUPERVISOR_TABS
+              .filter((t) => !(isGuest && t.id === 'management'))
+              .map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => { setMode(t.id); if (t.id !== 'system') setFocusService(null); }}
+                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    currentMode === t.id
+                      ? t.id === 'management'
+                        ? 'bg-[#7c5cd8] text-white'
+                        : 'bg-[#06b6d4] text-black'
+                      : 'text-[#94a3b8] hover:text-[#e2e8f0] hover:bg-[#2d3142]'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
           </nav>
         )}
 
@@ -86,11 +90,20 @@ export default function App() {
             </span>
           ))}
 
+          {/* Guest read-only badge */}
+          {isGuest && (
+            <span className="rounded-full px-2 py-0.5 border border-[#f1c21b]/30 bg-[#f1c21b]/10 text-[#f1c21b] text-xs">
+              read-only
+            </span>
+          )}
+
           {/* Logged-in user pill */}
           <span className={`rounded-full px-3 py-0.5 font-semibold ${
             isSupervisor
               ? 'bg-[#7c5cd8]/20 text-[#a78bfa] border border-[#7c5cd8]/30'
-              : 'bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20'
+              : isGuest
+                ? 'bg-[#f1c21b]/10 text-[#f1c21b] border border-[#f1c21b]/30'
+                : 'bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20'
           }`}>
             {auth.user.name}
           </span>
@@ -105,8 +118,8 @@ export default function App() {
         </div>
       </header>
 
-      {/* Health strip — supervisors only */}
-      {isSupervisor && (
+      {/* Health strip — supervisors and guests */}
+      {(isSupervisor || isGuest) && (
         <HealthStrip telemetry={telemetry} onServiceClick={handleServiceClick} />
       )}
 
@@ -123,13 +136,13 @@ export default function App() {
         {currentMode === 'system'      && (
           <SystemView telemetry={telemetry} focusService={focusService} />
         )}
-        {currentMode === 'management'  && isSupervisor && (
+        {currentMode === 'management'  && isSupervisor && !isGuest && (
           <ManagementView auth={auth} />
         )}
       </main>
 
-      {/* Footer — supervisors only (pickers get full screen) */}
-      {isSupervisor && (
+      {/* Footer — supervisors and guests (pickers get full screen) */}
+      {(isSupervisor || isGuest) && (
         <footer
           className="shrink-0 text-center text-xs py-2 border-t border-[#2d3142]"
           style={{ color: '#57606a' }}

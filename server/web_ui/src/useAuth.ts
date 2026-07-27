@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-export type UserRole = 'picker' | 'supervisor';
+export type UserRole = 'picker' | 'supervisor' | 'guest';
 
 export interface AppUser {
   id:         string;
@@ -56,13 +56,14 @@ async function sha256hex(text: string): Promise<string> {
 }
 
 export interface AuthState {
-  user:    AppUser | null;
-  loading: boolean;
-  error:   string | null;
-  users:   ApiUser[];          // full list — supervisor only; empty for pickers
-  login:   (nameOrId: string, pin: string) => Promise<boolean>;
-  logout:  () => void;
-  refresh: () => Promise<void>;
+  user:          AppUser | null;
+  loading:       boolean;
+  error:         string | null;
+  users:         ApiUser[];          // full list — supervisor only; empty for pickers
+  login:         (nameOrId: string, pin: string) => Promise<boolean>;
+  loginAsGuest:  () => void;
+  logout:        () => void;
+  refresh:       () => Promise<void>;
 }
 
 export function useAuth(): AuthState {
@@ -117,6 +118,14 @@ export function useAuth(): AuthState {
     }
   }, []);
 
+  const loginAsGuest = useCallback(() => {
+    const guest: AppUser = { id: 'guest', name: 'Guest', role: 'guest', picker_id: null };
+    setUser(guest);
+    saveSession(guest);
+    // Navigate to the app — WelcomePage and App are separate renders
+    window.location.href = '/app';
+  }, []);
+
   const logout = useCallback(() => {
     setUser(null);
     saveSession(null);
@@ -124,5 +133,5 @@ export function useAuth(): AuthState {
 
   const refresh = fetchUsers;
 
-  return { user, loading, error, users, login, logout, refresh };
+  return { user, loading, error, users, login, loginAsGuest, logout, refresh };
 }

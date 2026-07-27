@@ -5,18 +5,23 @@
  * Keeps the origin story brief, sprinkles in some Bob flavour,
  * and offers three clear exits:
  *   1. Full origin story (external value-story page)
- *   2. Enter the shop (→ /app, the picker system login)
- *   3. Bob at IBM (external watsonx page)
+ *   2. See the App (→ /app as guest — no password, read-only)
+ *   3. Shop (placeholder — coming soon)
  */
 
 import React from 'react';
+import type { AuthState } from './useAuth';
 
 const FULL_STORY_URL = '/origin-story';   // served as a static file from /usr/share/nginx/html
 const IBM_BOB_URL    = 'https://www.ibm.com/watsonx';
 
-export function WelcomePage() {
-  function enterShop() {
-    window.location.href = '/app';
+interface Props {
+  auth: AuthState;
+}
+
+export function WelcomePage({ auth }: Props) {
+  function seeTheApp() {
+    auth.loginAsGuest();
   }
 
   return (
@@ -100,24 +105,28 @@ export function WelcomePage() {
         {/* CTA buttons */}
         <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm mt-2">
           <button
-            onClick={enterShop}
+            onClick={seeTheApp}
             className="flex-1 py-4 rounded-2xl font-bold text-lg transition-all active:brightness-90"
             style={{ background: '#6929c4', color: '#fff' }}
           >
-            Enter the shop →
+            See the App →
           </button>
-          <a
-            href={FULL_STORY_URL}
-            className="flex-1 py-4 rounded-2xl font-bold text-lg transition-all text-center"
-            style={{
-              background: 'transparent',
-              border: '2px solid #2d3142',
-              color: '#94a3b8',
-            }}
+          <button
+            disabled
+            title="Shop coming soon"
+            className="flex-1 py-4 rounded-2xl font-bold text-lg transition-all opacity-40 cursor-not-allowed"
+            style={{ background: 'transparent', border: '2px solid #2d3142', color: '#94a3b8' }}
           >
-            Full origin story
-          </a>
+            Shop
+          </button>
         </div>
+        <a
+          href={FULL_STORY_URL}
+          className="text-sm transition-all text-center mt-1"
+          style={{ color: '#57606a' }}
+        >
+          Read the full origin story →
+        </a>
 
         {/* IBM Bob credit */}
         <a
