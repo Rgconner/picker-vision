@@ -94,12 +94,24 @@ async function startScan() {
   const vid = document.getElementById('vid');
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' }, audio: false
+      video: {
+        facingMode: 'environment',
+        width:  { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
+      audio: false
     });
     vid.srcObject = stream;
     await vid.play();
     scanning = true;
-    log('Camera started — scanning…');
+
+    /* Log actual track settings immediately */
+    const track    = stream.getVideoTracks()[0];
+    const settings = track.getSettings();
+    log('Track: ' + settings.width + '×' + settings.height +
+        ' facing:' + settings.facingMode +
+        ' deviceId:' + (settings.deviceId || '').slice(0,8));
+
     scanLoop();
   } catch(e) {
     log('Camera error: ' + e);
