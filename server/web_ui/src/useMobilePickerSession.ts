@@ -188,21 +188,27 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
         active:       true,
       });
 
+      const detections      = scans.filter((s) => s.type === 'product').map(toDetection);
+      const staging_regions = scans
+        .filter((s) => s.type === 'staging')
+        .map((s) => ({
+          staging_code:    s.stagingCode,
+          boundary_points: s.corners?.map((c) => [c.x, c.y]) ?? [],
+          centre:          s.bbox
+            ? [Math.round(s.bbox.x + s.bbox.w / 2), Math.round(s.bbox.y + s.bbox.h / 2)]
+            : [0, 0],
+          area:            s.bbox ? s.bbox.w * s.bbox.h : 0,
+        }));
+
+      /* Skip POST if there is nothing to report — avoids empty scan log noise */
+      if (detections.length === 0 && staging_regions.length === 0) return;
+
       const payload = {
         picker_id:       id,
         timestamp:       new Date().toISOString(),
         trace_id:        Math.random().toString(16).slice(2, 10),
-        detections:      scans.filter((s) => s.type === 'product').map(toDetection),
-        staging_regions: scans
-          .filter((s) => s.type === 'staging')
-          .map((s) => ({
-            staging_code:    s.stagingCode,
-            boundary_points: s.corners?.map((c) => [c.x, c.y]) ?? [],
-            centre:          s.bbox
-              ? [Math.round(s.bbox.x + s.bbox.w / 2), Math.round(s.bbox.y + s.bbox.h / 2)]
-              : [0, 0],
-            area:            s.bbox ? s.bbox.w * s.bbox.h : 0,
-          })),
+        detections,
+        staging_regions,
       };
 
       _postEvent(payload).then((ok) => {
