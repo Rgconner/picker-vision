@@ -101,16 +101,17 @@ jobs:
       # kubectl and kustomize are already installed on the self-hosted runner.
       # Kubeconfig is at the default ~/.kube/config location — no secret needed.
 
-      # Short SHA tag — same format as docker/metadata-action produces above
-      # All run: blocks use PowerShell (Windows self-hosted runner).
+      # Short SHA tag — same format as docker/metadata-action produces above.
+      # Use $env:GITHUB_SHA (always set) rather than ${{ github.sha }} template
+      # substitution to avoid PowerShell 5.1 quoting/encoding edge cases.
       - name: Resolve image tag
         id: tag
         shell: powershell
         run: |
-          $sha7 = "${{ github.sha }}".Substring(0, 7)
+          $sha7 = $env:GITHUB_SHA.Substring(0, 7)
           $line = "sha=sha-$sha7"
           Add-Content -Path $env:GITHUB_OUTPUT -Value $line -Encoding utf8
-          Write-Host "Image tag: $line"
+          Write-Host "Image tag resolved: $line"
 
       # ── Production deploy (main) ──────────────────────────────────────────────
       # MetalLB config is cluster-level infrastructure — applied once at setup,
