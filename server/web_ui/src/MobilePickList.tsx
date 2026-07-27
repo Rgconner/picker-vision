@@ -19,8 +19,9 @@
  *  - Confirm Packed CTA pulses green when all lines are picked
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { Detection, Order, PickerState } from './types';
+import { PackWizard } from './PackWizard';
 
 interface Props {
   orders:               Order[];
@@ -92,6 +93,8 @@ function ProgressBar({ picked, total }: { picked: number; total: number }) {
 
 export function MobilePickList({ orders, detections, orderCompletePending, onConfirmPacked }: Props) {
   const detMap = useMemo(() => buildDetectionMap(detections), [detections]);
+  const [packingOrderId, setPackingOrderId] = useState<string | null>(null);
+  const packingOrder = packingOrderId ? orders.find((o) => o.id === packingOrderId) : null;
 
   const sorted = useMemo(
     () => [...orders].sort((a, b) => orderWeight(a) - orderWeight(b)),
@@ -107,6 +110,15 @@ export function MobilePickList({ orders, detections, orderCompletePending, onCon
   }
 
   return (
+    <>
+    {packingOrder && (
+      <PackWizard
+        orderId={packingOrder.id}
+        orderRef={packingOrder.reference}
+        onClose={() => setPackingOrderId(null)}
+        onPacked={() => setPackingOrderId(null)}
+      />
+    )}
     <div className="flex flex-col gap-2 px-2 py-2">
       {sorted.map((order) => {
         const isPending    = orderCompletePending?.order_id === order.id;
@@ -207,8 +219,17 @@ export function MobilePickList({ orders, detections, orderCompletePending, onCon
               </div>
             )}
 
-            {/* ── Confirm Packed CTA ── */}
-            {isPending && (
+            {/* ── Pack CTA — shown when order is complete (BTT flow) or pending confirm ── */}
+            {(order.status === 'complete' || order.status === 'packing') && (
+              <button
+                onClick={() => setPackingOrderId(order.id)}
+                className="w-full py-3 px-3 bg-[#f59e0b] text-black font-bold text-sm flex items-center justify-center gap-2"
+              >
+                📦 Pack Order
+              </button>
+            )}
+            {/* ── Legacy confirm-packed CTA (non-BTT) ── */}
+            {isPending && order.status !== 'complete' && order.status !== 'packing' && (
               <button
                 onClick={() => onConfirmPacked(order.id)}
                 className="w-full py-3 px-3 bg-[#22c55e] text-black font-bold text-sm flex items-center justify-center gap-2 animate-pulse"
@@ -220,5 +241,6 @@ export function MobilePickList({ orders, detections, orderCompletePending, onCon
         );
       })}
     </div>
+    </>
   );
 }

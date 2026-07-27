@@ -410,7 +410,7 @@ All totes verified → "Seal and dispatch" → order status = packed
   circular dependencies.
 
 ### Status
-[ ] pending
+[x] done
 
 ---
 

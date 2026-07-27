@@ -635,3 +635,238 @@ def delete_scenario(scenario_id: str):
         s.commit()
     finally:
         s.close()
+
+
+# ---------------------------------------------------------------------------
+# Bob's Tiny Treasures — Pack & Verify endpoints
+# ---------------------------------------------------------------------------
+
+from packer import plan_packing as _plan_packing
+from models import (
+    Order      as _Order,
+    Product    as _Product,
+    OrderTote  as _OrderTote,
+    ToteLayer  as _ToteLayer,
+    ToteLineAssignment as _ToteLineAssignment,
+)
+
+
+def _pack_plan_to_dict(totes: list) -> dict:
+    """Serialise a list of OrderTote ORM rows (with .layers and .assignments) to a plain dict."""
+    def _assignment_dict(a) -> dict:
+        return {
+            "id":               a.id,
+            "tote_id":          a.tote_id,
+            "line_id":          a.line_id,
+            "layer_id":         a.layer_id,
+            "quantity_in_tote": a.quantity_in_tote,
+            "layer_seq":        a.layer_seq,
+        }
+
+    def _layer_dict(layer) -> dict:
+        return {
+            "id":                  layer.id,
+            "tote_id":             layer.tote_id,
+            "layer_seq":           layer.layer_seq,
+            "status":              layer.status,
+            "verification_method": layer.verification_method,
+            "verification_result": layer.verification_result,
+            "assignments":         [_assignment_dict(a) for a in layer.assignments],
+        }
+
+    def _tote_dict(tote) -> dict:
+        return {
+            "id":                 tote.id,
+            "order_id":           tote.order_id,
+            "staging_code":       tote.staging_code,
+            "tote_seq":           tote.tote_seq,
+            "max_weight_kg":      tote.max_weight_kg,
+            "assigned_weight_kg": tote.assigned_weight_kg,
+            "status":             tote.status,
+            "layers":             [_layer_dict(l) for l in tote.layers],
+        }
+
+    return {"totes": [_tote_dict(t) for t in totes]}
+
+
+@app.post("/orders/{order_id}/pack", tags=["btt"])
+def pack_order(order_id: str):
+    """Run the fallback packer on a completed order.
+
+    Creates OrderTote / ToteLayer / ToteLineAssignment rows.
+    Idempotent — if rows already exist, returns the existing plan.
+    """
+    s = _SessionLocal()
+    try:
+        order = s.get(_Order, order_id)
+        if order is None:
+            raise HTTPException(status_code=404, detail="Order not found")
+        if order.status not in ("complete", "packing"):
+            raise HTTPException(
+                status_code=409,
+                detail=f"Order must be in 'complete' status to pack (current: {order.status!r})"
+            )
+
+        # Idempotent: return existing plan if already created
+        existing_totes = (
+            s.query(_OrderTote)
+            .filter(_OrderTote.order_id == order_id)
+            .order_by(_OrderTote.tote_seq)
+            .all()
+        )
+        if existing_totes:
+            return _pack_plan_to_dict(existing_totes)
+
+        # Build (OrderLine, Product) pairs
+        pairs = []
+        for line in order.lines:
+            product = s.get(_Product, line.product_barcode)
+            if product:
+                pairs.append((line, product))
+
+        if not pairs:
+            raise HTTPException(status_code=422, detail="Order has no lines with known products")
+
+        # Run the pure packer function
+        tote_specs = _plan_packing(pairs)
+
+        # Determine staging_code from the first line that has one
+        default_staging = next(
+            (line.staging_code for line, _ in pairs if line.staging_code), None
+        )
+
+        # Persist the plan
+        new_totes = []
+        for spec in tote_specs:
+            tote_id = str(_uuid.uuid4())
+            tote = _OrderTote(
+                id                 = tote_id,
+                order_id           = order_id,
+                staging_code       = default_staging,
+                tote_seq           = spec.tote_seq,
+                max_weight_kg      = _TOTE_CAP_KG,
+                assigned_weight_kg = spec.assigned_weight_kg,
+                status             = "pending",
+            )
+            s.add(tote)
+
+            for layer_spec in spec.layers:
+                layer_id = str(_uuid.uuid4())
+                layer = _ToteLayer(
+                    id          = layer_id,
+                    tote_id     = tote_id,
+                    layer_seq   = layer_spec.layer_seq,
+                    status      = "pending",
+                )
+                s.add(layer)
+
+                # Track how many of each line are assigned to this tote/layer
+                qty_map: dict[str, int] = {}
+                for item in layer_spec.items:
+                    qty_map[item.line_id] = qty_map.get(item.line_id, 0) + 1
+
+                for line_id, qty in qty_map.items():
+                    s.add(_ToteLineAssignment(
+                        id               = str(_uuid.uuid4()),
+                        tote_id          = tote_id,
+                        line_id          = line_id,
+                        layer_id         = layer_id,
+                        quantity_in_tote = qty,
+                        layer_seq        = layer_spec.layer_seq,
+                    ))
+
+            new_totes.append(tote)
+
+        order.status = "packing"
+        s.commit()
+
+        # Re-query to get relationships populated
+        totes = (
+            s.query(_OrderTote)
+            .filter(_OrderTote.order_id == order_id)
+            .order_by(_OrderTote.tote_seq)
+            .all()
+        )
+        return _pack_plan_to_dict(totes)
+    finally:
+        s.close()
+
+
+@app.get("/orders/{order_id}/pack-plan", tags=["btt"])
+def get_pack_plan(order_id: str):
+    """Return the existing pack plan (totes + layers + assignments) for an order."""
+    s = _SessionLocal()
+    try:
+        order = s.get(_Order, order_id)
+        if order is None:
+            raise HTTPException(status_code=404, detail="Order not found")
+        totes = (
+            s.query(_OrderTote)
+            .filter(_OrderTote.order_id == order_id)
+            .order_by(_OrderTote.tote_seq)
+            .all()
+        )
+        if not totes:
+            raise HTTPException(status_code=404, detail="No pack plan found for this order")
+        return _pack_plan_to_dict(totes)
+    finally:
+        s.close()
+
+
+@app.patch("/orders/{order_id}/totes/{tote_id}/layers/{layer_id}", tags=["btt"])
+async def verify_layer(order_id: str, tote_id: str, layer_id: str, request: Request):
+    """Mark a layer as verified (or skipped).
+
+    Body: {"status": "verified"|"skipped", "verification_method": str, "verification_result": str}
+
+    Auto-seals the tote when all its layers are done.
+    Auto-packs the order when all totes are sealed.
+    """
+    body = await request.json()
+    new_status = body.get("status", "verified")
+    if new_status not in ("verified", "skipped"):
+        raise HTTPException(status_code=422, detail="status must be 'verified' or 'skipped'")
+
+    s = _SessionLocal()
+    try:
+        layer = s.get(_ToteLayer, layer_id)
+        if not layer or layer.tote_id != tote_id:
+            raise HTTPException(status_code=404, detail="Layer not found")
+
+        tote = s.get(_OrderTote, tote_id)
+        if not tote or tote.order_id != order_id:
+            raise HTTPException(status_code=404, detail="Tote not found")
+
+        layer.status              = new_status
+        layer.verification_method = body.get("verification_method", "none")
+        layer.verification_result = body.get("verification_result")
+
+        # Auto-seal tote if all layers are now done
+        all_layer_statuses = [l.status for l in tote.layers]
+        # Update in-memory: replace the layer we just modified
+        all_layer_statuses = [
+            new_status if l.id == layer_id else l.status
+            for l in tote.layers
+        ]
+        if all(st in ("verified", "skipped") for st in all_layer_statuses):
+            tote.status = "sealed"
+
+        s.flush()
+
+        # Auto-pack order if all totes are sealed
+        if tote.status == "sealed":
+            order = s.get(_Order, order_id)
+            all_totes = s.query(_OrderTote).filter(_OrderTote.order_id == order_id).all()
+            if all(t.status == "sealed" for t in all_totes):
+                order.status = "packed"
+
+        s.commit()
+
+        return _pack_plan_to_dict(
+            s.query(_OrderTote)
+            .filter(_OrderTote.order_id == order_id)
+            .order_by(_OrderTote.tote_seq)
+            .all()
+        )
+    finally:
+        s.close()

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Order, PickerState } from './types';
+import { PackWizard } from './PackWizard';
 
 interface Props {
   orders: Order[];
@@ -18,6 +19,9 @@ function orderStatusBadge(status: string): string {
 }
 
 export function PickList({ orders, orderCompletePending, onConfirmPacked }: Props) {
+  const [packingOrderId, setPackingOrderId] = useState<string | null>(null);
+  const packingOrder = packingOrderId ? orders.find((o) => o.id === packingOrderId) : null;
+
   if (orders.length === 0) {
     return (
       <div className="flex items-center justify-center h-32 text-[#94a3b8] text-sm">
@@ -27,6 +31,15 @@ export function PickList({ orders, orderCompletePending, onConfirmPacked }: Prop
   }
 
   return (
+    <>
+    {packingOrder && (
+      <PackWizard
+        orderId={packingOrder.id}
+        orderRef={packingOrder.reference}
+        onClose={() => setPackingOrderId(null)}
+        onPacked={() => setPackingOrderId(null)}
+      />
+    )}
     <div className="flex flex-col gap-3 overflow-y-auto">
       {orders.map((order) => {
         const isPending =
@@ -80,8 +93,17 @@ export function PickList({ orders, orderCompletePending, onConfirmPacked }: Prop
               })}
             </div>
 
-            {/* Confirm Packed CTA */}
-            {isPending && (
+            {/* Pack Order button — BTT flow */}
+            {(order.status === 'complete' || order.status === 'packing') && (
+              <button
+                onClick={() => setPackingOrderId(order.id)}
+                className="mt-1 w-full py-2 px-3 rounded-lg bg-[#f59e0b] text-black font-bold text-sm flex items-center justify-center gap-2"
+              >
+                📦 Pack Order
+              </button>
+            )}
+            {/* Confirm Packed CTA — legacy non-BTT flow */}
+            {isPending && order.status !== 'complete' && order.status !== 'packing' && (
               <button
                 onClick={() => onConfirmPacked(order.id)}
                 className="mt-1 w-full py-2 px-3 rounded-lg bg-[#22c55e] text-black font-bold text-sm pulse-green flex items-center justify-center gap-2"
@@ -93,5 +115,6 @@ export function PickList({ orders, orderCompletePending, onConfirmPacked }: Prop
         );
       })}
     </div>
+    </>
   );
 }

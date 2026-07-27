@@ -119,3 +119,39 @@ export interface LogResponse {
   picker_id?: string;
   lines: LogLine[];
 }
+
+// ── Pack & Verify (BTT) ───────────────────────────────────────────────────────
+
+export interface ToteLineAssignment {
+  id: string;
+  tote_id: string;
+  line_id: string;
+  layer_id: string | null;
+  quantity_in_tote: number;
+  layer_seq: number;
+}
+
+export interface ToteLayer {
+  id: string;
+  tote_id: string;
+  layer_seq: number;
+  status: 'pending' | 'verified' | 'skipped';
+  verification_method: string | null;
+  verification_result: string | null;
+  assignments: ToteLineAssignment[];
+}
+
+export interface OrderTote {
+  id: string;
+  order_id: string;
+  staging_code: string | null;
+  tote_seq: number;
+  max_weight_kg: number;
+  assigned_weight_kg: number;
+  status: 'pending' | 'packing' | 'verified' | 'sealed';
+  layers: ToteLayer[];
+}
+
+export interface PackPlan {
+  totes: OrderTote[];
+}
