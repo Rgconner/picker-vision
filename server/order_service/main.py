@@ -28,7 +28,7 @@ from fastapi import FastAPI, HTTPException, Request
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from models import Base
+from models import Base, OrderTote, ToteLayer, ToteLineAssignment, WarehouseScenario  # noqa: F401 — imported for create_all side-effect
 from seed_data import run_seed
 from adapters import get_adapter
 

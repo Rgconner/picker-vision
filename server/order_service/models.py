@@ -6,6 +6,7 @@ from sqlalchemy.orm import declarative_base, relationship
 Base = declarative_base()
 
 
+
 class User(Base):
     __tablename__ = "users"
 
@@ -53,6 +54,7 @@ class WorkflowConfig(Base):
     voice_enabled_default   = Column(Boolean, nullable=False, default=True)
     haptic_enabled_default  = Column(Boolean, nullable=False, default=True)
     mid_pick_validate_after = Column(Integer, nullable=False, default=5)
+    instance_profile        = Column(String, nullable=False, default="")   # "" | "bobs-tiny-treasures"
 
 
 class Product(Base):
@@ -66,6 +68,7 @@ class Product(Base):
     volume_cm3   = Column(Float, nullable=True)           # for cart bin-pack
     size_class   = Column(String, nullable=True)          # S / M / L / XL fallback
     value_class  = Column(String, nullable=False, default="standard")  # "standard" | "high"
+    size_inches  = Column(String, nullable=True)          # BTT physical footprint: "1x1" | "2x1" | "2x2"
 
 
 class StagingContainer(Base):
@@ -97,6 +100,86 @@ class OrderLine(Base):
     product_barcode = Column(String, ForeignKey("products.barcode"), nullable=False)
     quantity = Column(Integer, nullable=False, default=1)
     quantity_picked = Column(Integer, nullable=False, default=0)
-    staging_code = Column(String(4), ForeignKey("staging_containers.code"), nullable=False)
+    staging_code = Column(String(4), ForeignKey("staging_containers.code"), nullable=True)  # pre-pack hint; nullable for BTT tote workflow
     status = Column(String, nullable=False, default="pending")  # pending | picked | error
     order = relationship("Order", back_populates="lines")
+    tote_assignments = relationship("ToteLineAssignment", back_populates="line")
+
+
+# ---------------------------------------------------------------------------
+# Bob's Tiny Treasures — tote packing models
+# ---------------------------------------------------------------------------
+
+class OrderTote(Base):
+    """One physical Tiny Tote assigned to an order at pack time.
+
+    Created by packer.py when an order transitions complete → packing.
+    Multiple totes per order are allowed; each has its own 100 g weight cap.
+    """
+    __tablename__ = "order_totes"
+
+    id                  = Column(String, primary_key=True)            # UUID
+    order_id            = Column(String, ForeignKey("orders.id"), nullable=False)
+    staging_code        = Column(String(4), ForeignKey("staging_containers.code"), nullable=True)  # delivery zone
+    tote_seq            = Column(Integer, nullable=False, default=1)  # 1-based within order
+    max_weight_kg       = Column(Float, nullable=False, default=0.1)  # 100 g cap
+    assigned_weight_kg  = Column(Float, nullable=False, default=0.0)  # sum at plan time
+    status              = Column(String, nullable=False, default="pending")  # pending | packing | verified | sealed
+    layers              = relationship("ToteLayer", back_populates="tote", order_by="ToteLayer.layer_seq")
+    assignments         = relationship("ToteLineAssignment", back_populates="tote")
+
+
+class ToteLayer(Base):
+    """One verifiable horizontal layer inside a tote (max 2 items).
+
+    The picker is guided to place exactly these items, then verbally or
+    visually verify before proceeding to the next layer.
+    """
+    __tablename__ = "tote_layers"
+
+    id                  = Column(String, primary_key=True)            # UUID
+    tote_id             = Column(String, ForeignKey("order_totes.id"), nullable=False)
+    layer_seq           = Column(Integer, nullable=False)             # 1-based within tote
+    status              = Column(String, nullable=False, default="pending")  # pending | verified | skipped
+    verification_method = Column(String, nullable=True)               # "voice" | "camera" | "none"
+    verification_result = Column(String, nullable=True)               # raw transcript / result
+    tote                = relationship("OrderTote", back_populates="layers")
+    assignments         = relationship("ToteLineAssignment", back_populates="layer",
+                                       primaryjoin="ToteLayer.id == foreign(ToteLineAssignment.layer_id)")
+
+
+class ToteLineAssignment(Base):
+    """Maps an OrderLine (and a specific quantity) to a tote and layer.
+
+    A single OrderLine may be split across totes if it spans the weight cap
+    (e.g. qty=5 items where 3 fit in tote 1 and 2 spill to tote 2).
+    """
+    __tablename__ = "tote_line_assignments"
+
+    id               = Column(String, primary_key=True)               # UUID
+    tote_id          = Column(String, ForeignKey("order_totes.id"), nullable=False)
+    line_id          = Column(String, ForeignKey("order_lines.id"), nullable=False)
+    layer_id         = Column(String, ForeignKey("tote_layers.id"), nullable=True)  # set after layer creation
+    quantity_in_tote = Column(Integer, nullable=False, default=1)     # may be < line.quantity
+    layer_seq        = Column(Integer, nullable=False, default=1)      # which layer within this tote
+    tote             = relationship("OrderTote", back_populates="assignments")
+    line             = relationship("OrderLine", back_populates="tote_assignments")
+    layer            = relationship("ToteLayer", back_populates="assignments",
+                                    primaryjoin="ToteLineAssignment.layer_id == ToteLayer.id",
+                                    foreign_keys="[ToteLineAssignment.layer_id]")
+
+
+class WarehouseScenario(Base):
+    """Named snapshot of a warehouse grid layout and stock assignments.
+
+    The special row id='scratch' is upserted during live inventory scanning.
+    Named rows are copies saved by the supervisor for reuse across test runs.
+    """
+    __tablename__ = "warehouse_scenarios"
+
+    id         = Column(String, primary_key=True)                     # UUID or "scratch"
+    name       = Column(String, nullable=False, unique=True)          # e.g. "3x3 Alpha Run"
+    grid_rows  = Column(Integer, nullable=False, default=3)
+    grid_cols  = Column(Integer, nullable=False, default=3)
+    payload    = Column(String, nullable=False, default="[]")         # JSON: [{location_code, product_barcode, qty_on_hand}]
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
