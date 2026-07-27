@@ -7,7 +7,11 @@ RUN pip install --no-cache-dir \
     redis \
     sqlalchemy \
     aiosqlite \
-    python-dotenv
+    python-dotenv \
+    reportlab \
+    "qrcode[pil]" \
+    "python-barcode[images]" \
+    Pillow
 
 WORKDIR /app
 COPY . .

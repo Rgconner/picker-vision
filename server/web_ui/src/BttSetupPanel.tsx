@@ -12,6 +12,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useBarcodeScanner } from './useBarcodeScanner';
 import type { ScanResult } from './useBarcodeScanner';
+import { BttLabelsPanel } from './BttLabelsPanel';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -19,7 +20,7 @@ interface ShelfInfo  { code: string; label: string; qr_payload: string }
 interface StockEntry { location_code: string; product_barcode: string; qty_on_hand: number }
 interface Scenario   { id: string; name: string; grid_rows: number; grid_cols: number; payload: string; created_at: string }
 
-type SubTab = 'grid' | 'inventory' | 'scenarios';
+type SubTab = 'grid' | 'inventory' | 'scenarios' | 'labels';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -508,6 +509,7 @@ const SUB_TABS: { id: SubTab; label: string }[] = [
   { id: 'grid',      label: '⬛ Grid' },
   { id: 'inventory', label: '📦 Inventory' },
   { id: 'scenarios', label: '💾 Scenarios' },
+  { id: 'labels',    label: '🏷️ Labels' },
 ];
 
 export function BttSetupPanel() {
@@ -547,6 +549,7 @@ export function BttSetupPanel() {
         {sub === 'grid'      && <GridPanel />}
         {sub === 'inventory' && <InventoryPanel />}
         {sub === 'scenarios' && <ScenariosPanel />}
+        {sub === 'labels'    && <BttLabelsPanel />}
       </div>
     </div>
   );

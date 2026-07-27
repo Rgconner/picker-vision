@@ -870,3 +870,63 @@ async def verify_layer(order_id: str, tote_id: str, layer_id: str, request: Requ
         )
     finally:
         s.close()
+
+
+# ---------------------------------------------------------------------------
+# Bob's Tiny Treasures — Label Sheet Generator endpoints
+# ---------------------------------------------------------------------------
+
+from fastapi.responses import Response as _Response
+from label_generator import generate_label_pdf as _generate_label_pdf
+
+_DELIVERY_ZONES = [
+    {"code": "TINY", "label": "Tiny Tote Line 1",  "qr_payload": "STAGING:TINY"},
+    {"code": "WOND", "label": "Wonderland Bay",     "qr_payload": "STAGING:WOND"},
+    {"code": "CHRM", "label": "Charm Dispatch",     "qr_payload": "STAGING:CHRM"},
+]
+
+
+@app.get("/labels/products", tags=["btt"])
+def list_label_products():
+    """Return all BTT products (barcode prefix BTT-) for the label designer."""
+    s = _SessionLocal()
+    try:
+        rows = s.query(_Product).filter(_Product.barcode.like("BTT-%")).order_by(_Product.barcode).all()
+        return [
+            {
+                "barcode":     r.barcode,
+                "description": r.description,
+                "sku":         r.sku,
+                "weight_kg":   r.weight_kg,
+                "size_class":  r.size_class,
+                "size_inches": r.size_inches,
+            }
+            for r in rows
+        ]
+    finally:
+        s.close()
+
+
+@app.post("/labels/generate", tags=["btt"])
+async def generate_labels(request: Request):
+    """Generate a label sheet PDF and return it as a downloadable file.
+
+    Body: LabelConfig JSON (see label_generator.py for schema).
+    Returns: application/pdf
+    """
+    config = await request.json()
+
+    # Inject zones from server constants if the caller didn't supply them
+    if "zones" not in config or not config["zones"]:
+        config["zones"] = _DELIVERY_ZONES
+
+    try:
+        pdf_bytes = _generate_label_pdf(config)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"PDF generation failed: {exc}")
+
+    return _Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="btt_labels.pdf"'},
+    )

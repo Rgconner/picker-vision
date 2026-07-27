@@ -417,42 +417,106 @@ All totes verified → "Seal and dispatch" → order status = packed
 ## Sub-Task 4 — BTT Label Sheet Generator
 
 ### Intent
-`fixtures/bobs-tiny-treasures/generate_btt_labels.py` — a printable PDF generator
-(same pattern as [`tools/generate_test_barcodes.py`](tools/generate_test_barcodes.py))
-producing three sections:
+A **Labels** sub-tab inside the existing `BttSetupPanel` (Management → BTT Setup)
+that lets a supervisor configure and download a print-ready PDF label sheet — no
+CLI, no file system access required. The PDF is generated server-side
+(`POST /labels/generate`) and streamed straight to the browser as a download.
 
-1. **Product QR stickers** — 9 products × 1×1 inch QR codes (value = barcode e.g.
-   `BTT-00101`) with product name below. Designed for Avery 1×1 label stock.
-2. **Shelf location QR labels** — configurable grid via `--rows`/`--cols` (default 3×3).
-   QR payload = `SHELF:A1` etc. ~2×2 inch label size.
-3. **Delivery zone QR labels** — 3 zones, large format (3×3 inch) for packing-area
-   visibility. QR payload = `STAGING:TINY` etc.
+Three label sections, each independently configurable:
 
-Brand colour: cheerful gold/amber `#f59e0b`. Header:
-**"Bob's Tiny Treasures — Warehouse Labels"**.
+1. **Product stickers** — one label per BTT product (9 total).
+2. **Shelf location labels** — one label per shelf in the current grid (rows × cols).
+3. **Delivery zone labels** — one label per delivery zone (TINY / WOND / CHRM).
+
+### Label Designer UI (`BttLabelsPanel.tsx`)
+
+One card per section. Each card exposes:
+
+| Control | Options |
+|---------|---------|
+| **Include** | Toggle — include this section in the PDF |
+| **Barcode type** | QR Code · Code 128 · UPC-A |
+| **Detail level** | Minimal (name/code only) · Detailed (name + SKU + weight + barcode value) |
+| **Colour band** | *(Zone labels only)* — None · Colour-coded top band (TINY=amber, WOND=blue, CHRM=green) |
+
+Global controls (top of panel):
+
+| Control | Options |
+|---------|---------|
+| **Print mode** | Cut-yourself (clean grid, any paper) · Avery-matched (precise margins per template) |
+| **Avery template** | Products: 22807 (1×1 in, 40/sheet) · Shelves: 5164 (3.33×4 in, 6/sheet) · Zones: 8165 (full sheet, 1/sheet) — shown only when Avery mode selected, pre-filled, editable |
+| **Shelf grid** | Rows × Cols — defaults to current WorkflowConfig grid; overrideable here |
+
+A single **Download Labels PDF** button posts the config JSON to
+`POST /labels/generate` and triggers a browser file download.
+
+### New API Endpoints
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/labels/generate` | Body: `LabelConfig` JSON. Returns `application/pdf` blob. |
+| GET  | `/labels/products` | Returns list of BTT products (barcode, description, sku, weight_kg). |
+
+### Backend PDF Generator (`server/order_service/label_generator.py`)
+
+Pure function `generate_label_pdf(config: dict) -> bytes` using **ReportLab**.
+No DB access — product/shelf/zone data passed in via `config`.
+
+**Label content per section:**
+
+*Product stickers:*
+- Minimal: barcode symbol (QR/Code128/UPC) + product name (truncated)
+- Detailed: barcode symbol + name + SKU + weight + barcode value in monospace
+
+*Shelf labels:*
+- Barcode symbol (QR/Code128) + large shelf code + "Shelf A1" sub-label
+- No UPC for shelves (not a product barcode — UPC silently falls back to Code128)
+
+*Zone labels:*
+- Optional colour band across the top
+- Large barcode symbol + zone code in bold + full zone label + BTT wordmark footer
+- Full page (Avery 8165) or proportional in cut-yourself mode
+
+**Print modes:**
+- *Cut-yourself*: fixed grid of cells per page, even margins, dashed cut lines between cells
+- *Avery-matched*: cell positions computed from template spec (top/left margin,
+  cell width/height, h-gap, v-gap, cols-per-row)
+
+**Wordmark** (until ST-6 logo is wired in):
+`"Bob's Tiny Treasures"` in amber `#f59e0b` bold, sans-serif — with a
+`# TODO ST-6: replace with svglib.svg2rlg(logo.svg)` comment.
+
+**Dependencies added to Dockerfile:**
+`reportlab`, `qrcode[pil]`, `python-barcode[images]`, `Pillow`
 
 ### Expected Outcomes
-- `python generate_btt_labels.py` → `btt_labels.pdf` in same directory.
-- `python generate_btt_labels.py --rows 2 --cols 4` → 8-shelf label grid.
-- Product constants imported from `seed_btt.py` (no duplication).
+- Supervisor opens Management → BTT Setup → Labels tab.
+- Configures sections, barcode type, detail level, print mode.
+- Clicks "Download Labels PDF" → browser downloads `btt_labels.pdf`.
+- PDF renders correctly in any PDF viewer and prints cleanly.
+- All three sections, both barcode types, both detail levels, both print modes work.
+- Avery mode cells align within ±0.5 mm of template spec.
 
 ### Todo List
-1. Write `fixtures/bobs-tiny-treasures/generate_btt_labels.py` modelled on
-   `tools/generate_test_barcodes.py`.
-2. Import `PRODUCTS`, `STAGING_CONTAINERS`, and grid constants from `seed_btt.py`.
-3. Add `argparse` for `--rows`, `--cols`, `--output`.
-4. Product stickers section: 3-column grid of 1×1 inch QR codes.
-5. Shelf labels section: grid-generated from args.
-6. Delivery zone section: single row of 3 large QR codes.
-7. BTT brand header and footer on every page.
+1. Update this spec in `bobs-tiny-treasures-plan.md`.
+2. Add `reportlab`, `qrcode[pil]`, `python-barcode[images]`, `Pillow` to `Dockerfile`.
+3. Write `server/order_service/label_generator.py` — pure `generate_label_pdf(config)`.
+4. Add `POST /labels/generate` and `GET /labels/products` to `main.py`.
+5. Create `server/web_ui/src/BttLabelsPanel.tsx` — designer UI with all controls.
+6. Add `{ id: 'labels', label: '🏷️ Labels' }` sub-tab to `BttSetupPanel.tsx`.
+7. Update `SubTab` type and panel render switch in `BttSetupPanel.tsx`.
 
 ### Relevant Context
-- [`tools/generate_test_barcodes.py`](tools/generate_test_barcodes.py) — copy and adapt
-  `_make_qr_image()` and `build_pdf()`.
-- `seed_btt.py` (Sub-Task 2) defines all product and zone constants to import.
+- [`server/order_service/label_generator.py`](server/order_service/label_generator.py) — to create.
+- [`server/order_service/main.py`](server/order_service/main.py) — append routes after pack endpoints.
+- [`server/web_ui/src/BttSetupPanel.tsx`](server/web_ui/src/BttSetupPanel.tsx) — add Labels sub-tab.
+- [`server/order_service/Dockerfile`](server/order_service/Dockerfile) — add pip deps.
+- Product/zone data comes from the DB via `GET /labels/products` + existing
+  `/instance-profile` + `/warehouse/grid`; the frontend passes it all in the
+  `POST /labels/generate` body so the generator stays DB-free.
 
 ### Status
-[ ] pending
+[x] done
 
 ---
 
