@@ -153,7 +153,7 @@ export function useBarcodeScanner(
       // though the API decodes it fine.
       if (typeof BarcodeDetector !== 'undefined') {
         try {
-          const FORMATS = ['qr_code', 'code_128', 'ean_13', 'ean_8'];
+          const FORMATS = ['qr_code', 'code_128', 'ean_13', 'ean_8', 'data_matrix', 'code_39'];
           nativeRef.current  = new BarcodeDetector({ formats: FORMATS });
           engineRef.current  = 'native';
           remoteLog('info', '[Scanner] engine=BarcodeDetector (native)');
