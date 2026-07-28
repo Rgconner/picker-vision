@@ -19,7 +19,7 @@ import { useSupervisorSocket } from './useSupervisorSocket';
 import { VideoPanel } from './VideoPanel';
 import { DemoControls } from './DemoControls';
 import { ScanStrip } from './ScanStrip';
-import { dmSvg } from './dmSvg';
+import { qrSvg } from './qrSvg';
 
 interface Props {
   auth: AuthState;
@@ -124,7 +124,7 @@ function FocusedPickerView({ pickerId, onBack }: FocusedPickerProps) {
                   display: 'inline-block',
                   boxShadow: '0 0 0 1px rgba(190,149,255,0.1)',
                 }}
-                dangerouslySetInnerHTML={{ __html: dmSvg(nextLine.product_barcode, 240) }}
+                dangerouslySetInnerHTML={{ __html: qrSvg(nextLine.product_barcode, 240) }}
               />
               <span className="text-[#57606a] text-xs tracking-wide uppercase">
                 Point phone camera here to scan
