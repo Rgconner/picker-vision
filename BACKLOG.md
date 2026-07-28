@@ -224,6 +224,31 @@ curl https://bobstinytreasures.snwbd.com/mobile
 
 ---
 
+### BE-006 · BarcodeDetector was removed without evidence it failed — root cause of entire scanner regression (2026-07-27)
+
+**What happened:** The working scanner on `feature/mobile-web-client` used `BarcodeDetector` (native Android ML Kit) as primary and ZXing as fallback. That branch worked. On `feature/bobs-tiny-treasures` the following commit chain destroyed that:
+
+| Commit | Change | Problem |
+|---|---|---|
+| `4a882f1` | Only use `BarcodeDetector` if `data_matrix` is in `getSupportedFormats()` | Reasonable guard — but the Samsung may not advertise `data_matrix` even though it decodes it |
+| `ce4e10d` | Strip ZXing entirely — show "unsupported" if `BarcodeDetector` not available | Overcorrection — now there's no fallback |
+| `d66dbc6` | **Remove `BarcodeDetector` entirely, replace with ZXing-canvas-only.** Commit message: *"Chrome Android where BarcodeDetector silently fails"* | **This is the regression.** The claim has no supporting evidence anywhere in the repo. |
+
+The diagnostic commits (`e3cfb71`, `9c7aa39`, `f01afde`, `26dd846`) came **after** `d66dbc6` — ZXing was substituted in before any diagnosis was done. Every session since has been trying to make ZXing work where `BarcodeDetector` worked before.
+
+**The actual likely failure mode at `4a882f1`:** `BarcodeDetector.getSupportedFormats()` on some Samsung Chrome builds returns a list that omits `data_matrix`. The guard fell through to ZXing. Bob saw ZXing loading, labelled this "BarcodeDetector silently fails," and removed it rather than investigating the supported formats list or testing direct detection.
+
+**The fix:** Restore the `feature/mobile-web-client` strategy. `BarcodeDetector` primary, ZXing fallback. Do NOT gate on `data_matrix` being in `getSupportedFormats()` — pass it in the constructor formats list and let the API handle it. If the Samsung doesn't support it natively, it will throw or return empty results and ZXing handles those barcodes.
+
+**Checklist for next session:**
+- [ ] Restore `BarcodeDetector` as primary path in `useBarcodeScanner.ts` (port from `feature/mobile-web-client`)
+- [ ] Keep ZXing as fallback — do not remove it
+- [ ] Remove the `getSupportedFormats()` data_matrix gate — just request the formats and let the API decide
+- [ ] Log which engine was selected on init so we can confirm via remote logs
+- [ ] Test: does a decode event appear in `/api/debug/logs/Guest` within 5 seconds of pointing at the barcode?
+
+---
+
 ### BE-005 · Repeated bad decisions without asking — ZXing canvas decode failure (2026-07-28)
 
 **What happened:** ZXing was running correctly against a properly-sized canvas (853×480, confirmed in logs) but producing zero decodes. Instead of asking the user what they were scanning and what the setup looked like, Bob made a sequence of assumptions:
