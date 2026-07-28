@@ -145,6 +145,24 @@ That shows exactly which bundle the phone will load. Compare to what's in the po
 
 ---
 
+### QOL-012 · order-service rolling deploy blocks on PVC multi-attach (ReadWriteOnce)
+
+**Symptom:** After a deploy, new `order-service` pod stays in `ContainerCreating` indefinitely. Event: `Multi-Attach error for volume "pvc-..."  Volume is already used by pod(s) order-service-<old>`. Old pod holds the `ReadWriteOnce` PVC; new pod scheduled on a different node cannot attach it.
+
+**Manual workaround applied:** `kubectl delete pod <old-pod> -n picker-vision-btt --force --grace-period=0` + scale old RS to 0. Required every deploy where scheduler places pods on different nodes.
+
+**Proper fix (two options):**
+1. **Add `nodeAffinity` or `nodeName` to order-service deployment** — pin it to a specific node so old and new pods always land on the same node; RWO volume never needs to migrate.
+2. **Switch PVC to `ReadWriteMany` (NFS/CephFS)** — allows simultaneous attach on multiple nodes; eliminates the constraint entirely but requires storage class change.
+3. **Set `strategy.rollingUpdate.maxUnavailable: 1, maxSurge: 0`** — ensures old pod terminates before new one starts (Recreate-style within rolling), guaranteeing volume is free before new pod requests it. Simplest fix.
+
+Option 3 is the right immediate fix — one-line change to the deployment manifest.
+
+**Recurrence count:** Every deploy. **Open.**
+**Effort:** XS
+
+---
+
 ### QOL-011 · Demo session out-of-sync when picker re-registers under a different name
 
 **Symptom:** Supervisor shows order N, Samsung shows order N+1 (or a different order entirely). Scan events arrive with picker_id `Bob (Owner)-2` but the demo session is bound to `Bob (Owner)` — different WS channel, different state feed. The `-2` suffix appears when the phone registers a second time without clearing its prior registration, creating a ghost picker.

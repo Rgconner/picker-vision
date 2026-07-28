@@ -31,6 +31,11 @@ patches:
     target:
       kind: Deployment
       name: web-ui
+  # Use Recreate strategy for order-service — prevents Multi-Attach on RWO PVC
+  - path: order-service-deployment-patch.yaml
+    target:
+      kind: Deployment
+      name: order-service
   # Pin api-gateway LoadBalancer to 192.168.11.213
   - path: api-gateway-svc-patch.yaml
     target:

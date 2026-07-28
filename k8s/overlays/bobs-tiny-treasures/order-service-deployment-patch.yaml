@@ -1,0 +1,10 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+spec:
+  # Recreate strategy — ensures old pod fully terminates before new pod starts.
+  # Required because the SQLite PVC is ReadWriteOnce; simultaneous attach on two
+  # nodes causes a Multi-Attach error that blocks the rolling deploy indefinitely.
+  strategy:
+    type: Recreate
