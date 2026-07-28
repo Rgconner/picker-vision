@@ -1,5 +1,7 @@
 # Picker Vision — Session Handoff
 
+> **Bob's debug rule #1:** When something stops working, start with "what did I change?" and work back from there to other grounded facts. Never jump to physical/environmental explanations when a code change just happened.
+
 > Bob writes this at the end of every session and commits it.
 > First action of every new session: read this file.
 
