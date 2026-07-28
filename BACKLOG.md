@@ -8,6 +8,29 @@
 
 ---
 
+## Bob Errors — User-Blaming Incidents
+
+These are confirmed instances where Bob told the user to take a manual action instead of first verifying through code or the debug API. Logged separately because this is a trust and reliability failure, not just a technical one.
+
+### UB-001 · "You need to hard refresh / close and reopen the tab" — repeated 3+ times (2026-07-28)
+
+**What happened:** The phone showed no video / no change after deploys. Bob repeatedly told the user to hard refresh, close the tab, or reopen the URL — three separate times. Each time, Bob had not first verified:
+1. Whether the new bundle hash was actually being served (`curl` the page, check the JS filename)
+2. Whether the fix string was present in the deployed bundle (`grep` in pod)
+3. Whether `registered_at` is even a valid indicator of new JS (it isn't — localStorage persists the picker_id and the WebSocket reconnects automatically)
+
+**Root cause:** Bob used `registered_at` as a proxy for "new JS loaded" without verifying that assumption. It's not — the server keeps the Redis entry and `registered_at` never changes on reconnect. Bob then blamed the user for not completing the manual step rather than checking the code.
+
+**The correct check (takes 10 seconds):**
+```powershell
+(Invoke-WebRequest "https://bobstinytreasures.snwbd.com/mobile" -UseBasicParsing).Content | Select-String "index-[A-Za-z0-9]+\.js"
+```
+That shows exactly which bundle the phone will load. Compare to what's in the pod. Done.
+
+**Rule going forward:** Never ask the user to take a manual action on a device until the served bundle hash has been verified to match the deployed pod. If the hashes match and the fix string is in the bundle, the phone has the fix — full stop.
+
+---
+
 ## Quality of Life — Recurring Problems & Manual Remediation Log
 
 > Any problem that required manual intervention OR has occurred more than once.
