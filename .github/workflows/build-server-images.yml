@@ -72,6 +72,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          no-cache: true
 
   # ── Deploy ────────────────────────────────────────────────────────────────────
   # Runs after ALL build matrix jobs pass, on push only (not PRs).
@@ -185,8 +186,9 @@ jobs:
           '```'                             | Out-File $env:GITHUB_STEP_SUMMARY -Append
 
       # ── Bob's Tiny Treasures deploy (feature/bobs-tiny-treasures) ─────────────
-      # This overlay already pins branch tags in kustomization, so do not rewrite
-      # deployments to SHA tags here.
+      # Pin to SHA tag — same pattern as main/test.  The floating branch tag is
+      # unreliable when Docker GHA cache reuses layers across commits; SHA tags
+      # guarantee each commit deploys exactly what was built.
 
       - name: Apply Bob's Tiny Treasures manifests
         if: github.ref_name == 'feature/bobs-tiny-treasures'
@@ -197,16 +199,14 @@ jobs:
           & "C:\Users\RussConner\kubectl.exe" apply -k k8s/overlays/bobs-tiny-treasures/
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      # BTT uses a branch tag (feature-bobs-tiny-treasures) not a SHA tag, so
-      # kubectl apply sees no image change and skips the rollout.
-      # Force a restart on all deployments so nodes re-pull the updated image.
-      - name: Force rollout restart — Bob's Tiny Treasures
+      - name: Pin Bob's Tiny Treasures deployments to SHA tag
         if: github.ref_name == 'feature/bobs-tiny-treasures'
         shell: powershell
         run: |
-          $ns = "picker-vision-btt"
+          $tag = "${{ steps.tag.outputs.sha }}"
+          $ns  = "picker-vision-btt"
           foreach ($svc in @("api-gateway","order-service","event-processor","websocket-hub","web-ui")) {
-            & "C:\Users\RussConner\kubectl.exe" rollout restart deployment/$svc -n $ns
+            & "C:\Users\RussConner\kubectl.exe" set image deployment/$svc ${svc}=ghcr.io/rgconner/picker-vision/${svc}:$tag -n $ns
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
 
