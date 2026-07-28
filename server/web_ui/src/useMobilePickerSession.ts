@@ -254,7 +254,11 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
 
   const confirmPick = useCallback(async (orderId: string, lineId: string): Promise<boolean> => {
     try {
-      const res = await fetch(`/api/orders/${orderId}/lines/${lineId}`, { method: 'PATCH' });
+      const res = await fetch(`/api/orders/${orderId}/lines/${lineId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      });
       return res.ok;
     } catch {
       return false;

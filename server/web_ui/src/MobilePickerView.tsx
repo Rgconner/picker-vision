@@ -245,18 +245,20 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   // ── Gate on correct scan from server WebSocket ───────────────────────────────
   useEffect(() => {
     if (!pickerState || pendingConfirm) return;
+    // Only the next unpicked line on the active order — not any correct detection
+    const activeOrder = orders.find((o) => o.status === 'picking');
+    const nextLine    = activeOrder?.lines.find((l) => l.status !== 'picked' && l.quantity_picked < l.quantity);
+    if (!activeOrder || !nextLine) return;
     const correct = pickerState.detections?.find(
-      (d) => d.status === 'correct' && d.order_id && d.line_id
+      (d) => d.status === 'correct' && d.order_id === activeOrder.id && d.line_id === nextLine.id
     );
     if (!correct) return;
-    // Find the item description from current orders
-    const line = orders.flatMap((o) => o.lines).find((l) => l.id === correct.line_id);
     setPendingConfirm({
-      orderId:    correct.order_id!,
-      lineId:     correct.line_id!,
-      itemName:   line?.product_description ?? correct.value,
-      barcode:    correct.value,
-      stagingCode: correct.staging_code ?? line?.staging_code ?? null,
+      orderId:     correct.order_id!,
+      lineId:      correct.line_id!,
+      itemName:    nextLine.product_description ?? correct.value,
+      barcode:     correct.value,
+      stagingCode: correct.staging_code ?? nextLine.staging_code ?? null,
     });
   }, [pickerState]); // eslint-disable-line react-hooks/exhaustive-deps
 
