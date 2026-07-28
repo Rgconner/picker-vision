@@ -15,7 +15,7 @@
 
 import React, { useEffect } from 'react';
 import { useAuth } from './useAuth';
-import { dmSvg } from './dmSvg';
+import { qrSvg } from './qrSvg';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -88,7 +88,7 @@ function ProductLabel({ barcode, short, size, sizeColour }: typeof PRODUCTS[0]) 
       <div style={{ width: '5pt', height: '5pt', borderRadius: '50%', background: sizeColour, flexShrink: 0 }} />
       <div
         style={{ width: '0.75in', height: '0.75in', flexShrink: 0 }}
-        dangerouslySetInnerHTML={{ __html: dmSvg(barcode, 72) }}
+        dangerouslySetInnerHTML={{ __html: qrSvg(barcode, 72) }}
       />
       <div style={{ fontSize: '4.5pt', fontWeight: 700, fontFamily: 'Courier New, monospace', color: '#161616', textAlign: 'center', lineHeight: 1.2, wordBreak: 'break-all' }}>
         {barcode}
@@ -108,7 +108,7 @@ function StagingLabel({ code, label, accent }: typeof STAGING[0]) {
       </div>
       <div
         style={{ width: '0.65in', height: '0.65in', flexShrink: 0 }}
-        dangerouslySetInnerHTML={{ __html: dmSvg(`STAGING:${code}`, 62) }}
+        dangerouslySetInnerHTML={{ __html: qrSvg(`STAGING:${code}`, 62) }}
       />
       <div style={{ fontSize: '5pt', fontWeight: 700, fontFamily: 'Courier New, monospace', color: accent, letterSpacing: '0.5pt' }}>
         {code}
@@ -125,7 +125,7 @@ function ShelfLabel({ code }: { code: string }) {
       </div>
       <div
         style={{ width: '0.65in', height: '0.65in', flexShrink: 0 }}
-        dangerouslySetInnerHTML={{ __html: dmSvg(`SHELF:${code}`, 62) }}
+        dangerouslySetInnerHTML={{ __html: qrSvg(`SHELF:${code}`, 62) }}
       />
       <div style={{ fontSize: '6pt', fontWeight: 700, fontFamily: 'Courier New, monospace', color: '#161616' }}>
         {code}
