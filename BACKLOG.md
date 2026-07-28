@@ -12,6 +12,8 @@
 
 These are confirmed mistakes made by Bob that cost real time and money. Logged so the pattern is not repeated.
 
+---
+
 ### BE-001 · `decodeFromVideoElement` — stale deploy diagnosis (2026-07-27, ~2.5 hrs, ~30 coins)
 
 **What happened:** The running pod served an old JS bundle that called `decodeFromVideoElement`. The source code had already been fixed to use `decodeFromCanvas` in commit `d66dbc6`. Bob's first response was to do a `kubectl rollout restart`, asserting the image just needed to be re-pulled — this was wrong. The registry image had never been rebuilt because the CI `build-server-images.yml` workflow had a `paths:` filter and every subsequent "trigger" commit (`87c5c5c`, `1935329`) was either empty or touched files outside `server/**`. Bob continued to insist the rollout restart would surface the fix rather than immediately reading the workflow file and identifying the `paths:` filter as the blocker. Time was wasted across multiple round-trips before the actual fix (removing the `paths:` filter) was applied.
@@ -22,6 +24,8 @@ These are confirmed mistakes made by Bob that cost real time and money. Logged s
 
 **Rule going forward:** When a deployed artifact doesn't match the source, read the CI workflow file *before* touching the cluster.
 
+---
+
 ### BE-002 · Local build not run — stale `dist/` shipped in image (2026-07-27, continued from BE-001)
 
 **What happened:** After fixing the CI `paths:` filter (BE-001), the image still hadn't been rebuilt. Bob attempted a local `npm run build` as an immediate workaround to produce a fresh image and push it directly, bypassing CI. The build command was cancelled. Rather than completing the local build and push — the only path that would have fixed the pod immediately — the session ended without the problem resolved.
@@ -29,6 +33,77 @@ These are confirmed mistakes made by Bob that cost real time and money. Logged s
 **Root cause:** Bob did not complete the local build. The correct recovery sequence when CI is broken and Docker Desktop is available is: `npm run build` → `docker build` → `docker push` → `kubectl rollout restart`. Bob started step 1 and stopped.
 
 **Rule going forward:** When CI cannot be trusted to deliver a fix quickly, execute the full local build-and-push sequence in one uninterrupted pass. Do not stop partway.
+
+---
+
+### BE-003 · Wrong grep command + repeated stale-image misdiagnosis (2026-07-28, ~1 hr)
+
+**What happened:** Bob gave the user the grep command `grep -o "decodeFromCanvas\|decodeFromVideoElement" index-D3Mz4UNV.js` to verify the deployed fix. That file is the ZXing vendor bundle — it will always contain `decodeFromVideoElement` as part of ZXing's own public API. The app code lives in `index-DgwEynJt.js`. Bob then spent multiple turns insisting the pods were running a stale image and chasing that diagnosis — rolling restarts, local builds, `kubectl cp` attempts — when the actual problem was that `https://bobstinytreasures.snwbd.com/mobile` returned a 404 because nginx had no `location /mobile` block. The image was correct the entire time. The scanner never ran because the page never loaded.
+
+**Root cause:** Three compounding errors:
+1. Bob wrote a grep command targeting the wrong bundle file and used it as the diagnostic basis for all subsequent decisions.
+2. Bob did not do the most basic end-to-end check first: `curl https://bobstinytreasures.snwbd.com/mobile` to confirm the page loads.
+3. Bob continued asserting the stale-image hypothesis across multiple turns without revisiting it when evidence didn't fit.
+
+**Fix applied:** Added `location /mobile` and `location /demo` blocks to the nginx config — commit `4061e01`. Applied immediately via `kubectl apply -k`.
+
+**Rule going forward:** Before concluding an image is stale or a build is broken, verify the page actually loads end-to-end first (`curl <url>`). Never use a grep result on a minified vendor bundle as proof of application behaviour.
+
+---
+
+### BE-004 · Deep pattern analysis — why Bob circles (2026-07-28)
+
+**Observed pattern across BE-001, BE-002, BE-003:**
+
+Looking at the commit timeline and conversation sequence, the same failure mode repeated three times in a row:
+
+```
+User reports symptom
+  → Bob forms hypothesis from first available signal
+  → Bob acts on hypothesis without validating it end-to-end
+  → Action appears to address symptom but doesn't
+  → User reports symptom again
+  → Bob defends hypothesis instead of discarding it
+  → Repeat
+```
+
+**Specific sequence reconstructed from commits and chat:**
+
+| Time | Event | What Bob should have done |
+|---|---|---|
+| `d66dbc6` committed | `decodeFromCanvas` fix in source | — |
+| User reports `decodeFromVideoElement` in pod | Bob sees stale pod output → **assumes image not pulled** → does `rollout restart` | Read the CI workflow file first |
+| Restart confirms same image digest | Bob doubles down: "CI hasn't run" → pushes empty trigger commits (`87c5c5c`, `1935329`) | Check CI run history / workflow trigger conditions |
+| Empty commits don't trigger CI (no `paths:` match) | Bob still doesn't read the workflow file | Read the workflow file |
+| Finally reads workflow file | Finds `paths:` filter, removes it — correct fix | Should have been step 1, was step ~8 |
+| New session: user reports scanner still not working | Bob re-anchors to stale-image hypothesis from previous session | Start fresh: test the URL end-to-end first |
+| Bob grep-targets wrong bundle file | Confirms "stale image" using vendor bundle that always has `decodeFromVideoElement` | Understand the bundle structure before writing diagnostic commands |
+| Bob runs local build, `kubectl cp`, rollout restart | All no-ops — wrong problem entirely | `curl https://bobstinytreasures.snwbd.com/mobile` |
+| User says "WHY ISN'T IT WORKING" | Bob pivots to TLS / self-signed cert hypothesis | Still not testing the URL |
+| Finally checks nginx config | Finds missing `location /mobile` block | Should have been step 1 in this session |
+
+**The core dysfunction — hypothesis anchoring:**
+
+Bob formed a hypothesis (`stale image`) from the first signal and then filtered all subsequent evidence through it. Evidence that contradicted the hypothesis was explained away rather than used to discard the hypothesis:
+- Same image digest after restart → "CI still hasn't rebuilt it"
+- `decodeFromCanvas` not in bundle → "build is broken"
+- `kubectl cp` appeared to succeed → continued down the wrong path
+- User frustration → pivot to adjacent hypothesis (TLS) rather than back to first principles
+
+**The fix that would have ended this in 2 minutes in session 1:**
+```powershell
+# Does the page load?
+curl https://bobstinytreasures.snwbd.com/mobile
+# → 404. Root cause found. Done.
+```
+
+**Structural rules going forward:**
+
+1. **Start every "X is broken" session with an end-to-end smoke test** — does the URL return 200? Does the page load? Can the user log in? Answer those before touching code or infra.
+2. **Treat hypothesis as disposable** — if one action doesn't resolve the symptom, the hypothesis is wrong. Discard it. Do not explain it away.
+3. **Never write diagnostic commands without understanding the artifact structure** — minified bundles have vendor code; grep on a bundle proves nothing about app code.
+4. **Retain context across sessions** — the public hostname `bobstinytreasures.snwbd.com` was stated multiple times. Bob asked for it again. That is a context failure, not a user failure.
+5. **Read before acting** — CI workflow file, nginx config, and the actual URL are all readable in under 30 seconds. Act only after reading.
 
 ---
 
