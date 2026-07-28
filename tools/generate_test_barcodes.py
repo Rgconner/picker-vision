@@ -45,6 +45,19 @@ PRODUCTS = [
     {"barcode": "WH-00010", "description": "Item J - Premium"},
 ]
 
+# Bob's Tiny Treasures products — these use QR codes (not Code 128)
+BTT_PRODUCTS = [
+    {"barcode": "BTT-00101", "description": "Goblin Gem (S)"},
+    {"barcode": "BTT-00102", "description": "Sapphire Sprite (S)"},
+    {"barcode": "BTT-00103", "description": "Rascal Ruby (S)"},
+    {"barcode": "BTT-00201", "description": "Purple Prism (M)"},
+    {"barcode": "BTT-00202", "description": "Trickster Token (M)"},
+    {"barcode": "BTT-00203", "description": "Captain's Cube (M)"},
+    {"barcode": "BTT-00301", "description": "Magenta Monolith (L)"},
+    {"barcode": "BTT-00302", "description": "White Whopper (L)"},
+    {"barcode": "BTT-00303", "description": "Diamond Dynamo (L)"},
+]
+
 STAGING_QR = [
     {"payload": "STAGING:ALPH", "code": "ALPH", "label": "Alpha Bay 1 (Area)"},
     {"payload": "STAGING:BETA", "code": "BETA", "label": "Beta Bay 2 (Area)"},
@@ -239,6 +252,37 @@ def build_pdf(output_path: str) -> None:
         ("GRID",          (0, 0), (-1, -1), 0.5, colors.lightgrey),
     ]))
     story.append(qr_table)
+
+    # ── BTT Product QR section ─────────────────────────────────────────────────
+    story.append(Spacer(1, 6 * mm))
+    story.append(Paragraph("Bob's Tiny Treasures — Product QR Codes (2 inch)", section_style))
+
+    btt_qr_size = 50.8 * mm   # 2 inches — matches printed label size
+    btt_cells = []
+    for prod in BTT_PRODUCTS:
+        qr_image = _make_qr_image(prod["barcode"], btt_qr_size)
+        btt_cells.append([
+            qr_image,
+            Paragraph(f"<b>{prod['barcode']}</b>", caption_style),
+            Paragraph(prod["description"], caption_style),
+        ])
+
+    # 4 columns — 9 products = 3 rows × 3 + 1 empty
+    btt_col_w = usable_w / 4
+    btt_rows = [btt_cells[i:i + 4] for i in range(0, len(btt_cells), 4)]
+    if len(btt_rows[-1]) < 4:
+        btt_rows[-1] += [""] * (4 - len(btt_rows[-1]))
+    btt_table = Table(btt_rows, colWidths=[btt_col_w] * 4)
+    btt_table.setStyle(TableStyle([
+        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+        ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
+        ("TOPPADDING",    (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 4),
+        ("GRID",          (0, 0), (-1, -1), 0.5, colors.lightgrey),
+    ]))
+    story.append(btt_table)
 
     # ── Footer ─────────────────────────────────────────────────────────────────
     story.append(Spacer(1, 8 * mm))
