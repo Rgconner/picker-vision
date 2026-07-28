@@ -127,6 +127,24 @@ That shows exactly which bundle the phone will load. Compare to what's in the po
 
 ---
 
+### QOL-009 · Physical nav card for picker confirmation not yet built
+**Symptom:** Physical-demo scenario requires a laminated card with `NAV:CONFIRM` / `NAV:SKIP` / `NAV:BACK` / `NAV:HELP` QR codes in the corners. Picker scans a corner to confirm a pick instead of tapping a screen button. Currently not built.
+**Manual workaround:** Use web-demo scenario (on-screen button) for all demos including in-person.
+**Proper fix:** Add a "Nav Card" page to `tools/generate_test_barcodes.py` — A4 landscape, 4 corners each with a 1.5-inch QR (`NAV:CONFIRM` top-right, `NAV:SKIP` top-left, `NAV:BACK` bottom-left, `NAV:HELP` bottom-right), centred label. Scanner already handles `NAV:*` prefix as control events — card is purely a print artefact.
+**Recurrence count:** 0 (planned feature, not yet a blocker). **Open.**
+**Effort:** XS (tooling only — scanner support is already in the codebase)
+
+---
+
+### QOL-010 · Stale demo orders accumulate in DB across sessions
+**Symptom:** Every `POST /demo/start` creates new `picking` orders in SQLite and never cleans up old ones. After several sessions, 20+ stale orders are all visible to the event-processor. Any barcode scan matches multiple orders simultaneously — different pods return different matches, causing supervisor and mobile to show different items.
+**Manual workaround applied:** `kubectl exec` into order-service pod, ran Python script to `DELETE FROM orders WHERE reference LIKE 'DEMO-%'`. Required every session.
+**Proper fix:** `_create_demo_order` should mark any previous `picking` orders for the same picker_id/session as `cancelled` before creating the new one. Alternatively, `POST /demo/start` cancels all existing `picking` demo orders for that picker before creating the first order of the new session.
+**Recurrence count:** 2 sessions. **Open.**
+**Effort:** S
+
+---
+
 ### QOL-007 · Debug snapshot only posts when `?debug=1` — no passive diagnostics
 **Symptom:** Without `?debug=1` in the URL, there is no way to see what the camera sees remotely. Users don't know to add it.
 **Manual workaround applied:** Told user to reload with `?debug=1`.

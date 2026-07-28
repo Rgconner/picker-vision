@@ -437,7 +437,8 @@ async def update_workflow_config(request: Request):
         if not row:
             row = _WorkflowConfig(); s.add(row)
         for k in ("batch_mode", "validation_threshold", "voice_enabled_default",
-                  "haptic_enabled_default", "mid_pick_validate_after", "instance_profile"):
+                  "haptic_enabled_default", "mid_pick_validate_after", "instance_profile",
+                  "demo_scenario"):
             if k in body:
                 setattr(row, k, body[k])
         s.commit()
@@ -1084,6 +1085,16 @@ def demo_start(req: _DemoStartRequest):
         else:
             raise HTTPException(status_code=400, detail="mode must be 'personal' or 'presentation'")
 
+        # QOL-010: cancel any stale picking demo orders for this picker before
+        # creating the first order of the new session — prevents scan ambiguity.
+        stale = db.query(Order).filter(
+            Order.status == "picking",
+            Order.customer.like("Demo (%)")
+        ).all()
+        for o in stale:
+            o.status = "cancelled"
+        db.commit()
+
         session_id = str(uuid.uuid4())[:8]
         session_data: dict = {
             "session_id":          session_id,
@@ -1124,3 +1135,33 @@ def demo_stop(req: _DemoStopRequest):
         for sid, s in list(_demo_sessions.items()):
             if s["picker_id"] == _PRESENTATION_PICKER_ID:
                 del _demo_sessions[sid]
+
+
+@app.post("/demo/advance", tags=["demo"])
+def demo_advance(body: dict):
+    """Called by the mobile client after it writes a confirm-pick and detects
+    all lines are now picked.  Advances the demo session to the next order.
+
+    Body: {"order_id": str, "picker_id": str}
+    Returns the new current_order_id, or {} if session not found / cap reached.
+    """
+    order_id  = body.get("order_id")
+    picker_id = body.get("picker_id")
+    if not order_id or not picker_id:
+        raise HTTPException(status_code=400, detail="order_id and picker_id required")
+
+    db = _SessionLocal()
+    try:
+        for sid, s in list(_demo_sessions.items()):
+            if s.get("current_order_id") != order_id:
+                continue
+            s["orders_completed"] += 1
+            if s["orders_completed"] >= _DEMO_MAX_ORDERS:
+                del _demo_sessions[sid]
+                return {"done": True, "orders_completed": s["orders_completed"]}
+            new_order_id = _create_demo_order(s, db)
+            s["current_order_id"] = new_order_id
+            return {"current_order_id": new_order_id, "orders_completed": s["orders_completed"]}
+        return {}  # session not found for this order_id
+    finally:
+        db.close()

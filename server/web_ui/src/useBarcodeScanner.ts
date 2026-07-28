@@ -23,8 +23,9 @@ import { remoteLog } from './useRemoteLogger';
 export interface ScanResult {
   value: string;
   symbology: string;
-  type: 'product' | 'staging';
+  type: 'product' | 'staging' | 'nav';
   stagingCode: string | null;
+  navAction: string | null;   // e.g. 'CONFIRM' | 'SKIP' | 'BACK' | 'HELP'
   bbox: { x: number; y: number; w: number; h: number } | null;
   corners: { x: number; y: number }[] | null;
 }
@@ -92,28 +93,34 @@ const ZXING_FMT_NAMES: Record<number, string> = {
   2: 'ean_8', 3: 'ean_13', 4: 'code_128', 11: 'qr_code',
 };
 
+function classifyValue(raw: string): Pick<ScanResult, 'type' | 'stagingCode' | 'navAction'> {
+  if (raw.startsWith('NAV:')) {
+    return { type: 'nav', stagingCode: null, navAction: raw.slice(4).toUpperCase() };
+  }
+  if (raw.startsWith('STAGING:')) {
+    return { type: 'staging', stagingCode: raw.slice(8, 12).toUpperCase(), navAction: null };
+  }
+  return { type: 'product', stagingCode: null, navAction: null };
+}
+
 function nativeToScanResult(b: NativeBarcode): ScanResult {
-  const isStaging = b.rawValue.startsWith('STAGING:');
   const bb = b.boundingBox;
   return {
-    value:       b.rawValue,
-    symbology:   b.format,
-    type:        isStaging ? 'staging' : 'product',
-    stagingCode: isStaging ? b.rawValue.slice(8, 12).toUpperCase() : null,
-    bbox:        bb ? { x: Math.round(bb.x), y: Math.round(bb.y), w: Math.round(bb.width), h: Math.round(bb.height) } : null,
-    corners:     b.cornerPoints?.map((p) => ({ x: p.x, y: p.y })) ?? null,
+    value:     b.rawValue,
+    symbology: b.format,
+    ...classifyValue(b.rawValue),
+    bbox:    bb ? { x: Math.round(bb.x), y: Math.round(bb.y), w: Math.round(bb.width), h: Math.round(bb.height) } : null,
+    corners: b.cornerPoints?.map((p) => ({ x: p.x, y: p.y })) ?? null,
   };
 }
 
 function zxingToScanResult(text: string, formatNum: number): ScanResult {
-  const isStaging = text.startsWith('STAGING:');
   return {
-    value:       text,
-    symbology:   ZXING_FMT_NAMES[formatNum] ?? `format_${formatNum}`,
-    type:        isStaging ? 'staging' : 'product',
-    stagingCode: isStaging ? text.slice(8, 12).toUpperCase() : null,
-    bbox:        null,
-    corners:     null,
+    value:     text,
+    symbology: ZXING_FMT_NAMES[formatNum] ?? `format_${formatNum}`,
+    ...classifyValue(text),
+    bbox:    null,
+    corners: null,
   };
 }
 

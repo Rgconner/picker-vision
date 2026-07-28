@@ -20,6 +20,7 @@ export interface MobilePickerSessionState {
   lastScan: ScanResult | null;
   publish: (scan: ScanResult) => void;
   sendAction: (action: 'start' | 'stop' | 'validate') => void;
+  confirmPick: (orderId: string, lineId: string) => Promise<boolean>;
 }
 
 export function useMobilePickerSession(pickerId: string | null): MobilePickerSessionState {
@@ -218,6 +219,7 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
         active:       true,
       });
 
+      // NAV scans are control events — never sent to the server as detections
       const detections      = scans.filter((s) => s.type === 'product').map(toDetection);
       const staging_regions = scans
         .filter((s) => s.type === 'staging')
@@ -250,6 +252,15 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
 
   // ── Control actions (start / stop / validate) ─────────────────────────────
 
+  const confirmPick = useCallback(async (orderId: string, lineId: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}/lines/${lineId}`, { method: 'PATCH' });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }, []);
+
   const sendAction = useCallback((action: 'start' | 'stop' | 'validate') => {
     if (!pickerIdRef.current) return;
 
@@ -275,5 +286,5 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
     }
   }, [pickerState]);
 
-  return { connected, pickerState, validationResult, lastScan, publish, sendAction };
+  return { connected, pickerState, validationResult, lastScan, publish, sendAction, confirmPick };
 }

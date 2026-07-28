@@ -51,6 +51,26 @@ export function DemoControls({ auth }: Props) {
   const [starting, setStarting]       = useState(false);
   const [stopping, setStopping]       = useState(false);
   const [restarting, setRestarting]   = useState(false);
+  const [scenario, setScenario]       = useState<'web-demo' | 'physical-demo'>('web-demo');
+
+  // Load + persist scenario from workflow-config
+  useEffect(() => {
+    fetch('/api/workflow-config')
+      .then((r) => r.ok ? r.json() : null)
+      .then((cfg) => { if (cfg?.demo_scenario) setScenario(cfg.demo_scenario); })
+      .catch(() => {});
+  }, []);
+
+  async function applyScenario(s: 'web-demo' | 'physical-demo') {
+    setScenario(s);
+    try {
+      await fetch('/api/workflow-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ demo_scenario: s }),
+      });
+    } catch { /* ignore */ }
+  }
 
   const isGuest = auth.user?.role === 'guest';
   const isSupervisor = auth.user?.role === 'supervisor';
@@ -176,14 +196,38 @@ export function DemoControls({ auth }: Props) {
   if (!activeSession) {
     return (
       <div
-        className="flex items-center gap-4 px-4 py-3 border-b border-[#2d3142] flex-wrap"
+        className="flex flex-col gap-3 px-4 py-3 border-b border-[#2d3142]"
         style={{ background: '#12151f' }}
       >
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#57606a]" />
-          <span className="text-[#57606a] text-sm">No demo running</span>
+        {/* Scenario selector */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[#57606a] text-xs font-semibold uppercase tracking-wider">
+            Demo scenario
+          </span>
+          {([
+            { id: 'web-demo',      label: 'Web Demo',      desc: 'On-screen ✓ button',   color: '#be95ff', border: '#6929c4' },
+            { id: 'physical-demo', label: 'Physical Demo',  desc: 'Nav card scan',         color: '#f1c21b', border: '#a07800' },
+          ] as const).map((s) => (
+            <button
+              key={s.id}
+              onClick={() => canControl && applyScenario(s.id)}
+              disabled={!canControl}
+              title={isGuest ? 'Sign in as supervisor to change scenario' : s.desc}
+              className="flex flex-col items-start px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                borderColor: scenario === s.id ? s.border : '#2d3142',
+                color:        scenario === s.id ? s.color  : '#57606a',
+                background:   scenario === s.id ? `${s.border}22` : 'transparent',
+              }}
+            >
+              <span>{scenario === s.id ? '● ' : '○ '}{s.label}</span>
+              <span className="font-normal opacity-70">{s.desc}</span>
+            </button>
+          ))}
         </div>
-        <div className="flex gap-2 ml-auto">
+
+        {/* Start buttons */}
+        <div className="flex gap-2">
           <button
             onClick={startPersonal}
             disabled={!canControl || starting}
@@ -191,7 +235,7 @@ export function DemoControls({ auth }: Props) {
             className="px-3 py-1.5 rounded-md text-xs font-semibold border transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             style={{ borderColor: '#6929c4', color: '#be95ff', background: 'transparent' }}
           >
-            {starting ? 'Starting…' : '▶ Start Demo (Personal)'}
+            {starting ? 'Starting…' : '▶ Personal'}
           </button>
           <button
             onClick={startPresentation}
@@ -200,7 +244,7 @@ export function DemoControls({ auth }: Props) {
             className="px-3 py-1.5 rounded-md text-xs font-semibold border transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             style={{ borderColor: '#00b4d8', color: '#67e8f9', background: 'transparent' }}
           >
-            {starting ? 'Starting…' : '▶ Start Demo (Presentation)'}
+            {starting ? 'Starting…' : '▶ Presentation'}
           </button>
         </div>
       </div>
@@ -218,6 +262,12 @@ export function DemoControls({ auth }: Props) {
         <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />
         <span className="text-[#22c55e] text-xs font-semibold uppercase tracking-wider">
           Demo running
+        </span>
+        <span
+          className="text-[#57606a] text-xs px-1.5 py-0.5 rounded border"
+          style={{ borderColor: scenario === 'physical-demo' ? '#a07800' : '#6929c4', color: scenario === 'physical-demo' ? '#f1c21b' : '#be95ff' }}
+        >
+          {scenario === 'physical-demo' ? 'Physical' : 'Web'}
         </span>
         <span className="text-[#57606a] text-xs">
           {activeSession.mode === 'presentation' ? 'Presentation' : `Personal · ${activeSession.picker_id}`}

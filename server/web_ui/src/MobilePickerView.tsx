@@ -40,6 +40,7 @@ import { MobileCameraView } from './MobileCameraView';
 import { MobilePickList } from './MobilePickList';
 import { MobileControls } from './MobileControls';
 import { useDebugSnapshot } from './useDebugSnapshot';
+import { ConfirmOverlay } from './ConfirmOverlay';
 
 // ── Next-item banner — shown above camera in the new scan-from-screen workflow ─
 function NextItemBanner({ orders }: { orders: Order[] }) {
@@ -151,6 +152,19 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   const [orders, setOrders]       = useState<Order[]>([]);
   const [localValidation, setLocalValidation] = useState<ReturnType<typeof useMobilePickerSession>['validationResult']>(null);
 
+  // ── Demo scenario ────────────────────────────────────────────────────────
+  const [demoScenario, setDemoScenario] = useState<'web-demo' | 'physical-demo'>('web-demo');
+  useEffect(() => {
+    fetch('/api/workflow-config')
+      .then((r) => r.ok ? r.json() : null)
+      .then((cfg) => { if (cfg?.demo_scenario) setDemoScenario(cfg.demo_scenario); })
+      .catch(() => {});
+  }, []);
+
+  // ── Confirm overlay state ────────────────────────────────────────────────
+  interface PendingConfirm { orderId: string; lineId: string; itemName: string; barcode: string; stagingCode: string | null; }
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
+
   const videoRef    = useRef<HTMLVideoElement>(null);
   const canvasRef   = useRef<HTMLCanvasElement>(null);
   const isLandscape = useIsLandscape();
@@ -171,7 +185,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   const camera = useMobileCamera();
 
   // ── Server session ──────────────────────────────────────────────────────────
-  const { connected, pickerState, validationResult, lastScan, publish, sendAction } =
+  const { connected, pickerState, validationResult, lastScan, publish, sendAction, confirmPick } =
     useMobilePickerSession(pickerId || null);
 
   useEffect(() => {
@@ -181,8 +195,30 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   // ── Barcode scanning ────────────────────────────────────────────────────────
   const handleDetect = useCallback((result: ScanResult) => {
     if (!scanning) return;
+
+    // NAV:CONFIRM while confirm overlay is showing — trigger confirm
+    if (result.type === 'nav' && result.navAction === 'CONFIRM' && pendingConfirm) {
+      handleConfirm();
+      return;
+    }
+    // NAV:SKIP while confirm overlay is showing — skip this item
+    if (result.type === 'nav' && result.navAction === 'SKIP' && pendingConfirm) {
+      setPendingConfirm(null);
+      return;
+    }
+    // Ignore all scans while confirm overlay is open
+    if (pendingConfirm) return;
+    // Ignore NAV scans when no overlay is showing
+    if (result.type === 'nav') return;
+
     publish(result);
-  }, [scanning, publish]);
+
+    // After a correct scan arrives via WebSocket, the pickerState will update.
+    // We detect the correct-scan gate here by checking the enriched detections
+    // from pickerState — but pickerState updates asynchronously. Instead, we
+    // rely on the server pushing the enriched state via WS, then gate in the
+    // pickerState effect below.
+  }, [scanning, publish, pendingConfirm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { unsupported: scannerUnsupported } =
     useBarcodeScanner(videoRef as React.RefObject<HTMLVideoElement | null>, scanning, handleDetect);
@@ -205,6 +241,50 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     }
     fetchOrders();
   }, [pickerState]);
+
+  // ── Gate on correct scan from server WebSocket ───────────────────────────────
+  useEffect(() => {
+    if (!pickerState || pendingConfirm) return;
+    const correct = pickerState.detections?.find(
+      (d: { status: string; order_id: string | null; line_id: string | null; value: string; staging_code: string | null }) =>
+        d.status === 'correct' && d.order_id && d.line_id
+    );
+    if (!correct) return;
+    // Find the item description from current orders
+    const line = orders.flatMap((o) => o.lines).find((l) => l.id === correct.line_id);
+    setPendingConfirm({
+      orderId:    correct.order_id!,
+      lineId:     correct.line_id!,
+      itemName:   line?.product_description ?? correct.value,
+      barcode:    correct.value,
+      stagingCode: correct.staging_code ?? line?.staging_code ?? null,
+    });
+  }, [pickerState]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleConfirm = useCallback(async () => {
+    if (!pendingConfirm) return;
+    const { orderId, lineId } = pendingConfirm;
+    setPendingConfirm(null);
+
+    await confirmPick(orderId, lineId);
+
+    // Check if all lines are now picked — if so, advance the demo session
+    try {
+      const res = await fetch(`/api/orders/${orderId}`);
+      if (res.ok) {
+        const order: Order = await res.json();
+        const allPicked = order.lines.every((l) => l.status === 'picked' || l.quantity_picked >= l.quantity);
+        if (allPicked) {
+          await fetch('/api/demo/advance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: orderId, picker_id: pickerId }),
+          });
+        }
+        setOrders((prev) => prev.map((o) => o.id === orderId ? order : o));
+      }
+    } catch { /* ignore */ }
+  }, [pendingConfirm, confirmPick, pickerId]);
 
   // ── Confirm packed ──────────────────────────────────────────────────────────
   const handleConfirmPacked = useCallback(async (orderId: string) => {
@@ -362,6 +442,16 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   if (isLandscape) {
     return (
       <div className="flex overflow-hidden bg-[#0f1117] text-[#e2e8f0]" style={{ height: '100dvh' }}>
+        {pendingConfirm && (
+          <ConfirmOverlay
+            scenario={demoScenario}
+            itemName={pendingConfirm.itemName}
+            barcode={pendingConfirm.barcode}
+            stagingCode={pendingConfirm.stagingCode}
+            onConfirm={handleConfirm}
+            onSkip={() => setPendingConfirm(null)}
+          />
+        )}
 
         {/* Left column — camera + controls (55 %) */}
         <div className="flex flex-col overflow-hidden border-r border-[#2d3142]" style={{ width: '55%' }}>
@@ -395,6 +485,16 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
       className="flex flex-col overflow-hidden bg-[#0f1117] text-[#e2e8f0]"
       style={{ height: '100dvh', paddingBottom: 'env(safe-area-inset-bottom, 0px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
+      {pendingConfirm && (
+        <ConfirmOverlay
+          scenario={demoScenario}
+          itemName={pendingConfirm.itemName}
+          barcode={pendingConfirm.barcode}
+          stagingCode={pendingConfirm.stagingCode}
+          onConfirm={handleConfirm}
+          onSkip={() => setPendingConfirm(null)}
+        />
+      )}
       {header}
       {scannerWarning}
       {joinBanner}
