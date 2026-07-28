@@ -145,6 +145,29 @@ That shows exactly which bundle the phone will load. Compare to what's in the po
 
 ---
 
+### QOL-011 · Demo session out-of-sync when picker re-registers under a different name
+
+**Symptom:** Supervisor shows order N, Samsung shows order N+1 (or a different order entirely). Scan events arrive with picker_id `Bob (Owner)-2` but the demo session is bound to `Bob (Owner)` — different WS channel, different state feed. The `-2` suffix appears when the phone registers a second time without clearing its prior registration, creating a ghost picker.
+
+**Observed today:** Supervisor said "201", Samsung said "301". `/pickers` showed `demo-presenter` (offline) + `Bob (Owner)-2` (online) while demo session was for `Bob (Owner)`.
+
+**Root causes (three compounding):**
+1. **Duplicate picker registration** — `POST /pickers/register` returns 409 only when `device_id` mismatches. Same device registering twice with a new `picker_id` gets silently accepted, producing `Bob (Owner)` then `Bob (Owner)-2`.
+2. **Demo session bound to picker_id at start time** — `POST /demo/start` captures `picker_id` and never updates it. If the phone reconnects under any other picker_id, the WS channel diverges.
+3. **No rejoin reconciliation** — when a picker registers, there is no check for an existing active demo session for that `device_id`. The phone gets no indication it should re-bind to the live session.
+
+**Manual workaround applied:** Hit ⟳ Restart Demo on supervisor to re-sync (stops + restarts session for the currently-registered picker_id).
+
+**Proper fix (three parts):**
+1. **Deduplicate by device_id on register** — if `device_id` matches an existing picker, return the *existing* picker_id instead of registering a new one. The phone then connects on the canonical ID.
+2. **Session follow-the-picker** — `POST /pickers/register` response includes `active_demo_session` if one exists for that device_id, so the app can immediately subscribe to the right WS channel.
+3. **Or: demo sessions keyed on device_id not picker_id** — demo session lookup by `device_id` at registration time → always reconnects to the right session regardless of what name the phone picked.
+
+**Recurrence count:** 2 sessions. **Open.**
+**Effort:** M
+
+---
+
 ### QOL-007 · Debug snapshot only posts when `?debug=1` — no passive diagnostics
 **Symptom:** Without `?debug=1` in the URL, there is no way to see what the camera sees remotely. Users don't know to add it.
 **Manual workaround applied:** Told user to reload with `?debug=1`.
