@@ -246,8 +246,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   useEffect(() => {
     if (!pickerState || pendingConfirm) return;
     const correct = pickerState.detections?.find(
-      (d: { status: string; order_id: string | null; line_id: string | null; value: string; staging_code: string | null }) =>
-        d.status === 'correct' && d.order_id && d.line_id
+      (d) => d.status === 'correct' && d.order_id && d.line_id
     );
     if (!correct) return;
     // Find the item description from current orders

@@ -76,8 +76,9 @@ export function MobileLiteView({ pickerId, onChangeId }: Props) {
       symbology: 'manual',
       type:        isStaging ? 'staging' : 'product',
       stagingCode: isStaging ? value.slice(8, 12).toUpperCase() : null,
-      bbox:    null,
-      corners: null,
+      navAction:   null,
+      bbox:        null,
+      corners:     null,
     };
     publish(scan);
     setInputValue('');
