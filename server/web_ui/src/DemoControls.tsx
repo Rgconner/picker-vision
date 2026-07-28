@@ -80,7 +80,7 @@ export function DemoControls({ auth }: Props) {
   }
 
   const isGuest = auth.user?.role === 'guest';
-  const isSupervisor = auth.user?.role === 'supervisor' || auth.user?.role === 'owner';
+  const isSupervisor = auth.user?.role === 'supervisor';
   const canControl = isSupervisor;  // guests and unauthenticated cannot start/stop
 
   // Poll demo status + pickers every 3 s
