@@ -65,12 +65,14 @@ export function useMobileCamera(): MobileCameraState {
     setReady(false);
     setError(null);
 
+    const ua       = navigator.userAgent;
+    const platform = `${ua.substring(0, 120)}`;
+    console.info('[Camera] openCamera called — UA:', platform);
+
     if (!navigator.mediaDevices?.getUserMedia) {
-      setError(
-        'Camera unavailable: this page must be served over HTTPS. ' +
-        'Ask your administrator to enable TLS on the web-ui service, ' +
-        'or open the site via https://.'
-      );
+      const msg = 'Camera unavailable — page must be served over HTTPS (getUserMedia not available).';
+      console.warn('[Camera] getUserMedia missing. UA:', platform);
+      setError(msg);
       return;
     }
 
@@ -78,37 +80,56 @@ export function useMobileCamera(): MobileCameraState {
       let targetDeviceId = deviceId;
 
       // If no explicit deviceId, enumerate to find the rear camera by label.
-      // This avoids Android returning a low-res default stream when using
-      // facingMode alone — selecting by deviceId gets the full-res rear sensor.
+      // Samsung Android Chrome sometimes returns a black stream with deviceId:{exact}
+      // after a failed probe — fall back to facingMode if the probe stream is null.
       if (!targetDeviceId) {
         // First open a minimal stream to unlock device labels
-        const probe = await navigator.mediaDevices.getUserMedia({ video: true }).catch(() => null);
-        if (probe) probe.getTracks().forEach((t) => t.stop());
+        const probe = await navigator.mediaDevices.getUserMedia({ video: true }).catch((e) => {
+          console.warn('[Camera] probe getUserMedia failed:', e);
+          return null;
+        });
+        if (probe) {
+          probe.getTracks().forEach((t) => t.stop());
+        } else {
+          console.warn('[Camera] probe returned null — skipping deviceId enumeration, using facingMode fallback');
+        }
 
         const all = await enumerateDevices();
-        const rear = all.find((d) => /back|rear|environment/i.test(d.label))
-                  ?? all[all.length - 1]; // Android puts rear camera last
+        console.info('[Camera] enumerated devices:', all.map((d) => `${d.label}(${d.deviceId.slice(0,8)})`).join(', ') || 'none');
+
+        // Only use deviceId:exact if probe succeeded AND we found a rear camera.
+        // On Samsung, probe failure means labels are empty and exact deviceId gives black frames.
+        const rear = probe
+          ? (all.find((d) => /back|rear|environment/i.test(d.label)) ?? all[all.length - 1])
+          : null;
         targetDeviceId = rear?.deviceId ?? null;
+        console.info('[Camera] selected targetDeviceId:', targetDeviceId?.slice(0, 8) ?? 'null (using facingMode)');
       }
 
       const constraints: MediaStreamConstraints = targetDeviceId
-        ? { video: { deviceId: { exact: targetDeviceId }, width: { ideal: 1920, min: 1280 }, height: { ideal: 1080, min: 720 } } }
-        : { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920, min: 1280 }, height: { ideal: 1080, min: 720 } } };
+        ? { video: { deviceId: { exact: targetDeviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } } }
+        : { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } };
 
+      console.info('[Camera] requesting stream with constraints:', JSON.stringify(constraints));
       const s = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = s;
       setStream(s);
 
       const track    = s.getVideoTracks()[0];
       const settings = track?.getSettings?.() ?? {};
-      setFacing((settings as MediaTrackSettings & { facingMode?: string }).facingMode ?? 'environment');
-      setActiveDeviceId((settings as MediaTrackSettings & { deviceId?: string }).deviceId ?? targetDeviceId ?? null);
+      const resolvedFacing = (settings as MediaTrackSettings & { facingMode?: string }).facingMode ?? 'environment';
+      const resolvedDevice = (settings as MediaTrackSettings & { deviceId?: string }).deviceId ?? targetDeviceId ?? null;
+      console.info('[Camera] stream ready — facing:', resolvedFacing, 'deviceId:', resolvedDevice?.slice(0,8), 'width:', (settings as MediaTrackSettings).width, 'height:', (settings as MediaTrackSettings).height);
+
+      setFacing(resolvedFacing);
+      setActiveDeviceId(resolvedDevice);
 
       const devs = await enumerateDevices();
       setDevices(devs);
       setReady(true);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+      console.error('[Camera] getUserMedia failed:', msg, '— UA:', platform);
       setError(`Camera error: ${msg}`);
       setReady(false);
     }

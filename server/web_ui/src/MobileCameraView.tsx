@@ -72,7 +72,11 @@ export function MobileCameraView({
     if (!video) return;
     if (stream) {
       video.srcObject = stream;
-      video.play().catch(() => {/* autoplay policy — user gesture required */});
+      // play() may be blocked by autoplay policy until a user gesture occurs.
+      // We attempt it here and also re-attempt on the 'canplay' event.
+      const attempt = () => video.play().catch(() => {});
+      video.addEventListener('canplay', attempt, { once: true });
+      attempt();
     } else {
       video.srcObject = null;
     }

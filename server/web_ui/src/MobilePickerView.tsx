@@ -219,6 +219,11 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   function handleStartStop(active: boolean) {
     setScanning(active);
     sendAction(active ? 'start' : 'stop');
+    // Re-attempt video play on Start — provides the user gesture iOS requires
+    // to unblock autoplay even when the stream is already attached.
+    if (active && videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
   }
 
   const detections     = pickerState?.detections     ?? [];
