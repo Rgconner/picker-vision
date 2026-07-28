@@ -9,6 +9,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
+import { remoteLog } from './useRemoteLogger';
 
 export interface ScanResult {
   value: string;
@@ -67,8 +68,11 @@ async function getReader(): Promise<ZXingReader | null> {
     hints.set(zxing.DecodeHintType.TRY_HARDER, true);
     _reader = new zxing.BrowserMultiFormatReader(hints) as unknown as ZXingReader;
     console.info('[Scanner] ZXing BrowserMultiFormatReader ready');
+    remoteLog('info', '[Scanner] ZXing ready');
   } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
     console.warn('[Scanner] ZXing load failed:', e);
+    remoteLog('error', `[Scanner] ZXing load failed: ${msg}`);
   }
   _readerLoading = false;
   _readerCallbacks.forEach((cb) => cb());
@@ -105,13 +109,24 @@ export function useBarcodeScanner(
     if (!scanning || !engineReady) return;
 
     const canvas = document.createElement('canvas');
-    let active   = true;
+    let active    = true;
     let timer: ReturnType<typeof setTimeout>;
+    let tickCount = 0;
+
+    remoteLog('info', '[Scanner] scan loop started');
 
     async function tick() {
       if (!active) return;
       const video  = videoRef.current;
       const reader = await getReader();
+
+      // Log first tick and every 50 ticks so we know the loop is alive
+      tickCount++;
+      if (tickCount === 1 || tickCount % 50 === 0) {
+        const vstate = video ? `readyState:${video.readyState} ${video.videoWidth}x${video.videoHeight}` : 'no video';
+        remoteLog('info', `[Scanner] tick #${tickCount} — ${vstate}`);
+      }
+
       if (video && reader && video.readyState >= 2 && video.videoWidth > 0) {
         canvas.width  = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -126,6 +141,7 @@ export function useBarcodeScanner(
             if (text && (text !== lastValueRef.current || now - lastTimeRef.current > DEBOUNCE_MS)) {
               lastValueRef.current = text;
               lastTimeRef.current  = now;
+              remoteLog('info', `[Scanner] decoded: ${text} (fmt:${fmt})`);
               onDetectRef.current(toScanResult(text, fmt));
             }
           } catch {
@@ -140,6 +156,7 @@ export function useBarcodeScanner(
     return () => {
       active = false;
       clearTimeout(timer);
+      remoteLog('info', `[Scanner] scan loop stopped after ${tickCount} ticks`);
     };
   }, [scanning, engineReady, videoRef]);
 
