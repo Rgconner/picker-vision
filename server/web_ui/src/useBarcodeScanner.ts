@@ -5,6 +5,15 @@
  *   1. Native BarcodeDetector API (Chrome Android — GPU-accelerated, ML Kit)
  *   2. ZXing-js canvas fallback (works everywhere: Firefox, Safari, Vuzix)
  *
+ * Supported formats (deliberate narrow scope):
+ *   - qr_code   — all picker-vision controlled labels (staging codes, printed products)
+ *   - ean_13    — retail products off the shelf we don't control
+ *   - ean_8     — short-form retail EAN
+ *   - code_128  — warehouse / shipping labels we don't control
+ *
+ * Dropped: data_matrix (Samsung BarcodeDetector doesn't support it; no BTT use case),
+ *          code_39, pdf_417 (no use case — adds detection noise).
+ *
  * The caller controls scanning via the `scanning` flag.
  */
 
@@ -57,12 +66,10 @@ async function getZXingReader(): Promise<ZXingReader | null> {
     const zxing = await import('@zxing/library');
     const hints = new Map();
     hints.set(zxing.DecodeHintType.POSSIBLE_FORMATS, [
-      zxing.BarcodeFormat.DATA_MATRIX,
       zxing.BarcodeFormat.QR_CODE,
       zxing.BarcodeFormat.CODE_128,
       zxing.BarcodeFormat.EAN_13,
       zxing.BarcodeFormat.EAN_8,
-      zxing.BarcodeFormat.CODE_39,
     ]);
     hints.set(zxing.DecodeHintType.TRY_HARDER, true);
     _zxingReader = new zxing.BrowserMultiFormatReader(hints) as unknown as ZXingReader;
@@ -82,8 +89,7 @@ async function getZXingReader(): Promise<ZXingReader | null> {
 // ── Result converters ────────────────────────────────────────────────────────
 
 const ZXING_FMT_NAMES: Record<number, string> = {
-  1: 'aztec', 2: 'ean_8', 3: 'ean_13', 4: 'code_128',
-  6: 'code_39', 8: 'data_matrix', 11: 'qr_code', 15: 'pdf_417',
+  2: 'ean_8', 3: 'ean_13', 4: 'code_128', 11: 'qr_code',
 };
 
 function nativeToScanResult(b: NativeBarcode): ScanResult {
@@ -130,8 +136,9 @@ export function useBarcodeScanner(
   const engineRef    = useRef<'native' | 'zxing' | null>(null);
   const nativeRef    = useRef<NativeBarcodeDetector | null>(null);
   const inFlightRef  = useRef(false);
-  const lastValueRef = useRef('');
-  const lastTimeRef  = useRef(0);
+  // Per-value debounce map — tracks last-fired time for each decoded value
+  // independently so two simultaneous codes don't debounce each other.
+  const debounceMap  = useRef<Map<string, number>>(new Map());
 
   // Stable callback ref — prevents re-triggering scan loop on parent re-renders
   const onDetectRef = useRef(onDetect);
@@ -146,7 +153,7 @@ export function useBarcodeScanner(
       // though the API decodes it fine.
       if (typeof BarcodeDetector !== 'undefined') {
         try {
-          const FORMATS = ['qr_code', 'code_128', 'ean_13', 'data_matrix', 'code_39', 'ean_8'];
+          const FORMATS = ['qr_code', 'code_128', 'ean_13', 'ean_8'];
           nativeRef.current  = new BarcodeDetector({ formats: FORMATS });
           engineRef.current  = 'native';
           remoteLog('info', '[Scanner] engine=BarcodeDetector (native)');
@@ -204,9 +211,10 @@ export function useBarcodeScanner(
               const results = await nativeRef.current.detect(video);
               const now = Date.now();
               for (const r of results) {
-                if (r.rawValue && (r.rawValue !== lastValueRef.current || now - lastTimeRef.current > DEBOUNCE_MS)) {
-                  lastValueRef.current = r.rawValue;
-                  lastTimeRef.current  = now;
+                if (!r.rawValue) continue;
+                const last = debounceMap.current.get(r.rawValue) ?? 0;
+                if (now - last > DEBOUNCE_MS) {
+                  debounceMap.current.set(r.rawValue, now);
                   remoteLog('info', `[Scanner] decoded: ${r.rawValue} (fmt:${r.format})`);
                   onDetectRef.current(nativeToScanResult(r));
                 }
@@ -254,11 +262,13 @@ export function useBarcodeScanner(
               const text   = result.getText();
               const fmt    = result.getBarcodeFormat();
               const now    = Date.now();
-              if (text && (text !== lastValueRef.current || now - lastTimeRef.current > DEBOUNCE_MS)) {
-                lastValueRef.current = text;
-                lastTimeRef.current  = now;
-                remoteLog('info', `[Scanner] decoded: ${text} (fmt:${fmt})`);
-                onDetectRef.current(zxingToScanResult(text, fmt));
+              if (text) {
+                const last = debounceMap.current.get(text) ?? 0;
+                if (now - last > DEBOUNCE_MS) {
+                  debounceMap.current.set(text, now);
+                  remoteLog('info', `[Scanner] decoded: ${text} (fmt:${fmt})`);
+                  onDetectRef.current(zxingToScanResult(text, fmt));
+                }
               }
             } catch { /* NotFoundException is normal — no code in frame */ }
           }
