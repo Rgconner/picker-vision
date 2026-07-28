@@ -50,6 +50,7 @@ export function DemoControls({ auth }: Props) {
   const [order, setOrder]             = useState<Order | null>(null);
   const [starting, setStarting]       = useState(false);
   const [stopping, setStopping]       = useState(false);
+  const [restarting, setRestarting]   = useState(false);
 
   const isGuest = auth.user?.role === 'guest';
   const isSupervisor = auth.user?.role === 'supervisor';
@@ -135,6 +136,36 @@ export function DemoControls({ auth }: Props) {
     }
   }
 
+  async function restartDemo() {
+    if (!canControl) return;
+    setRestarting(true);
+    try {
+      const active = sessions[0];
+      // Stop existing session first
+      if (active) {
+        await fetch('/api/demo/stop', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: active.session_id }),
+        });
+      }
+      // Start fresh with same mode + picker_id
+      const body = active?.mode === 'personal'
+        ? { mode: 'personal', picker_id: active.picker_id }
+        : { mode: 'presentation' };
+      await fetch('/api/demo/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const res = await fetch('/api/demo/status');
+      if (res.ok) setSessions(await res.json());
+      setOrder(null);
+    } finally {
+      setRestarting(false);
+    }
+  }
+
   // Find the next unpicked line across the active order
   const nextLine = order?.lines.find((l) => l.status !== 'picked') ?? null;
   const remainingCount = order?.lines.filter((l) => l.status !== 'picked').length ?? 0;
@@ -200,13 +231,23 @@ export function DemoControls({ auth }: Props) {
             ⚠ Mistakes on ({Math.round(activeSession.mistake_probability * 100)}%)
           </span>
         )}
-        <button
-          onClick={() => stopSession(activeSession.session_id)}
-          disabled={!canControl || stopping}
-          className="ml-auto px-3 py-1 rounded-md text-xs font-semibold border border-[#ef4444]/40 text-[#ef4444] hover:bg-[#ef4444]/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          {stopping ? 'Stopping…' : '■ Stop Demo'}
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={restartDemo}
+            disabled={!canControl || restarting || stopping}
+            title="Stop current session and start a fresh one — fixes out-of-sync state"
+            className="px-3 py-1 rounded-md text-xs font-semibold border border-[#f1c21b]/40 text-[#f1c21b] hover:bg-[#f1c21b]/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            {restarting ? 'Restarting…' : '⟳ Restart Demo'}
+          </button>
+          <button
+            onClick={() => stopSession(activeSession.session_id)}
+            disabled={!canControl || stopping || restarting}
+            className="px-3 py-1 rounded-md text-xs font-semibold border border-[#ef4444]/40 text-[#ef4444] hover:bg-[#ef4444]/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            {stopping ? 'Stopping…' : '■ Stop Demo'}
+          </button>
+        </div>
       </div>
 
       {/* QR row: next-item barcode + join-demo link */}
