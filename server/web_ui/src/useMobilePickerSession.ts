@@ -47,7 +47,7 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
 
   // ── Registration + heartbeat ───────────────────────────────────────────────
 
-  const register = useCallback(async (id: string) => {
+  const register = useCallback(async (id: string): Promise<string> => {
     // Persistent device ID — survives tab close, unique per browser install
     let deviceId = '';
     try {
@@ -58,20 +58,32 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
       }
     } catch { /* ignore if localStorage unavailable */ }
 
-    try {
-      await fetch('/pickers/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          picker_id:   id,
-          stream_url:  '',
-          control_url: '',
-          version:     'mobile-web-1.0',
-          device_id:   deviceId,
-          user_agent:  navigator.userAgent.substring(0, 200),
-        }),
-      });
-    } catch { /* silent — heartbeat will retry */ }
+    // Try the requested ID, then append -2, -3 ... until we get a free slot
+    let candidate = id;
+    for (let attempt = 2; attempt <= 9; attempt++) {
+      try {
+        const res = await fetch('/pickers/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            picker_id:   candidate,
+            stream_url:  '',
+            control_url: '',
+            version:     'mobile-web-1.0',
+            device_id:   deviceId,
+            user_agent:  navigator.userAgent.substring(0, 200),
+          }),
+        });
+        if (res.status === 409) {
+          candidate = `${id}-${attempt}`;
+          continue;
+        }
+        return candidate; // registered successfully
+      } catch {
+        return candidate; // network error — heartbeat will retry with same candidate
+      }
+    }
+    return candidate;
   }, []);
 
   // ── WebSocket subscription ─────────────────────────────────────────────────
@@ -81,7 +93,13 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
     pickerIdRef.current = pickerId;
     activeRef.current   = true;
 
-    register(pickerId);
+    // Register — may auto-assign a suffixed ID (e.g. Guest-2) if conflict
+    register(pickerId).then((assignedId) => {
+      if (assignedId !== pickerId) {
+        // Server gave us a different ID — update ref so WS + events use it
+        pickerIdRef.current = assignedId;
+      }
+    });
 
     // Heartbeat every 25s (server TTL is 120s, stale threshold 45s)
     heartbeatTimer.current = setInterval(() => {

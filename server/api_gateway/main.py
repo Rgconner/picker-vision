@@ -264,12 +264,21 @@ async def register_picker(body: PickerRegisterBody):
     now = datetime.now(timezone.utc).isoformat()
     existing = _redis_get_picker(body.picker_id) or {}
 
-    # Warn if same picker_id is re-registering from a different device_id
-    conflict = (
+    # Reject registration if picker_id is already owned by a different device.
+    # This prevents a desktop/laptop session from stomping a mobile scanner session.
+    if (
         body.device_id
         and existing.get("device_id")
         and existing["device_id"] != body.device_id
-    )
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "picker_id_conflict",
+                "message": f"Picker ID '{body.picker_id}' is already registered by another device. Choose a different ID.",
+                "picker_id": body.picker_id,
+            }
+        )
 
     info = {
         "picker_id":    body.picker_id,
@@ -281,10 +290,9 @@ async def register_picker(body: PickerRegisterBody):
         "version":      body.version,
         "device_id":    body.device_id or existing.get("device_id"),
         "user_agent":   body.user_agent or existing.get("user_agent"),
-        "device_conflict": conflict,
     }
     _redis_set_picker(info)
-    return {"registered": True, "picker_id": body.picker_id, "device_conflict": conflict}
+    return {"registered": True, "picker_id": body.picker_id}
 
 
 @app.post("/pickers/heartbeat")
