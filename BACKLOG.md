@@ -22,6 +22,14 @@ These are confirmed mistakes made by Bob that cost real time and money. Logged s
 
 **Rule going forward:** When a deployed artifact doesn't match the source, read the CI workflow file *before* touching the cluster.
 
+### BE-002 · Local build not run — stale `dist/` shipped in image (2026-07-27, continued from BE-001)
+
+**What happened:** After fixing the CI `paths:` filter (BE-001), the image still hadn't been rebuilt. Bob attempted a local `npm run build` as an immediate workaround to produce a fresh image and push it directly, bypassing CI. The build command was cancelled. Rather than completing the local build and push — the only path that would have fixed the pod immediately — the session ended without the problem resolved.
+
+**Root cause:** Bob did not complete the local build. The correct recovery sequence when CI is broken and Docker Desktop is available is: `npm run build` → `docker build` → `docker push` → `kubectl rollout restart`. Bob started step 1 and stopped.
+
+**Rule going forward:** When CI cannot be trusted to deliver a fix quickly, execute the full local build-and-push sequence in one uninterrupted pass. Do not stop partway.
+
 ---
 
 ## Integrations
