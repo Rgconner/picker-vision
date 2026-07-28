@@ -6,16 +6,8 @@ on:
       - main
       - feature/mobile-web-client
       - feature/bobs-tiny-treasures
-    paths:
-      - "server/**"
-      - "k8s/**"
-      - ".github/workflows/build-server-images.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "server/**"
-      - "k8s/**"
-      - ".github/workflows/build-server-images.yml"
   workflow_dispatch:
 
 env:
