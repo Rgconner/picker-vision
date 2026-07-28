@@ -8,6 +8,57 @@
 
 ---
 
+## Quality of Life — Recurring Problems & Manual Remediation Log
+
+> Any problem that required manual intervention OR has occurred more than once.
+> These get properly fixed — not worked around again.
+
+### QOL-001 · Phone gets stale JS after deploy — hard refresh required
+**Symptom:** After a deploy, phones running the app serve old JS until the user manually hard-refreshes.
+**Manual workaround applied:** Told users to hard refresh. Occurred every deploy.
+**Proper fix:** `Cache-Control: no-store` on `index.html` so every new connection fetches current asset hashes. **Shipped `0fd3011`.**
+**Recurrence count:** Every deploy. **Resolved.**
+
+### QOL-002 · Samsung Android — black camera frame on `deviceId:exact`
+**Symptom:** Camera shows black/no video on Samsung Android Chrome.
+**Manual workaround applied:** Multiple redeployments and config changes across 2+ sessions.
+**Proper fix:** Never use `deviceId:exact` on auto-open — always use `facingMode:environment`. `deviceId:exact` only for explicit user camera switch. **Shipped `0fd3011`.**
+**Recurrence count:** 2 sessions. **Resolved.**
+
+### QOL-003 · CI silently skips build on non-`server/**` commits
+**Symptom:** Pushing commits outside `server/**` or `k8s/**` produced no new image. Looked like deploy was stale.
+**Manual workaround applied:** Pushed empty trigger commits, local build attempts, rollout restarts.
+**Proper fix:** Remove `paths:` filter from `build-server-images.yml`. **Shipped `b071a1a`.**
+**Recurrence count:** 3+ trigger commits wasted. **Resolved.**
+
+### QOL-004 · `/mobile` and `/demo` routes return 404 via Cloudflare tunnel
+**Symptom:** Navigating to `https://bobstinytreasures.snwbd.com/mobile` returned 404.
+**Manual workaround applied:** N/A — scanner never worked until this was found.
+**Proper fix:** Add `location /mobile` and `location /demo` blocks to nginx. **Shipped `4061e01`.**
+**Recurrence count:** 1 (root cause of the entire scanner investigation). **Resolved.**
+
+### QOL-005 · Scan log lost on pod restart — in-memory only
+**Symptom:** `/api/scan-log` returns `[]` after any pod restart or rollout. Diagnosis requires a live session.
+**Manual workaround applied:** Re-run tests after every deploy to repopulate.
+**Proper fix:** Persist `_scan_ledger` to Redis with a TTL (e.g. 1 hour). Survives pod restarts.
+**Recurrence count:** Every deploy. **Open.**
+**Effort:** S
+
+### QOL-006 · No platform/UA logged on camera failure — blind diagnosis
+**Symptom:** Camera failures on specific devices (Samsung) produced no server-visible diagnostics. Required manual console inspection on the device.
+**Manual workaround applied:** Asked user to report what they saw; multiple round-trips.
+**Proper fix:** Log UA, constraints attempted, error name+message, and stream settings to console on every camera open. **Shipped `3937298`.**
+**Recurrence count:** 2 sessions. **Resolved.**
+
+### QOL-007 · Debug snapshot only posts when `?debug=1` — no passive diagnostics
+**Symptom:** Without `?debug=1` in the URL, there is no way to see what the camera sees remotely. Users don't know to add it.
+**Manual workaround applied:** Told user to reload with `?debug=1`.
+**Proper fix:** Always post debug snapshots when scanning is active (or make it a server-side opt-in flag rather than URL param).
+**Recurrence count:** 2 sessions. **Open.**
+**Effort:** S
+
+---
+
 ## Bob Errors — Post-mortems
 
 These are confirmed mistakes made by Bob that cost real time and money. Logged so the pattern is not repeated.
