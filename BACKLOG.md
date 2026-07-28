@@ -224,6 +224,55 @@ curl https://bobstinytreasures.snwbd.com/mobile
 
 ---
 
+### BE-005 · Repeated bad decisions without asking — ZXing canvas decode failure (2026-07-28)
+
+**What happened:** ZXing was running correctly against a properly-sized canvas (853×480, confirmed in logs) but producing zero decodes. Instead of asking the user what they were scanning and what the setup looked like, Bob made a sequence of assumptions:
+
+1. **Assumed portrait** — logs showed `1080x1920` at one point so Bob assumed the user was in portrait. User was in landscape — the camera simply initialised portrait before the user rotated. Bob shipped a "short-side cap" fix based on this assumption without asking.
+2. **Assumed barcode size was the problem** — shipped two separate downsample changes (960px cap, then 480px short-side cap) without confirming whether the barcode was even visible in the frame at the time of scanning.
+3. **Never asked what the user was pointing at** — never asked: "What are you scanning? Where is the barcode? Is it on screen or a physical label?"
+
+**What the user told Bob when he finally asked:** The native camera app can decode the same barcode at 100% accuracy, no problem. That means the barcode is perfectly readable. The problem is not barcode size, orientation, or lighting — it is something ZXing does differently from the native camera decoder.
+
+**The question Bob should have asked at tick #1:**
+> "What are you pointing the camera at — a physical label, a screen? Can you confirm the barcode is clearly visible in the camera frame?"
+
+**Why the native camera succeeds where ZXing fails — Bob's analysis:**
+
+The Android native camera app (and Chrome's `BarcodeDetector` API on supported devices) uses the platform's ML Kit / Google Barcode Scanning library under the hood. This differs from ZXing in three critical ways:
+
+| Property | ZXing (`@zxing/library`) | Android native / ML Kit |
+|---|---|---|
+| Algorithm | Rule-based binarisation + linear scan | Neural-network assisted, multi-scale |
+| Blur tolerance | Poor — needs sharp edges | High — handles motion blur |
+| Perspective correction | None | Full homography |
+| Scale invariance | Poor — fixed resolution pass | Multi-scale pyramid |
+| Data Matrix support | Yes, but basic | Optimised for DM |
+
+ZXing is doing a single-pass fixed-threshold binarise + decode on each canvas frame. ML Kit does a multi-scale pyramid with learned feature detection — it finds the barcode region first, corrects perspective, then decodes. ZXing never does any of that.
+
+**What this means for the fix:**
+
+The right approach is NOT to keep tweaking canvas resolution. The right approach is one of:
+
+1. **Use `BarcodeDetector` API** (Chrome Android supports it) — this IS the ML Kit path. Check `'BarcodeDetector' in window` and use it when available. Fall back to ZXing only when not available.
+2. **Use a better JS barcode library** — `zxing-wasm` (WebAssembly ZXing 2.x) is significantly better than `@zxing/library` (JS port of ZXing Java 1.x). Or `barcode-detector` polyfill which wraps `BarcodeDetector` natively.
+3. **Add `TRY_HARDER` + multiple rotations** — ZXing has a `TRY_HARDER` hint (already set) but also accepts rotated passes; ZXing's Data Matrix decoder is notoriously bad at non-axis-aligned codes.
+
+**The correct diagnostic question for tomorrow:**
+> Does `BarcodeDetector` exist in the browser on the Samsung? Run: `'BarcodeDetector' in window` from the console. If yes — use it. That is literally what the native camera uses.
+
+**Checklist for next session:**
+- [ ] Ask user what they are scanning and confirm it is in frame before any code changes
+- [ ] Check if `BarcodeDetector` is available on the Samsung (Chrome 83+ Android supports it)
+- [ ] If available: switch scanner to use `BarcodeDetector` as primary path, ZXing as fallback
+- [ ] If not available: evaluate `zxing-wasm` vs current `@zxing/library`
+- [ ] Do NOT ship another canvas-resize change without first confirming resize is the actual bottleneck
+
+**Rule going forward:** When a symptom is "X doesn't work but Y does the same thing perfectly," the first question is always: what does Y do that X doesn't? Read the specs. Do not blindly tweak parameters.
+
+---
+
 ## Integrations
 
 ### IBM Sterling OMS — Order Management System
