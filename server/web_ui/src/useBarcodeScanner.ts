@@ -128,11 +128,15 @@ export function useBarcodeScanner(
       }
 
       if (video && reader && video.readyState >= 2 && video.videoWidth > 0) {
-        canvas.width  = video.videoWidth;
-        canvas.height = video.videoHeight;
+        // Downsample to max 960px wide — ZXing decodes better when the barcode
+        // occupies a larger fraction of the frame. At 1920x1080 a small on-screen
+        // DM code may be only 30px wide; at 960x540 it doubles in relative size.
+        const scale  = Math.min(1, 960 / video.videoWidth);
+        canvas.width  = Math.round(video.videoWidth  * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
         const ctx = canvas.getContext('2d');
         if (ctx) {
-          ctx.drawImage(video, 0, 0);
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           try {
             const result = await reader.decodeFromCanvas(canvas);
             const text   = result.getText();
