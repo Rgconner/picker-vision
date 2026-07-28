@@ -8,6 +8,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { remoteLog } from './useRemoteLogger';
 
 export type CameraFacing = 'environment' | 'user' | 'exact-environment' | string;
 
@@ -68,10 +69,12 @@ export function useMobileCamera(): MobileCameraState {
     const ua       = navigator.userAgent;
     const platform = `${ua.substring(0, 120)}`;
     console.info('[Camera] openCamera called — UA:', platform);
+    remoteLog('info', `[Camera] openCamera called — UA: ${platform}`);
 
     if (!navigator.mediaDevices?.getUserMedia) {
       const msg = 'Camera unavailable — page must be served over HTTPS (getUserMedia not available).';
       console.warn('[Camera] getUserMedia missing. UA:', platform);
+      remoteLog('warn', `[Camera] getUserMedia missing — UA: ${platform}`);
       setError(msg);
       return;
     }
@@ -86,13 +89,17 @@ export function useMobileCamera(): MobileCameraState {
       if (!targetDeviceId) {
         // Enumerate for the device list UI — but do NOT use the result to pick a deviceId.
         const probe = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } }).catch((e) => {
-          console.warn('[Camera] initial probe failed:', e);
+          const emsg = e instanceof Error ? e.message : String(e);
+          console.warn('[Camera] initial probe failed:', emsg);
+          remoteLog('warn', `[Camera] probe failed: ${emsg}`);
           return null;
         });
         if (probe) probe.getTracks().forEach((t) => t.stop());
 
         const all = await enumerateDevices();
-        console.info('[Camera] enumerated devices:', all.map((d) => `${d.label || '(no label)'}(${d.deviceId.slice(0,8)})`).join(', ') || 'none');
+        const devStr = all.map((d) => `${d.label || '(no label)'}(${d.deviceId.slice(0,8)})`).join(', ') || 'none';
+        console.info('[Camera] enumerated devices:', devStr);
+        remoteLog('info', `[Camera] devices: ${devStr}`);
         // Populate device switcher but keep targetDeviceId null — use facingMode below
       }
 
@@ -101,7 +108,10 @@ export function useMobileCamera(): MobileCameraState {
         ? { video: { deviceId: { exact: targetDeviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } } }
         : { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } };
 
-      console.info('[Camera] requesting stream — targetDeviceId:', targetDeviceId?.slice(0,8) ?? 'null', 'constraints:', JSON.stringify(constraints));
+      const constraintStr = JSON.stringify(constraints);
+      console.info('[Camera] requesting stream — constraints:', constraintStr);
+      remoteLog('info', `[Camera] requesting stream: ${constraintStr}`);
+
       const s = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = s;
       setStream(s);
@@ -110,7 +120,11 @@ export function useMobileCamera(): MobileCameraState {
       const settings = track?.getSettings?.() ?? {};
       const resolvedFacing = (settings as MediaTrackSettings & { facingMode?: string }).facingMode ?? 'environment';
       const resolvedDevice = (settings as MediaTrackSettings & { deviceId?: string }).deviceId ?? targetDeviceId ?? null;
-      console.info('[Camera] stream ready — facing:', resolvedFacing, 'deviceId:', resolvedDevice?.slice(0,8), 'width:', (settings as MediaTrackSettings).width, 'height:', (settings as MediaTrackSettings).height);
+      const w = (settings as MediaTrackSettings).width;
+      const h = (settings as MediaTrackSettings).height;
+      const streamMsg = `[Camera] stream ready — facing:${resolvedFacing} deviceId:${resolvedDevice?.slice(0,8) ?? 'null'} ${w}x${h}`;
+      console.info(streamMsg);
+      remoteLog('info', streamMsg);
 
       setFacing(resolvedFacing);
       setActiveDeviceId(resolvedDevice);
@@ -121,6 +135,7 @@ export function useMobileCamera(): MobileCameraState {
     } catch (err) {
       const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
       console.error('[Camera] getUserMedia failed:', msg, '— UA:', platform);
+      remoteLog('error', `[Camera] getUserMedia failed: ${msg} — UA: ${platform}`);
       setError(`Camera error: ${msg}`);
       setReady(false);
     }

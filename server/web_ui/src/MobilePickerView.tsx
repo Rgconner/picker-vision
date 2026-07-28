@@ -34,6 +34,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Order } from './types';
 import { useMobileCamera } from './useMobileCamera';
 import { useBarcodeScanner, type ScanResult } from './useBarcodeScanner';
+import { setRemoteLogPickerId } from './useRemoteLogger';
 import { useMobilePickerSession } from './useMobilePickerSession';
 import { MobileCameraView } from './MobileCameraView';
 import { MobilePickList } from './MobilePickList';
@@ -161,6 +162,12 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   );
 
   // ── Camera ──────────────────────────────────────────────────────────────────
+  // Wire remote logger to picker ID so camera logs reach the server
+  useEffect(() => {
+    setRemoteLogPickerId(pickerId || null);
+    return () => setRemoteLogPickerId(null);
+  }, [pickerId]);
+
   const camera = useMobileCamera();
 
   // ── Server session ──────────────────────────────────────────────────────────

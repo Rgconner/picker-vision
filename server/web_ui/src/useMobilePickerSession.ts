@@ -48,15 +48,27 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
   // ── Registration + heartbeat ───────────────────────────────────────────────
 
   const register = useCallback(async (id: string) => {
+    // Persistent device ID — survives tab close, unique per browser install
+    let deviceId = '';
+    try {
+      deviceId = localStorage.getItem('pv_device_id') || '';
+      if (!deviceId) {
+        deviceId = crypto.randomUUID();
+        localStorage.setItem('pv_device_id', deviceId);
+      }
+    } catch { /* ignore if localStorage unavailable */ }
+
     try {
       await fetch('/pickers/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           picker_id:   id,
-          stream_url:  '',          // mobile node — no MJPEG stream
+          stream_url:  '',
           control_url: '',
           version:     'mobile-web-1.0',
+          device_id:   deviceId,
+          user_agent:  navigator.userAgent.substring(0, 200),
         }),
       });
     } catch { /* silent — heartbeat will retry */ }

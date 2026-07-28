@@ -160,6 +160,8 @@ app.add_middleware(
 # API key middleware
 _API_KEY_EXEMPT_EXACT    = {"/health", "/pickers/register", "/api/logs", "/api/telemetry"}
 _API_KEY_EXEMPT_PREFIXES = ("/api/debug/",)
+_DEBUG_LOG_TTL           = 600   # 10 minutes
+_DEBUG_LOG_MAXLEN        = 100   # max log lines per picker in Redis list
 
 
 @app.middleware("http")
@@ -226,6 +228,8 @@ class PickerRegisterBody(BaseModel):
     stream_url: str
     control_url: str
     version: str = "unknown"
+    device_id: str | None = None      # persistent browser UUID from localStorage
+    user_agent: str | None = None     # navigator.userAgent — identifies device model
 
 
 class ControlBody(BaseModel):
@@ -259,17 +263,28 @@ async def register_picker(body: PickerRegisterBody):
     _COUNTERS["pickers_registered"] += 1
     now = datetime.now(timezone.utc).isoformat()
     existing = _redis_get_picker(body.picker_id) or {}
+
+    # Warn if same picker_id is re-registering from a different device_id
+    conflict = (
+        body.device_id
+        and existing.get("device_id")
+        and existing["device_id"] != body.device_id
+    )
+
     info = {
-        "picker_id": body.picker_id,
-        "stream_url": body.stream_url,
-        "control_url": body.control_url,
-        "status": "online",
+        "picker_id":    body.picker_id,
+        "stream_url":   body.stream_url,
+        "control_url":  body.control_url,
+        "status":       "online",
         "registered_at": existing.get("registered_at", now),
         "last_seen_at": now,
-        "version": body.version,
+        "version":      body.version,
+        "device_id":    body.device_id or existing.get("device_id"),
+        "user_agent":   body.user_agent or existing.get("user_agent"),
+        "device_conflict": conflict,
     }
     _redis_set_picker(info)
-    return {"registered": True, "picker_id": body.picker_id}
+    return {"registered": True, "picker_id": body.picker_id, "device_conflict": conflict}
 
 
 @app.post("/pickers/heartbeat")
@@ -591,3 +606,48 @@ async def debug_snapshot_get(picker_id: str):
         raise HTTPException(status_code=422, detail="Stored snapshot is not valid base64")
 
     return _Response(content=jpeg_bytes, media_type="image/jpeg")
+
+
+# ---------------------------------------------------------------------------
+# Debug logs — ships browser console output from mobile pickers to the server
+# so remote diagnosis does not require physical access to the device.
+#
+# POST /api/debug/logs/{picker_id}  — phone posts log lines (level + message)
+# GET  /api/debug/logs/{picker_id}  — retrieve last N lines, newest first
+# ---------------------------------------------------------------------------
+
+@app.post("/api/debug/logs/{picker_id}")
+async def debug_logs_post(picker_id: str, request: Request):
+    """Accept browser console log lines from the mobile picker and store in Redis."""
+    body   = await request.json()
+    lines  = body.get("lines", [])
+    if not lines:
+        return {"stored": 0}
+
+    key = f"debug:logs:{picker_id}"
+    stored = 0
+    for entry in lines:
+        record = {
+            "ts":      datetime.now(timezone.utc).isoformat(),
+            "level":   entry.get("level", "info"),
+            "message": str(entry.get("message", "")),
+        }
+        if _redis:
+            _redis.lpush(key, json.dumps(record))
+            _redis.ltrim(key, 0, _DEBUG_LOG_MAXLEN - 1)
+            _redis.expire(key, _DEBUG_LOG_TTL)
+        stored += 1
+
+    return {"stored": stored, "picker_id": picker_id}
+
+
+@app.get("/api/debug/logs/{picker_id}")
+async def debug_logs_get(picker_id: str, limit: int = 50):
+    """Return recent console log lines for picker_id, newest first."""
+    limit = min(limit, _DEBUG_LOG_MAXLEN)
+    key   = f"debug:logs:{picker_id}"
+    lines: list = []
+    if _redis:
+        raw = _redis.lrange(key, 0, limit - 1)
+        lines = [json.loads(r) for r in raw]
+    return {"picker_id": picker_id, "lines": lines}
