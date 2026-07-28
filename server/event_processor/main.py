@@ -227,6 +227,18 @@ async def receive_detection(body: dict):
                 d["order_id"] = active_line["_order"]["id"]
                 d["line_id"] = active_line["id"]
                 d["status"] = "correct"
+                # Write the pick immediately — increment quantity_picked on the order line.
+                # Invalidate the orders cache so the completion check below uses fresh data.
+                # Best-effort: failure here does not fail the scan event response.
+                try:
+                    await client.patch(
+                        f"{ORDER_SERVICE_URL}/orders/{active_line['_order']['id']}/lines/{active_line['id']}",
+                        timeout=5.0,
+                    )
+                    _cache.pop("orders", None)
+                except Exception as _pick_err:
+                    logger.warning("mark_picked failed trace=%s line=%s: %s",
+                                   trace_id, active_line['id'], _pick_err)
 
             enriched_detections.append(d)
             if d.get("type") == "product":
@@ -275,21 +287,41 @@ async def receive_detection(body: dict):
 
         # ------------------------------------------------------------------
         # 4. Order completion check
+        # Re-fetch orders fresh (cache was invalidated by any mark_picked call above)
+        # so we see the updated quantity_picked / line status from this scan.
         # ------------------------------------------------------------------
         order_complete_pending_id: str | None = None
         order_complete_staging_code: str | None = None
 
+        # Re-fetch if any pick was written (cache was cleared); fall back to stale data.
+        fresh_orders = _cache_get("orders")
+        if fresh_orders is None:
+            try:
+                resp = await client.get(f"{ORDER_SERVICE_URL}/orders")
+                fresh_orders = resp.json() if resp.status_code == 200 else orders_data
+                _cache_set("orders", fresh_orders)
+            except Exception:
+                fresh_orders = orders_data
+
         detected_barcodes = {d["value"] for d in enriched_detections if d.get("on_active_order")}
         detected_staging_codes = {r["staging_code"] for r in enriched_regions}
 
-        for order in orders_data:
+        for order in fresh_orders:
             lines = order.get("lines", [])
             if not lines:
                 continue
             all_picked = all(ln["status"] == "picked" for ln in lines)
-            all_detected = all(ln["product_barcode"] in detected_barcodes for ln in lines)
-            all_staged = all(ln["staging_code"] in detected_staging_codes for ln in lines)
-            if all_picked and all_detected and all_staged:
+            # all_detected / all_staged are Pi-camera frame checks (all items visible at once).
+            # Mobile web scans sequentially — one barcode per event — so these checks
+            # are skipped when no staging regions are present in the payload (mobile mode).
+            # Completion is driven entirely by all_picked (database state) in mobile mode.
+            if detected_staging_codes:
+                all_detected = all(ln["product_barcode"] in detected_barcodes for ln in lines)
+                all_staged   = all(ln["staging_code"] in detected_staging_codes for ln in lines)
+                complete = all_picked and all_detected and all_staged
+            else:
+                complete = all_picked
+            if complete:
                 order_complete_pending_id = order["id"]
                 # Use the first staging code in the order as representative
                 order_complete_staging_code = lines[0]["staging_code"] if lines else None
