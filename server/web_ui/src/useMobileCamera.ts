@@ -77,40 +77,31 @@ export function useMobileCamera(): MobileCameraState {
     }
 
     try {
-      let targetDeviceId = deviceId;
+      let targetDeviceId = deviceId; // only set when user explicitly switches camera
 
-      // If no explicit deviceId, enumerate to find the rear camera by label.
-      // Samsung Android Chrome sometimes returns a black stream with deviceId:{exact}
-      // after a failed probe — fall back to facingMode if the probe stream is null.
+      // Auto-open: always use facingMode — never deviceId:exact on initial open.
+      // Samsung Android Chrome returns black frames when deviceId:exact is used
+      // before the user has interacted with the camera permission dialog, even
+      // when the probe stream succeeds. facingMode works reliably on all devices.
       if (!targetDeviceId) {
-        // First open a minimal stream to unlock device labels
-        const probe = await navigator.mediaDevices.getUserMedia({ video: true }).catch((e) => {
-          console.warn('[Camera] probe getUserMedia failed:', e);
+        // Enumerate for the device list UI — but do NOT use the result to pick a deviceId.
+        const probe = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } }).catch((e) => {
+          console.warn('[Camera] initial probe failed:', e);
           return null;
         });
-        if (probe) {
-          probe.getTracks().forEach((t) => t.stop());
-        } else {
-          console.warn('[Camera] probe returned null — skipping deviceId enumeration, using facingMode fallback');
-        }
+        if (probe) probe.getTracks().forEach((t) => t.stop());
 
         const all = await enumerateDevices();
-        console.info('[Camera] enumerated devices:', all.map((d) => `${d.label}(${d.deviceId.slice(0,8)})`).join(', ') || 'none');
-
-        // Only use deviceId:exact if probe succeeded AND we found a rear camera.
-        // On Samsung, probe failure means labels are empty and exact deviceId gives black frames.
-        const rear = probe
-          ? (all.find((d) => /back|rear|environment/i.test(d.label)) ?? all[all.length - 1])
-          : null;
-        targetDeviceId = rear?.deviceId ?? null;
-        console.info('[Camera] selected targetDeviceId:', targetDeviceId?.slice(0, 8) ?? 'null (using facingMode)');
+        console.info('[Camera] enumerated devices:', all.map((d) => `${d.label || '(no label)'}(${d.deviceId.slice(0,8)})`).join(', ') || 'none');
+        // Populate device switcher but keep targetDeviceId null — use facingMode below
       }
 
+      // Always use facingMode for auto-open; deviceId:exact only for explicit switch
       const constraints: MediaStreamConstraints = targetDeviceId
         ? { video: { deviceId: { exact: targetDeviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } } }
         : { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } };
 
-      console.info('[Camera] requesting stream with constraints:', JSON.stringify(constraints));
+      console.info('[Camera] requesting stream — targetDeviceId:', targetDeviceId?.slice(0,8) ?? 'null', 'constraints:', JSON.stringify(constraints));
       const s = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = s;
       setStream(s);

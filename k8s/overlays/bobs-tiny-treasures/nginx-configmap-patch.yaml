@@ -20,6 +20,13 @@ data:
       # /mobile and /mobile/* → standalone mobile picker view
       # All three are handled by the same index.html SPA; the JS router
       # in main.tsx reads window.location.pathname to pick the right component.
+      # index.html must never be cached — always fetch fresh so the browser
+      # picks up new content-hashed JS/CSS bundles on every deploy.
+      location = /index.html {
+        add_header Cache-Control "no-store, no-cache, must-revalidate";
+        try_files $uri =404;
+      }
+
       location / {
         try_files $uri $uri/ /index.html;
       }
@@ -136,6 +143,11 @@ data:
 
       root /usr/share/nginx/html;
       index index.html;
+
+      location = /index.html {
+        add_header Cache-Control "no-store, no-cache, must-revalidate";
+        try_files $uri =404;
+      }
 
       location / {
         try_files $uri $uri/ /index.html;
