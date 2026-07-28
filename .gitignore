@@ -36,3 +36,6 @@ Thumbs.db
 
 # Docker
 .dockerignore
+
+# Graphify — generated knowledge graph output (rebuild with: graphify . --update)
+graphify-out/
