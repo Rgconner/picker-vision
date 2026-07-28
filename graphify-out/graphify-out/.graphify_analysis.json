@@ -1136,41 +1136,8 @@
       "why": "inferred connection - not explicitly stated in source; connects across different repos/directories"
     }
   ],
-  "questions": [
-    {
-      "type": "bridge_node",
-      "question": "Why does `get()` connect `get` to `vision_service.py`, `_row_to_dict`, `verify_layer`, `generate_warehouse_grid`, `websocket_hub/main.py`, `_create_demo_order`, `order_service/main.py`, `Request`?",
-      "why": "High betweenness centrality (0.146) - this node is a cross-community bridge."
-    },
-    {
-      "type": "bridge_node",
-      "question": "Why does `plan_packing()` connect `plan_packing` to `order_service/main.py`?",
-      "why": "High betweenness centrality (0.034) - this node is a cross-community bridge."
-    },
-    {
-      "type": "bridge_node",
-      "question": "Why does `EventPublisher` connect `EventPublisher` to `vision_service.py`?",
-      "why": "High betweenness centrality (0.023) - this node is a cross-community bridge."
-    },
-    {
-      "type": "verify_inferred",
-      "question": "Are the 18 inferred relationships involving `plan_packing()` (e.g. with `.test_custom_max_items_per_layer()` and `.test_custom_weight_cap()`) actually correct?",
-      "why": "`plan_packing()` has 18 INFERRED edges - model-reasoned connections that need verification."
-    },
-    {
-      "type": "isolated_nodes",
-      "question": "What connects `start.sh script`, `OPENCV_LOG_LEVEL`, `FRAME_WIDTH` to the rest of the system?",
-      "why": "126 weakly-connected nodes found - possible documentation gaps or missing edges."
-    },
-    {
-      "type": "low_cohesion",
-      "question": "Should `get` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.05399625768511093 - nodes in this community are weakly interconnected."
-    },
-    {
-      "type": "low_cohesion",
-      "question": "Should `models.py` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.09795918367346938 - nodes in this community are weakly interconnected."
-    }
-  ]
+  "tokens": {
+    "input": 0,
+    "output": 0
+  }
 }
