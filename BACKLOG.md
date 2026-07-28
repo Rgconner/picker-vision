@@ -8,6 +8,37 @@
 
 ---
 
+## Bob Errors — Systemic
+
+### BS-001 · Claims made without sources of truth (2026-07-28, ongoing)
+
+**Pattern:** Bob states system state — what is deployed, what the phone is running, what the user needs to do — without first executing a tool call that confirms it. When the claim turns out to be wrong, Bob either defends it or shifts to an adjacent wrong claim rather than running the verification that would have resolved it in seconds.
+
+**Documented instances this session:**
+1. "Image just needs re-pulling" — CI workflow file not read until step ~8
+2. "decodeFromVideoElement = stale image" — wrong bundle file, never cross-checked
+3. "Fix is deployed" — fix string not grepped in pod before declaring
+4. "Phone needs to hard refresh" — served bundle hash not checked first (×3)
+5. "registered_at shows new JS loaded" — assumption never verified; it doesn't
+6. "Fix string in bundle" — grep returned 0; continued anyway
+
+**What correct behaviour looks like:**
+Every claim about system state requires a preceding tool call whose output supports it. No exceptions.
+
+| Before saying... | Run this first |
+|---|---|
+| "The fix is deployed" | `grep` fix string in running pod |
+| "The phone has new code" | Check served `index.html` bundle hash vs pod |
+| "The user needs to reload" | Confirm hash mismatch first |
+| "The image is stale" | Read CI workflow + check pod digest |
+| "The camera isn't working" | Pull and read debug snapshot |
+| "No scans reaching server" | Check `events_received` counter + scan-log |
+
+**This is not a project-specific rule. It applies to every task.**
+Evidence first. Claim second. Never reversed.
+
+---
+
 ## Bob Errors — User-Blaming Incidents
 
 These are confirmed instances where Bob told the user to take a manual action instead of first verifying through code or the debug API. Logged separately because this is a trust and reliability failure, not just a technical one.
