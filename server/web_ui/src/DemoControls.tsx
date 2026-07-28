@@ -45,6 +45,11 @@ interface Props {
   auth: AuthState;
 }
 
+interface Picker {
+  picker_id: string;
+  status: string;
+}
+
 export function DemoControls({ auth }: Props) {
   const [sessions, setSessions]       = useState<DemoSession[]>([]);
   const [order, setOrder]             = useState<Order | null>(null);
@@ -52,6 +57,8 @@ export function DemoControls({ auth }: Props) {
   const [stopping, setStopping]       = useState(false);
   const [restarting, setRestarting]   = useState(false);
   const [scenario, setScenario]       = useState<'web-demo' | 'physical-demo'>('web-demo');
+  const [pickers, setPickers]         = useState<Picker[]>([]);
+  const [selectedPicker, setSelectedPicker] = useState<string>('');
 
   // Load + persist scenario from workflow-config
   useEffect(() => {
@@ -73,10 +80,10 @@ export function DemoControls({ auth }: Props) {
   }
 
   const isGuest = auth.user?.role === 'guest';
-  const isSupervisor = auth.user?.role === 'supervisor';
+  const isSupervisor = auth.user?.role === 'supervisor' || auth.user?.role === 'owner';
   const canControl = isSupervisor;  // guests and unauthenticated cannot start/stop
 
-  // Poll demo status every 3 s
+  // Poll demo status + pickers every 3 s
   useEffect(() => {
     async function fetchStatus() {
       try {
@@ -84,10 +91,26 @@ export function DemoControls({ auth }: Props) {
         if (res.ok) setSessions(await res.json());
       } catch { /* ignore */ }
     }
+    async function fetchPickers() {
+      try {
+        const res = await fetch('/pickers');
+        if (res.ok) {
+          const list: Picker[] = await res.json();
+          setPickers(list);
+          // Auto-select first online picker that isn't the supervisor
+          setSelectedPicker((prev) => {
+            if (prev) return prev; // keep existing selection
+            const online = list.find((p) => p.status === 'online' && p.picker_id !== auth.user?.name);
+            return online?.picker_id ?? list[0]?.picker_id ?? '';
+          });
+        }
+      } catch { /* ignore */ }
+    }
     fetchStatus();
-    const interval = setInterval(fetchStatus, 3000);
+    fetchPickers();
+    const interval = setInterval(() => { fetchStatus(); fetchPickers(); }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // When a session is active, poll its current order to find the next item
   useEffect(() => {
@@ -106,16 +129,13 @@ export function DemoControls({ auth }: Props) {
   }, [sessions]);
 
   async function startPersonal() {
-    if (!canControl) return;
+    if (!canControl || !selectedPicker) return;
     setStarting(true);
     try {
       await fetch('/api/demo/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'personal',
-          picker_id: auth.user?.name ?? 'demo-supervisor',
-        }),
+        body: JSON.stringify({ mode: 'personal', picker_id: selectedPicker }),
       });
       const res = await fetch('/api/demo/status');
       if (res.ok) setSessions(await res.json());
@@ -227,11 +247,27 @@ export function DemoControls({ auth }: Props) {
         </div>
 
         {/* Start buttons */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap items-center">
+          {/* Picker selector */}
+          <select
+            value={selectedPicker}
+            onChange={(e) => setSelectedPicker(e.target.value)}
+            disabled={!canControl}
+            className="text-xs rounded-md px-2 py-1.5 border bg-transparent disabled:opacity-40"
+            style={{ borderColor: '#2d3142', color: '#94a3b8' }}
+            title="Which picker to start the personal demo for"
+          >
+            {pickers.length === 0 && <option value="">No pickers online</option>}
+            {pickers.map((p) => (
+              <option key={p.picker_id} value={p.picker_id} style={{ background: '#1a1d2e' }}>
+                {p.picker_id} {p.status === 'online' ? '●' : '○'}
+              </option>
+            ))}
+          </select>
           <button
             onClick={startPersonal}
-            disabled={!canControl || starting}
-            title={isGuest ? 'Sign in as supervisor to start a demo' : undefined}
+            disabled={!canControl || starting || !selectedPicker}
+            title={isGuest ? 'Sign in as supervisor to start a demo' : `Start personal demo for ${selectedPicker}`}
             className="px-3 py-1.5 rounded-md text-xs font-semibold border transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             style={{ borderColor: '#6929c4', color: '#be95ff', background: 'transparent' }}
           >
