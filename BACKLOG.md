@@ -116,6 +116,17 @@ That shows exactly which bundle the phone will load. Compare to what's in the po
 **Proper fix:** Log UA, constraints attempted, error name+message, and stream settings to console on every camera open. **Shipped `3937298`.**
 **Recurrence count:** 2 sessions. **Resolved.**
 
+### QOL-008 · QR label minimum scannable size on Samsung not yet established
+**Symptom:** All on-screen QR codes are sized for screen scanning (~120–240px). Printed product labels use 2-inch QR codes. It is unknown whether smaller printed labels (1-inch, 0.75-inch) are reliably scannable at comfortable working distance on Samsung Chrome with `BarcodeDetector`.
+**Why it matters:** Warehouse shelf labels need to be compact — 2-inch may be too large for dense shelving. Reducing label size risks scan failures.
+**Manual workaround:** Use 2-inch QRs for now (confirmed working).
+**Proper fix:** Structured test — print labels at 2-inch, 1-inch, 0.75-inch, test at 15cm / 30cm / 60cm on Samsung Chrome. Record minimum reliable size. Update `tools/generate_test_barcodes.py` default sizes accordingly.
+**Do not change `qrSvg` sizing in the app without this data.** On-screen codes are a different problem from printed labels.
+**Recurrence count:** 0 (deferred, not yet a problem). **Open.**
+**Effort:** XS (print + 10 min of scanning)
+
+---
+
 ### QOL-007 · Debug snapshot only posts when `?debug=1` — no passive diagnostics
 **Symptom:** Without `?debug=1` in the URL, there is no way to see what the camera sees remotely. Users don't know to add it.
 **Manual workaround applied:** Told user to reload with `?debug=1`.
