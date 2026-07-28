@@ -9,70 +9,64 @@
 
 ---
 
-## Current State (2026-07-28 — session 3)
+## Current State (2026-07-28 — session 4)
 
 **Branch:** `feature/bobs-tiny-treasures`
-**Last commit:** `ced635c` — Restart Demo button added to supervisor
-**CI:** `ced635c` build in progress (started ~19:42 UTC). The deploy job now uses SHA pinning (not floating tag) — no more cache-poisoning.
-**Cluster:** All pods on `sha-be705bf` except web-ui which was manually pinned mid-session. Once `ced635c` CI completes, all pods will be on `sha-ced635c`.
+**Last commit:** `25bae1d` — TS fix: navAction + Detection type annotation
+**CI status:** Build triggered for `25bae1d` — runner had not yet picked it up at end of session. Watch for it.
+**Cluster:** All pods on `sha-26c882a`. Once `25bae1d` CI completes, pods will move to `sha-25bae1d`.
 
 ---
 
 ## Immediate First Action Next Session
 
-1. Confirm `ced635c` CI completed successfully and cluster is on `sha-ced635c`:
+1. Confirm `25bae1d` CI completed and cluster moved:
    ```powershell
-   & "C:\Users\RussConner\kubectl.exe" get pods -n picker-vision-btt -o wide
-   (Invoke-WebRequest "https://bobstinytreasures.snwbd.com/mobile" -UseBasicParsing).Content | Select-String "index-[A-Za-z0-9_-]+\.js"
+   & "C:\Users\RussConner\kubectl.exe" get pods -n picker-vision-btt -o json | python -c "
+   import sys,json; pods=json.load(sys.stdin)['items']
+   [print(p['metadata']['name'], p['status']['containerStatuses'][0]['image'].split(':')[-1]) for p in pods if p['status'].get('containerStatuses')]
+   "
+   # Bundle should be NEW hash (not index-Z_9LpMAG.js or index-D3Mz4UNV.js)
+   (Invoke-WebRequest 'https://bobstinytreasures.snwbd.com/mobile' -UseBasicParsing).Content | Select-String 'index-[A-Za-z0-9_-]+\.js'
    ```
-2. Hard-reload the supervisor page on the demo device, hit **⟳ Restart Demo** to re-sync session
-3. Test end-to-end: scan items → order completes → PackWizard surfaces on mobile
+2. If runner still hasn't picked up the job, restart it:
+   ```powershell
+   Stop-Process -Name "Runner.Listener" -Force
+   Start-Process "C:\Users\RussConner\actions-runner\run.cmd"
+   ```
+3. Once deployed, hit **⟳ Restart Demo** on the supervisor page, then test end-to-end on Samsung.
 
 ---
 
-## What We Did This Session (session 3)
+## What We Did This Session (session 4)
 
-### CI / deploy fix (root cause: Docker GHA layer cache poisoning)
-- `sha-1e949a8` and later builds reused a stale GHA layer cache → produced `index-BDmVnm_T.js` (pre-QR-fix bundle) instead of the correct one
-- **Fix 1 (`76833fc`):** Added `no-cache: true` to `build-push-action` in CI — every build is now clean
-- **Fix 2 (`76833fc`):** BTT deploy now uses SHA pinning (`kubectl set image`) instead of floating branch tag + `rollout restart` — guarantees each push deploys exactly what was built
-- Manually pinned cluster to `sha-be705bf` (last known-good image) while CI rebuilt
+### Deploy investigation
+- Cluster was already on `sha-26c882a` at session start — `index-BDmVnm_T.js` was already gone (fixed last session)
+- Commit `a28a24f` (confirm overlay + demo advance) was committed and pushed but CI never ran for it — runner had a broker connection error at 19:51 UTC and the push at ~15:46 local was missed
+- Pushed empty commit `fe75bf5` to re-trigger CI
 
-### Event-processor: workflow never advanced (3 bugs fixed in `f9f292b`)
-1. **Pick never written** — event-processor validated barcodes as `correct` but never called `PATCH /orders/{id}/lines/{line_id}`. `quantity_picked` stayed 0 forever.
-2. **Stale cache** — completion check ran against cached order data from before the PATCH. Added `_cache.pop("orders")` after each PATCH + re-fetch before completion check.
-3. **Mobile completion gated on camera frame** — Pi-camera flow requires all barcodes visible simultaneously + staging QR in frame. Mobile scans one at a time with no staging regions. Fixed: when `staging_regions` is empty, completion driven by `all_picked` (DB state) only.
-
-### Supervisor: Restart Demo button (`ced635c`)
-- Added `⟳ Restart Demo` (amber) next to `■ Stop Demo` in the running-session bar
-- Stops current session and immediately starts a fresh one with same mode/picker_id
-- Fixes out-of-sync state after pod restarts wipe in-memory `_demo_sessions`
-- Supervisor-only (guests see it disabled)
-
-### Design clarification: per-scan tray verification
-- Reviewed `bobs-tiny-treasures-plan.md` and `btt-pick-verify.html` prototype
-- **Phase 1 (blind pick):** continuous scan → `correct` → advance. No mid-pick tray verification. This is correct per design.
-- **Phase 2 (Pack & Verify):** triggers after all lines picked. Layer-by-layer verification in `PackWizard.tsx`. This is the designed verification step.
-- Gap identified: `MobilePickerView` may not be surfacing `PackWizard` after order completes — needs verification next session.
+### TypeScript build errors fixed (`25bae1d`)
+Two errors in the Docker build:
+1. **`MobileLiteView.tsx:74`** — literal `ScanResult` object missing `navAction: null` (field was added to interface but not to this manual-entry code path)
+2. **`MobilePickerView.tsx:249`** — inline type annotation on `.find()` callback used `status: string` but `Detection.status` is `'correct' | 'unexpected' | null` — mismatch. Fixed by dropping the redundant inline annotation and letting TS infer from the `Detection` type.
 
 ---
 
 ## What's Next (ordered)
 
-- [ ] **Verify `ced635c` deploy** — confirm CI succeeded and cluster is on correct SHA
-- [ ] **Test end-to-end pick flow** — scan all items on demo order, confirm order reaches `complete`, confirm `PackWizard` surfaces on mobile automatically
-- [ ] **Test `⟳ Restart Demo`** — hit it on supervisor, confirm mobile immediately shows new order
-- [ ] **PackWizard auto-trigger** — check `MobilePickerView` listens for `order_complete_pending` and renders `PackWizard`. Plan says done but unverified in live flow.
-- [ ] **QR size test (deferred)** — see BACKLOG QOL-008. Print smaller QR labels (1-inch, 0.75-inch) and test scan distance/reliability on Samsung. Do not change `qrSvg` sizing without this data first.
-- [ ] **Investigate `qrSvg` 32-byte limit** — picker_id >10 chars will overflow join-demo QR. Extend `qrSvg` to QR v5+ or use relative URL shortening. Add to BACKLOG when ready to fix.
-- [ ] **Observability plan sub-tasks 1–5** — still pending (see `observability-plan.md`)
+- [ ] **Confirm `25bae1d` deployed** — new bundle hash in pod + `sha-25bae1d` image
+- [ ] **Test end-to-end pick flow on Samsung** — connect phone, scan items on order 2 (`DEMO-E92FD1-002`), confirm ConfirmOverlay appears after each correct scan, tap Confirm, verify `quantity_picked` increments, order reaches `complete`
+- [ ] **Test ⟳ Restart Demo** — hit it on supervisor, confirm mobile shows new order immediately
+- [ ] **Test scenario switching** — change to Physical Demo in supervisor, confirm overlay shows nav card instruction + 10s button fallback instead of amber Confirm button
+- [ ] **Verify PackWizard auto-surfaces** after order completes (unverified in live flow — `MobilePickerView` listens for `order_complete_pending` WS event)
+- [ ] **QR size test (deferred)** — see BACKLOG QOL-008
 
 ---
 
 ## Open Questions
 
-- Does `PackWizard` actually auto-surface on mobile when an order completes in the live flow? Plan says done; unverified in today's session.
-- What is the minimum scannable QR size on Samsung Chrome at comfortable working distance? (see BACKLOG QOL-008)
+- Does `PackWizard` actually auto-surface on mobile when an order completes? Plan says done; unverified in live flow.
+- Runner broker reconnect: is it reliably picking up jobs after the 19:51 UTC drop? May need to restart runner service if it misses jobs again.
 
 ---
 
@@ -83,13 +77,14 @@
 | Production URL | `https://bobstinytreasures.snwbd.com` |
 | K8s namespace | `picker-vision-btt` |
 | Active branch | `feature/bobs-tiny-treasures` |
-| Last known-good web-ui image | `sha-be705bf` (`index-pEcfUa22.js` + `index-D3Mz4UNV.js`) |
+| Last known-good web-ui image | `sha-26c882a` (`index-Z_9LpMAG.js` + `index-D3Mz4UNV.js`) |
 | LM Studio IP | `http://192.168.1.79:1234` |
-| Best local model for Graphify | `google/gemma-4-12b-qat` (12B, fits 16GB VRAM at 32k ctx) |
+| API gateway (BTT) | `http://192.168.11.213` (key: `changeme`) |
+| Web UI (BTT) | `http://192.168.11.214` |
 | Bundle hash check | `(Invoke-WebRequest "https://bobstinytreasures.snwbd.com/mobile" -UseBasicParsing).Content \| Select-String "index-[A-Za-z0-9_-]+\.js"` |
-| Remote log check | `(Invoke-WebRequest "https://bobstinytreasures.snwbd.com/api/debug/logs/Guest" -UseBasicParsing).Content \| python -m json.tool` |
-| Debug snapshot | `Invoke-WebRequest "https://bobstinytreasures.snwbd.com/api/debug/snapshot/Guest" -UseBasicParsing -OutFile snap.jpg` (requires `?debug=1` in mobile URL) |
 | Demo status | `(Invoke-WebRequest "http://192.168.11.213/api/demo/status" -UseBasicParsing -Headers @{"X-API-Key"="changeme"}).Content \| python -m json.tool` |
+| All orders | `(Invoke-WebRequest "http://192.168.11.213/api/orders" -UseBasicParsing -Headers @{"X-API-Key"="changeme"}).Content \| python -m json.tool` |
+| DB in pod | `/data/picker.db` (persistent volume) — NOT `/app/picker.db` |
 
 ---
 
@@ -106,3 +101,4 @@
 | CI uses `no-cache: true` on all builds | GHA layer cache caused stale bundles to ship silently — never cache Docker builds on this project |
 | BTT deploy uses SHA pinning not floating tag | Floating tag + rollout restart is unreliable; SHA pinning is the pattern for all three envs now |
 | Phase 1 pick flow has no mid-pick tray verification | By design — blind pick is continuous. Tray verification is Phase 2 (PackWizard), not between individual scans. |
+| Picks written by mobile `confirmPick` only | Pi auto-pick removed from event-processor. All picks via `PATCH /api/orders/{id}/lines/{line_id}` called from mobile confirm action. |
