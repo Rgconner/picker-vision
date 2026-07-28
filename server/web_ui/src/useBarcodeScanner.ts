@@ -1,9 +1,9 @@
 /**
  * useBarcodeScanner — scans frames from a <video> element for barcodes.
  *
- * Uses @zxing/library (BrowserMultiFormatReader) exclusively.
- * Captures a canvas frame at ~1fps and decodes it — works on all browsers
- * including Chrome Android where BarcodeDetector silently fails.
+ * Strategy (in priority order):
+ *   1. Native BarcodeDetector API (Chrome Android — GPU-accelerated, ML Kit)
+ *   2. ZXing-js canvas fallback (works everywhere: Firefox, Safari, Vuzix)
  *
  * The caller controls scanning via the `scanning` flag.
  */
@@ -20,40 +20,39 @@ export interface ScanResult {
   corners: { x: number; y: number }[] | null;
 }
 
-// ZXing format number → name map
-const FMT_NAMES: Record<number, string> = {
-  1: 'aztec', 2: 'ean_8', 3: 'ean_13', 4: 'code_128',
-  6: 'code_39', 8: 'data_matrix', 11: 'qr_code', 15: 'pdf_417',
+// ── Native BarcodeDetector types (not in all TS libs) ────────────────────────
+
+interface NativeBarcodeDetector {
+  detect(image: HTMLVideoElement | HTMLCanvasElement): Promise<NativeBarcode[]>;
+}
+interface NativeBarcode {
+  rawValue:    string;
+  format:      string;
+  boundingBox: DOMRectReadOnly;
+  cornerPoints: { x: number; y: number }[];
+}
+declare const BarcodeDetector: {
+  new(opts: { formats: string[] }): NativeBarcodeDetector;
+  getSupportedFormats(): Promise<string[]>;
 };
 
-function toScanResult(text: string, formatNum: number): ScanResult {
-  const isStaging = text.startsWith('STAGING:');
-  return {
-    value:       text,
-    symbology:   FMT_NAMES[formatNum] ?? `format_${formatNum}`,
-    type:        isStaging ? 'staging' : 'product',
-    stagingCode: isStaging ? text.slice(8, 12).toUpperCase() : null,
-    bbox:        null,
-    corners:     null,
-  };
-}
+// ── ZXing singleton — loaded once, reused across hook instances ──────────────
 
-// Module-level reader singleton — loaded once, reused across hook instances
 type ZXingReader = {
   decodeFromCanvas(canvas: HTMLCanvasElement): Promise<{ getText(): string; getBarcodeFormat(): number }>;
 };
-let _reader: ZXingReader | null = null;
-let _readerLoading = false;
-const _readerCallbacks: Array<() => void> = [];
+let _zxingReader: ZXingReader | null = null;
+let _zxingLoading = false;
+const _zxingCallbacks: Array<() => void> = [];
 
-async function getReader(): Promise<ZXingReader | null> {
-  if (_reader) return _reader;
-  if (_readerLoading) {
+async function getZXingReader(): Promise<ZXingReader | null> {
+  if (_zxingReader) return _zxingReader;
+  if (_zxingLoading) {
     return new Promise<ZXingReader | null>((resolve) => {
-      _readerCallbacks.push(() => resolve(_reader));
+      _zxingCallbacks.push(() => resolve(_zxingReader));
     });
   }
-  _readerLoading = true;
+  _zxingLoading = true;
   try {
     const zxing = await import('@zxing/library');
     const hints = new Map();
@@ -66,7 +65,7 @@ async function getReader(): Promise<ZXingReader | null> {
       zxing.BarcodeFormat.CODE_39,
     ]);
     hints.set(zxing.DecodeHintType.TRY_HARDER, true);
-    _reader = new zxing.BrowserMultiFormatReader(hints) as unknown as ZXingReader;
+    _zxingReader = new zxing.BrowserMultiFormatReader(hints) as unknown as ZXingReader;
     console.info('[Scanner] ZXing BrowserMultiFormatReader ready');
     remoteLog('info', '[Scanner] ZXing ready');
   } catch (e) {
@@ -74,97 +73,206 @@ async function getReader(): Promise<ZXingReader | null> {
     console.warn('[Scanner] ZXing load failed:', e);
     remoteLog('error', `[Scanner] ZXing load failed: ${msg}`);
   }
-  _readerLoading = false;
-  _readerCallbacks.forEach((cb) => cb());
-  _readerCallbacks.length = 0;
-  return _reader;
+  _zxingLoading = false;
+  _zxingCallbacks.forEach((cb) => cb());
+  _zxingCallbacks.length = 0;
+  return _zxingReader;
 }
 
-const SCAN_INTERVAL_MS = 250; // 4 attempts/sec — fast enough, doesn't hammer CPU
+// ── Result converters ────────────────────────────────────────────────────────
+
+const ZXING_FMT_NAMES: Record<number, string> = {
+  1: 'aztec', 2: 'ean_8', 3: 'ean_13', 4: 'code_128',
+  6: 'code_39', 8: 'data_matrix', 11: 'qr_code', 15: 'pdf_417',
+};
+
+function nativeToScanResult(b: NativeBarcode): ScanResult {
+  const isStaging = b.rawValue.startsWith('STAGING:');
+  const bb = b.boundingBox;
+  return {
+    value:       b.rawValue,
+    symbology:   b.format,
+    type:        isStaging ? 'staging' : 'product',
+    stagingCode: isStaging ? b.rawValue.slice(8, 12).toUpperCase() : null,
+    bbox:        bb ? { x: Math.round(bb.x), y: Math.round(bb.y), w: Math.round(bb.width), h: Math.round(bb.height) } : null,
+    corners:     b.cornerPoints?.map((p) => ({ x: p.x, y: p.y })) ?? null,
+  };
+}
+
+function zxingToScanResult(text: string, formatNum: number): ScanResult {
+  const isStaging = text.startsWith('STAGING:');
+  return {
+    value:       text,
+    symbology:   ZXING_FMT_NAMES[formatNum] ?? `format_${formatNum}`,
+    type:        isStaging ? 'staging' : 'product',
+    stagingCode: isStaging ? text.slice(8, 12).toUpperCase() : null,
+    bbox:        null,
+    corners:     null,
+  };
+}
+
+// ── Constants ────────────────────────────────────────────────────────────────
+
+const SCAN_INTERVAL_MS = 250; // ZXing canvas poll — ~4fps
+const DEBOUNCE_MS      = 800; // same value must wait this long before re-firing
+
+// ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useBarcodeScanner(
-  videoRef: React.RefObject<HTMLVideoElement | null>,
-  scanning: boolean,
-  onDetect: (result: ScanResult) => void,
+  videoRef:  React.RefObject<HTMLVideoElement | null>,
+  scanning:  boolean,
+  onDetect:  (result: ScanResult) => void,
 ) {
   const [engineReady, setEngineReady] = useState(false);
   const [unsupported, setUnsupported] = useState(false);
-  const lastValueRef = useRef<string>('');
-  const lastTimeRef  = useRef<number>(0);
-  const DEBOUNCE_MS  = 800;
 
+  // Which engine was selected: 'native' | 'zxing' | null
+  const engineRef    = useRef<'native' | 'zxing' | null>(null);
+  const nativeRef    = useRef<NativeBarcodeDetector | null>(null);
+  const inFlightRef  = useRef(false);
+  const lastValueRef = useRef('');
+  const lastTimeRef  = useRef(0);
+
+  // Stable callback ref — prevents re-triggering scan loop on parent re-renders
   const onDetectRef = useRef(onDetect);
   useEffect(() => { onDetectRef.current = onDetect; }, [onDetect]);
 
-  // Load ZXing on mount
+  // ── Engine initialisation ────────────────────────────────────────────────
+
   useEffect(() => {
-    getReader().then((r) => {
-      if (r) setEngineReady(true);
-      else    setUnsupported(true);
-    });
+    async function init() {
+      // Try native BarcodeDetector first — no getSupportedFormats gate on
+      // data_matrix because some Samsung builds omit it from the list even
+      // though the API decodes it fine.
+      if (typeof BarcodeDetector !== 'undefined') {
+        try {
+          const FORMATS = ['qr_code', 'code_128', 'ean_13', 'data_matrix', 'code_39', 'ean_8'];
+          nativeRef.current  = new BarcodeDetector({ formats: FORMATS });
+          engineRef.current  = 'native';
+          remoteLog('info', '[Scanner] engine=BarcodeDetector (native)');
+          console.info('[Scanner] engine=BarcodeDetector (native)');
+          setEngineReady(true);
+          return;
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          remoteLog('warn', `[Scanner] BarcodeDetector init failed: ${msg} — falling back to ZXing`);
+          console.warn('[Scanner] BarcodeDetector init failed, falling back to ZXing:', e);
+        }
+      } else {
+        remoteLog('info', '[Scanner] BarcodeDetector unavailable — using ZXing');
+        console.info('[Scanner] BarcodeDetector unavailable — using ZXing');
+      }
+
+      // ZXing fallback
+      const reader = await getZXingReader();
+      if (reader) {
+        engineRef.current = 'zxing';
+        remoteLog('info', '[Scanner] engine=ZXing (canvas fallback)');
+        setEngineReady(true);
+      } else {
+        setUnsupported(true);
+      }
+    }
+    init();
   }, []);
 
-  // Scan loop — grabs canvas frame every SCAN_INTERVAL_MS
+  // ── Scan loop ────────────────────────────────────────────────────────────
+
   useEffect(() => {
     if (!scanning || !engineReady) return;
 
-    const canvas = document.createElement('canvas');
     let active    = true;
-    let timer: ReturnType<typeof setTimeout>;
     let tickCount = 0;
 
-    remoteLog('info', '[Scanner] scan loop started');
+    remoteLog('info', `[Scanner] scan loop started (engine=${engineRef.current})`);
 
-    async function tick() {
-      if (!active) return;
-      const video  = videoRef.current;
-      const reader = await getReader();
-
-      // Log first tick and every 50 ticks so we know the loop is alive
-      tickCount++;
-      if (tickCount === 1 || tickCount % 50 === 0) {
-        const vstate = video ? `readyState:${video.readyState} ${video.videoWidth}x${video.videoHeight}` : 'no video';
-        remoteLog('info', `[Scanner] tick #${tickCount} — ${vstate}`);
-      }
-
-      if (video && reader && video.readyState >= 2 && video.videoWidth > 0) {
-        // Cap the smaller dimension at 480px — works for both landscape and portrait.
-        // At 1080x1920 portrait this gives 480x853; the barcode fills far more of the frame.
-        const shortSide = Math.min(video.videoWidth, video.videoHeight);
-        const scale     = Math.min(1, 480 / shortSide);
-        canvas.width  = Math.round(video.videoWidth  * scale);
-        canvas.height = Math.round(video.videoHeight * scale);
-        if (tickCount === 1 || tickCount % 50 === 0) {
-          remoteLog('info', `[Scanner] canvas: ${canvas.width}x${canvas.height} (scale:${scale.toFixed(3)})`);
+    if (engineRef.current === 'native') {
+      // Native: rAF loop — await detect() before next frame to avoid races
+      const rafRef = { id: 0 };
+      async function nativeLoop() {
+        if (!active) return;
+        if (!inFlightRef.current) {
+          inFlightRef.current = true;
+          const video = videoRef.current;
+          tickCount++;
+          if (tickCount === 1 || tickCount % 100 === 0) {
+            const vstate = video ? `readyState:${video.readyState} ${video.videoWidth}x${video.videoHeight}` : 'no video';
+            remoteLog('info', `[Scanner] tick #${tickCount} — ${vstate}`);
+          }
+          if (video && video.readyState >= 2 && video.videoWidth > 0 && nativeRef.current) {
+            try {
+              const results = await nativeRef.current.detect(video);
+              const now = Date.now();
+              for (const r of results) {
+                if (r.rawValue && (r.rawValue !== lastValueRef.current || now - lastTimeRef.current > DEBOUNCE_MS)) {
+                  lastValueRef.current = r.rawValue;
+                  lastTimeRef.current  = now;
+                  remoteLog('info', `[Scanner] decoded: ${r.rawValue} (fmt:${r.format})`);
+                  onDetectRef.current(nativeToScanResult(r));
+                }
+              }
+            } catch { /* ignore mid-scan errors */ }
+          }
+          inFlightRef.current = false;
         }
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          try {
-            const result = await reader.decodeFromCanvas(canvas);
-            const text   = result.getText();
-            const fmt    = result.getBarcodeFormat();
-            const now    = Date.now();
-            if (text && (text !== lastValueRef.current || now - lastTimeRef.current > DEBOUNCE_MS)) {
-              lastValueRef.current = text;
-              lastTimeRef.current  = now;
-              remoteLog('info', `[Scanner] decoded: ${text} (fmt:${fmt})`);
-              onDetectRef.current(toScanResult(text, fmt));
-            }
-          } catch {
-            /* NotFoundException is normal — no code in frame */
+        if (active) rafRef.id = requestAnimationFrame(nativeLoop);
+      }
+      rafRef.id = requestAnimationFrame(nativeLoop);
+      return () => {
+        active = false;
+        cancelAnimationFrame(rafRef.id);
+        remoteLog('info', `[Scanner] scan loop stopped after ${tickCount} ticks`);
+      };
+
+    } else {
+      // ZXing: canvas poll at SCAN_INTERVAL_MS
+      const canvas = document.createElement('canvas');
+      let timer: ReturnType<typeof setTimeout>;
+
+      async function zxingTick() {
+        if (!active) return;
+        const video  = videoRef.current;
+        const reader = await getZXingReader();
+        tickCount++;
+        if (tickCount === 1 || tickCount % 50 === 0) {
+          const vstate = video ? `readyState:${video.readyState} ${video.videoWidth}x${video.videoHeight}` : 'no video';
+          remoteLog('info', `[Scanner] tick #${tickCount} — ${vstate}`);
+        }
+        if (video && reader && video.readyState >= 2 && video.videoWidth > 0) {
+          const shortSide = Math.min(video.videoWidth, video.videoHeight);
+          const scale     = Math.min(1, 480 / shortSide);
+          canvas.width  = Math.round(video.videoWidth  * scale);
+          canvas.height = Math.round(video.videoHeight * scale);
+          if (tickCount === 1 || tickCount % 50 === 0) {
+            remoteLog('info', `[Scanner] canvas: ${canvas.width}x${canvas.height} (scale:${scale.toFixed(3)})`);
+          }
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            try {
+              const result = await reader.decodeFromCanvas(canvas);
+              const text   = result.getText();
+              const fmt    = result.getBarcodeFormat();
+              const now    = Date.now();
+              if (text && (text !== lastValueRef.current || now - lastTimeRef.current > DEBOUNCE_MS)) {
+                lastValueRef.current = text;
+                lastTimeRef.current  = now;
+                remoteLog('info', `[Scanner] decoded: ${text} (fmt:${fmt})`);
+                onDetectRef.current(zxingToScanResult(text, fmt));
+              }
+            } catch { /* NotFoundException is normal — no code in frame */ }
           }
         }
+        if (active) timer = setTimeout(zxingTick, SCAN_INTERVAL_MS);
       }
-      if (active) timer = setTimeout(tick, SCAN_INTERVAL_MS);
-    }
 
-    tick();
-    return () => {
-      active = false;
-      clearTimeout(timer);
-      remoteLog('info', `[Scanner] scan loop stopped after ${tickCount} ticks`);
-    };
+      zxingTick();
+      return () => {
+        active = false;
+        clearTimeout(timer);
+        remoteLog('info', `[Scanner] scan loop stopped after ${tickCount} ticks`);
+      };
+    }
   }, [scanning, engineReady, videoRef]);
 
   return { engineReady, unsupported, supportedFormats: [] as string[] };
