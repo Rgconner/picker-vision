@@ -28,6 +28,14 @@ data:
         try_files $uri $uri/ /index.html;
       }
 
+      location /mobile {
+        try_files $uri $uri/ /index.html;
+      }
+
+      location /demo {
+        try_files $uri $uri/ /index.html;
+      }
+
       location /api/ {
         proxy_pass http://api-gateway.picker-vision-btt.svc.cluster.local:80/api/;
         proxy_http_version 1.1;
@@ -134,6 +142,14 @@ data:
       }
 
       location /app {
+        try_files $uri $uri/ /index.html;
+      }
+
+      location /mobile {
+        try_files $uri $uri/ /index.html;
+      }
+
+      location /demo {
         try_files $uri $uri/ /index.html;
       }
 
