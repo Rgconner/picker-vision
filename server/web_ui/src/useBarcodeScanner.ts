@@ -216,7 +216,9 @@ export function useBarcodeScanner(
     // ── Shared dwell logic ────────────────────────────────────────────────
     // Called every tick with the full set of decoded values seen this frame.
     // Increments dwell counters for present values, resets absent ones.
-    // Fires onDetect when a value crosses DWELL_FRAMES.
+    // Fires onDetect ONLY when exactly one value has reached DWELL_FRAMES —
+    // if multiple values are ready simultaneously the picker has not isolated
+    // a single item yet, so all are held as candidates and the HUD warns them.
     // Returns the current candidate list so it can be published via setCandidates.
     function processDwell(
       seenThisFrame: Array<{ value: string; result: ScanResult }>,
@@ -229,30 +231,42 @@ export function useBarcodeScanner(
         if (!seenKeys.has(key)) dwellMap.current.delete(key);
       }
 
-      const nextCandidates: DwellCandidate[] = [];
-
-      for (const { value, result } of seenThisFrame) {
-        const prev  = dwellMap.current.get(value) ?? 0;
-        const count = prev + 1;
-        dwellMap.current.set(value, count);
-
-        if (count >= DWELL_FRAMES) {
-          // Check debounce — don't re-fire the same value too quickly
-          const last = debounceMap.current.get(value) ?? 0;
-          if (now - last > DEBOUNCE_MS) {
-            debounceMap.current.set(value, now);
-            dwellMap.current.set(value, 0); // reset so it must re-dwell before next fire
-            remoteLog('info', `[Scanner] dwell-fire: ${value} (${count} frames)`);
-            onDetectRef.current(result);
-          }
-          // Don't include in candidates once fired — it's done
-        } else {
-          // Still building — include in candidates list
-          nextCandidates.push({ value, frames: count, bbox: result.bbox, corners: result.corners });
-        }
+      // First pass — update all counters
+      for (const { value } of seenThisFrame) {
+        const prev = dwellMap.current.get(value) ?? 0;
+        dwellMap.current.set(value, prev + 1);
       }
 
-      return nextCandidates;
+      // Collect values that have reached threshold and are past debounce
+      const ready = seenThisFrame.filter(({ value }) => {
+        const count = dwellMap.current.get(value) ?? 0;
+        const last  = debounceMap.current.get(value) ?? 0;
+        return count >= DWELL_FRAMES && now - last > DEBOUNCE_MS;
+      });
+
+      // Only fire if exactly one item is isolated — multiple means picker
+      // hasn't cleared the frame yet; hold everything as candidates.
+      if (ready.length === 1) {
+        const { value, result } = ready[0];
+        debounceMap.current.set(value, now);
+        dwellMap.current.set(value, 0); // must re-dwell before next fire
+        remoteLog('info', `[Scanner] dwell-fire: ${value}`);
+        onDetectRef.current(result);
+        // fired item drops out of candidates
+        return seenThisFrame
+          .filter(({ value: v }) => v !== value)
+          .map(({ value: v, result: r }) => ({
+            value: v, frames: dwellMap.current.get(v) ?? 0, bbox: r.bbox, corners: r.corners,
+          }));
+      }
+
+      // Zero or multiple ready — return all as candidates
+      return seenThisFrame.map(({ value, result }) => ({
+        value,
+        frames:  dwellMap.current.get(value) ?? 0,
+        bbox:    result.bbox,
+        corners: result.corners,
+      }));
     }
 
     if (engineRef.current === 'native') {

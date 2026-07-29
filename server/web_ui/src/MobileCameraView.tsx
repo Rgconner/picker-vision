@@ -318,61 +318,36 @@ export function MobileCameraView({
         )}
       </div>
 
-      {/* ── HUD status strip — centre-bottom of camera view ── */}
+      {/* ── HUD status strip — driven entirely from local candidates (no server round-trip needed) ── */}
       {(() => {
-        const wrongItems   = detections.filter((d) => d.type === 'product' && d.status === 'unexpected');
-        const correctItems = detections.filter((d) => d.type === 'product' && d.status === 'correct');
-        const totalProduct = detections.filter((d) => d.type === 'product').length;
+        const count = candidates.length;
+        if (count === 0) return null;
 
-        // Only show when scanning is meaningfully active (something visible)
-        const hasCandidates = candidates.length > 0;
-        const hasDetections = totalProduct > 0;
-        if (!hasCandidates && !hasDetections) return null;
-
-        // Multi-object warning — correct item present but other items also in frame
-        if (correctItems.length > 0 && totalProduct > 1) {
+        // Multiple objects in frame — dwell gate is holding, picker must isolate
+        if (count > 1) {
           return (
             <div
               className="absolute bottom-16 left-3 right-3 flex items-center gap-2 px-3 py-2 rounded-xl pointer-events-none"
-              style={{ background: 'rgba(161,98,7,0.90)', backdropFilter: 'blur(4px)' }}
+              style={{ background: 'rgba(161,98,7,0.92)', backdropFilter: 'blur(4px)' }}
             >
               <span className="text-[#fef9c3] text-base font-bold shrink-0">⚠</span>
               <span className="text-[#fef9c3] text-xs font-semibold leading-tight">
-                {totalProduct} item{totalProduct > 1 ? 's' : ''} in view — isolate the correct one before scanning
+                {count} items in view — isolate one before scanning
               </span>
             </div>
           );
         }
 
-        // Wrong item only — nothing correct in frame
-        if (wrongItems.length > 0 && correctItems.length === 0) {
-          return (
-            <div
-              className="absolute bottom-16 left-3 right-3 flex items-center gap-2 px-3 py-2 rounded-xl pointer-events-none"
-              style={{ background: 'rgba(127,29,29,0.90)', backdropFilter: 'blur(4px)' }}
-            >
-              <span className="text-[#fca5a5] text-base font-bold shrink-0">⊘</span>
-              <span className="text-[#fca5a5] text-xs font-semibold leading-tight">
-                Wrong item — not on this order
-              </span>
-            </div>
-          );
-        }
-
-        // Candidate building dwell — show "hold steady" nudge
-        if (hasCandidates && correctItems.length === 0 && wrongItems.length === 0) {
-          return (
-            <div
-              className="absolute bottom-16 left-3 right-3 flex items-center gap-2 px-3 py-2 rounded-xl pointer-events-none"
-              style={{ background: 'rgba(88,28,135,0.85)', backdropFilter: 'blur(4px)' }}
-            >
-              <span className="text-[#e9d5ff] text-base shrink-0">◎</span>
-              <span className="text-[#e9d5ff] text-xs font-semibold leading-tight">Hold steady…</span>
-            </div>
-          );
-        }
-
-        return null;
+        // Single candidate building dwell — show "hold steady" nudge
+        return (
+          <div
+            className="absolute bottom-16 left-3 right-3 flex items-center gap-2 px-3 py-2 rounded-xl pointer-events-none"
+            style={{ background: 'rgba(88,28,135,0.85)', backdropFilter: 'blur(4px)' }}
+          >
+            <span className="text-[#e9d5ff] text-base shrink-0">◎</span>
+            <span className="text-[#e9d5ff] text-xs font-semibold leading-tight">Hold steady…</span>
+          </div>
+        );
       })()}
 
       {/* ── Debug info panel (bottom-left, semi-transparent) ── */}
