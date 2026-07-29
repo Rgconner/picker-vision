@@ -1,0 +1,55 @@
+<svg xmlns="http://w3.org" viewBox="0 0 500 650" width="100%" height="100%">
+  <!-- Outer Frame Styles -->
+  <style>
+    .cut-line { stroke: #000000; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .fold-line { stroke: #777777; stroke-width: 1.5; stroke-dasharray: 5,5; fill: none; }
+    .face-label { font-family: sans-serif; font-size: 12px; fill: #999999; text-anchor: middle; }
+  </style>
+
+  <!-- BACKGROUND HELP TEXT (Will not affect layout dimensions) -->
+  <text x="250" y="30" class="face-label" style="font-size:14px; font-weight:bold; fill:#333;">LATIN CROSS NO-SLIT CUBE TEMPLATE</text>
+  <text x="250" y="50" class="face-label">Solid Line = Cut Outer Edge Only | Dashed Line = Score &amp; Fold</text>
+
+  <!-- ==================== INTERNAL FOLD LINES (Dashed) ==================== -->
+  <g class="fold-line">
+    <!-- Horizontal fold lines between main faces -->
+    <line x1="200" y1="180" x2="300" y2="180" />
+    <line x1="100" y1="280" x2="400" y2="280" />
+    <line x1="100" y1="380" x2="400" y2="380" />
+    <line x1="200" y1="480" x2="300" y2="480" />
+    <!-- Vertical fold lines between main faces -->
+    <line x1="200" y1="180" x2="200" y2="480" />
+    <line x1="300" y1="180" x2="300" y2="480" />
+    <!-- Flap base fold lines -->
+    <line x1="200" y1="80"  x2="300" y2="80" />
+    <line x1="100" y1="280" x2="100" y2="380" />
+    <line x1="400" y1="280" x2="400" y2="380" />
+    <line x1="200" y1="480" x2="200" y2="580" />
+    <line x1="300" y1="480" x2="300" y2="580" />
+  </g>
+
+  <!-- ==================== EXTERIOR CUT SILHOUETTE (Solid) ==================== -->
+  <!-- This is a single, continuous outer path. No internal slices are made. -->
+  <path class="cut-line" d="
+    M 200,180 
+    L 220,80 L 280,80 L 300,180 
+    L 400,180 L 400,280 
+    L 420,300 L 420,360 L 400,380 
+    L 400,480 
+    L 300,480 
+    L 300,560 L 280,580 L 220,580 L 200,560 
+    L 200,480 
+    L 100,480 L 100,380 
+    L 80,360 L 80,300 L 100,280 
+    L 100,180 
+    Z" 
+  />
+
+  <!-- FACE IDENTIFIERS (For spatial orientation context) -->
+  <text x="250" y="135" class="face-label">1. TOP</text>
+  <text x="150" y="235" class="face-label">2. LEFT</text>
+  <text x="250" y="235" class="face-label">3. FRONT</text>
+  <text x="350" y="235" class="face-label">4. RIGHT</text>
+  <text x="250" y="335" class="face-label">5. BOTTOM</text>
+  <text x="250" y="435" class="face-label">6. BACK</text>
+</svg>
