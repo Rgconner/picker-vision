@@ -33,7 +33,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Order } from './types';
 import { useMobileCamera } from './useMobileCamera';
-import { useBarcodeScanner, type ScanResult } from './useBarcodeScanner';
+import { useBarcodeScanner, DWELL_FRAMES, type ScanResult } from './useBarcodeScanner';
 import { setRemoteLogPickerId } from './useRemoteLogger';
 import { useMobilePickerSession } from './useMobilePickerSession';
 import { MobileCameraView } from './MobileCameraView';
@@ -220,7 +220,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     // pickerState effect below.
   }, [scanning, publish, pendingConfirm]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { unsupported: scannerUnsupported } =
+  const { unsupported: scannerUnsupported, candidates } =
     useBarcodeScanner(videoRef as React.RefObject<HTMLVideoElement | null>, scanning, handleDetect);
 
   // Debug snapshot — posts composite JPEG every 2 s when ?debug=1
@@ -396,6 +396,8 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
       detections={detections}
       stagingRegions={stagingRegions}
       lastScan={lastScan}
+      candidates={candidates}
+      dwellFrames={DWELL_FRAMES}
       videoRef={videoRef as React.RefObject<HTMLVideoElement | null>}
       canvasRef={canvasRef as React.RefObject<HTMLCanvasElement | null>}
       debugMode={debugMode}

@@ -5,13 +5,16 @@
  *   - <video> element driven by the supplied MediaStream
  *   - <canvas> overlaid at identical dimensions, drawn each animation frame
  *   - Bounding boxes + labels for each scan result from the server-enriched state
+ *   - ⊘ symbol + thick red box on unexpected items
+ *   - Dwell progress arc on candidates (building toward DWELL_FRAMES threshold)
+ *   - HUD status strip — no object / wrong object / multi-object warnings
  *   - Camera selector pill and facing toggle button
  */
 
 import React, { useEffect, useRef, useCallback } from 'react';
 import type { Detection, StagingRegion } from './types';
 import type { CameraDevice, CameraFacing } from './useMobileCamera';
-import type { ScanResult } from './useBarcodeScanner';
+import type { ScanResult, DwellCandidate } from './useBarcodeScanner';
 
 interface Props {
   stream:         MediaStream | null;
@@ -27,6 +30,10 @@ interface Props {
   stagingRegions: StagingRegion[];
   /** Most recent local scan — drawn immediately before server round-trip completes */
   lastScan:       ScanResult | null;
+  /** Candidates currently building dwell — shown as progress arcs */
+  candidates:     DwellCandidate[];
+  /** Total dwell frames threshold — used to scale the progress arc */
+  dwellFrames:    number;
   videoRef:       React.RefObject<HTMLVideoElement | null>;
   /** When provided, the AR canvas ref is forwarded here for external use (e.g. debug snapshot) */
   canvasRef?:     React.RefObject<HTMLCanvasElement | null>;
@@ -40,13 +47,13 @@ const COLOURS = {
   unexpected: '#ef4444',
   staging:    '#06b6d4',
   pending:    '#94a3b8',
-  local:      '#a78bfa',   // purple — local scan not yet enriched by server
+  dwell:      '#a78bfa',   // purple — candidate building dwell
 };
 
 export function MobileCameraView({
   stream, devices, activeDeviceId, facing, error, ready,
   onSwitch, onToggleFacing,
-  detections, stagingRegions, lastScan,
+  detections, stagingRegions, lastScan, candidates, dwellFrames,
   videoRef,
   canvasRef: externalCanvasRef,
   debugMode = false,
@@ -62,9 +69,13 @@ export function MobileCameraView({
   const detectionsRef     = useRef(detections);
   const stagingRef        = useRef(stagingRegions);
   const lastScanRef       = useRef(lastScan);
+  const candidatesRef     = useRef(candidates);
+  const dwellFramesRef    = useRef(dwellFrames);
   useEffect(() => { detectionsRef.current  = detections;     }, [detections]);
   useEffect(() => { stagingRef.current     = stagingRegions; }, [stagingRegions]);
   useEffect(() => { lastScanRef.current    = lastScan;       }, [lastScan]);
+  useEffect(() => { candidatesRef.current  = candidates;     }, [candidates]);
+  useEffect(() => { dwellFramesRef.current = dwellFrames;    }, [dwellFrames]);
 
   // Attach stream to video element
   useEffect(() => {
@@ -115,15 +126,43 @@ export function MobileCameraView({
       const [bx, by, bw, bh] = det.bbox;
       const x = bx * sx, y = by * sy, w = bw * sx, h = bh * sy;
 
-      const colour = det.active
+      const isWrong = det.status === 'unexpected';
+      const colour  = det.active
         ? COLOURS.active
+        : isWrong ? COLOURS.unexpected
         : det.status === 'correct' ? COLOURS.correct
-        : det.status === 'unexpected' ? COLOURS.unexpected
         : COLOURS.pending;
 
       ctx.strokeStyle = colour;
-      ctx.lineWidth   = det.active ? 3 : 2;
+      ctx.lineWidth   = isWrong ? 4 : det.active ? 3 : 2.5;
       ctx.strokeRect(x, y, w, h);
+
+      if (isWrong) {
+        // ⊘ fill — semi-transparent red wash
+        ctx.fillStyle = 'rgba(239,68,68,0.15)';
+        ctx.fillRect(x, y, w, h);
+
+        // Diagonal strike lines (X)
+        ctx.save();
+        ctx.strokeStyle = COLOURS.unexpected;
+        ctx.lineWidth   = 3;
+        ctx.globalAlpha = 0.7;
+        ctx.beginPath(); ctx.moveTo(x, y);         ctx.lineTo(x + w, y + h); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x + w, y);     ctx.lineTo(x, y + h);     ctx.stroke();
+        ctx.restore();
+
+        // ⊘ symbol centred on the box
+        const fontSize = Math.max(28, Math.min(w, h) * 0.5);
+        ctx.font      = `bold ${fontSize}px sans-serif`;
+        ctx.fillStyle = COLOURS.unexpected;
+        ctx.globalAlpha = 0.85;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⊘', x + w / 2, y + h / 2);
+        ctx.globalAlpha = 1;
+        ctx.textAlign   = 'left';
+        ctx.textBaseline = 'alphabetic';
+      }
 
       // Label — both lines use the same threshold so they never cross
       const labelBelow = y <= 30;
@@ -164,17 +203,46 @@ export function MobileCameraView({
       ctx.textAlign = 'left';
     }
 
-    // ── Draw local last scan (purple) before server round-trip ───────────────
-    if (lastScanRef.current?.bbox) {
-      const { x, y, w, h } = lastScanRef.current.bbox;
-      ctx.strokeStyle = COLOURS.local;
-      ctx.lineWidth   = 2;
-      ctx.setLineDash([5, 3]);
-      ctx.strokeRect(x * sx, y * sy, w * sx, h * sy);
+    // ── Draw dwell candidates (purple progress arc) ───────────────────────────
+    const threshold = dwellFramesRef.current;
+    for (const cand of candidatesRef.current) {
+      if (!cand.bbox) continue;
+      const { x: bx2, y: by2, w: bw2, h: bh2 } = cand.bbox;
+      const x2 = bx2 * sx, y2 = by2 * sy, w2 = bw2 * sx, h2 = bh2 * sy;
+      const progress = Math.min(cand.frames / threshold, 1);
+
+      // Dashed border — thicker as progress builds
+      ctx.strokeStyle = COLOURS.dwell;
+      ctx.lineWidth   = 2 + progress * 2;
+      ctx.setLineDash([6, 3]);
+      ctx.globalAlpha = 0.5 + progress * 0.4;
+      ctx.strokeRect(x2, y2, w2, h2);
       ctx.setLineDash([]);
-      ctx.fillStyle = COLOURS.local;
-      ctx.font      = '12px monospace';
-      ctx.fillText(lastScanRef.current.value, x * sx + 2, y * sy > 14 ? y * sy - 4 : y * sy + h * sy + 13);
+      ctx.globalAlpha = 1;
+
+      // Progress arc in the top-right corner
+      const r  = Math.min(14, Math.min(w2, h2) * 0.18);
+      const cx = x2 + w2 - r - 4;
+      const cy = y2 + r + 4;
+      // Background circle
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+      ctx.lineWidth   = r * 0.6;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+      // Foreground arc
+      ctx.strokeStyle = COLOURS.dwell;
+      ctx.lineWidth   = r * 0.55;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+      ctx.stroke();
+
+      // Value label
+      ctx.fillStyle  = COLOURS.dwell;
+      ctx.font       = '11px monospace';
+      ctx.globalAlpha = 0.8;
+      ctx.fillText(cand.value, x2 + 2, y2 > 14 ? y2 - 3 : y2 + h2 + 12);
+      ctx.globalAlpha = 1;
     }
 
     rafRef.current = requestAnimationFrame(draw);
@@ -250,6 +318,63 @@ export function MobileCameraView({
         )}
       </div>
 
+      {/* ── HUD status strip — centre-bottom of camera view ── */}
+      {(() => {
+        const wrongItems   = detections.filter((d) => d.type === 'product' && d.status === 'unexpected');
+        const correctItems = detections.filter((d) => d.type === 'product' && d.status === 'correct');
+        const totalProduct = detections.filter((d) => d.type === 'product').length;
+
+        // Only show when scanning is meaningfully active (something visible)
+        const hasCandidates = candidates.length > 0;
+        const hasDetections = totalProduct > 0;
+        if (!hasCandidates && !hasDetections) return null;
+
+        // Multi-object warning — correct item present but other items also in frame
+        if (correctItems.length > 0 && totalProduct > 1) {
+          return (
+            <div
+              className="absolute bottom-16 left-3 right-3 flex items-center gap-2 px-3 py-2 rounded-xl pointer-events-none"
+              style={{ background: 'rgba(161,98,7,0.90)', backdropFilter: 'blur(4px)' }}
+            >
+              <span className="text-[#fef9c3] text-base font-bold shrink-0">⚠</span>
+              <span className="text-[#fef9c3] text-xs font-semibold leading-tight">
+                {totalProduct} item{totalProduct > 1 ? 's' : ''} in view — isolate the correct one before scanning
+              </span>
+            </div>
+          );
+        }
+
+        // Wrong item only — nothing correct in frame
+        if (wrongItems.length > 0 && correctItems.length === 0) {
+          return (
+            <div
+              className="absolute bottom-16 left-3 right-3 flex items-center gap-2 px-3 py-2 rounded-xl pointer-events-none"
+              style={{ background: 'rgba(127,29,29,0.90)', backdropFilter: 'blur(4px)' }}
+            >
+              <span className="text-[#fca5a5] text-base font-bold shrink-0">⊘</span>
+              <span className="text-[#fca5a5] text-xs font-semibold leading-tight">
+                Wrong item — not on this order
+              </span>
+            </div>
+          );
+        }
+
+        // Candidate building dwell — show "hold steady" nudge
+        if (hasCandidates && correctItems.length === 0 && wrongItems.length === 0) {
+          return (
+            <div
+              className="absolute bottom-16 left-3 right-3 flex items-center gap-2 px-3 py-2 rounded-xl pointer-events-none"
+              style={{ background: 'rgba(88,28,135,0.85)', backdropFilter: 'blur(4px)' }}
+            >
+              <span className="text-[#e9d5ff] text-base shrink-0">◎</span>
+              <span className="text-[#e9d5ff] text-xs font-semibold leading-tight">Hold steady…</span>
+            </div>
+          );
+        }
+
+        return null;
+      })()}
+
       {/* ── Debug info panel (bottom-left, semi-transparent) ── */}
       {debugMode && (
         <div className="absolute bottom-2 left-2 right-2 rounded-lg bg-black/70 backdrop-blur-sm text-white text-[10px] font-mono p-2 space-y-0.5 pointer-events-none">
@@ -257,6 +382,7 @@ export function MobileCameraView({
           <div><span className="text-[#94a3b8]">detections:</span> {detections.length}</div>
           <div><span className="text-[#94a3b8]">active:</span> {detections.filter(d => d.active).length}</div>
           <div><span className="text-[#94a3b8]">staging:</span> {stagingRegions.length}</div>
+          <div><span className="text-[#94a3b8]">candidates:</span> {candidates.map((c) => `${c.value}(${c.frames})`).join(', ') || '—'}</div>
           <div><span className="text-[#94a3b8]">lastScan:</span> {lastScan?.value ?? '—'}</div>
           <div><span className="text-[#94a3b8]">snapshot:</span> POSTing /api/debug/snapshot every 2 s</div>
           <div className="text-[#57606a] mt-1">GET /api/debug/snapshot/&lt;picker-id&gt; for live view</div>

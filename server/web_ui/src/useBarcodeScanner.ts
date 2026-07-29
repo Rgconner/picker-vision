@@ -126,8 +126,18 @@ function zxingToScanResult(text: string, formatNum: number): ScanResult {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const SCAN_INTERVAL_MS = 250; // ZXing canvas poll — ~4fps
-const DEBOUNCE_MS      = 800; // same value must wait this long before re-firing
+const SCAN_INTERVAL_MS  = 250;  // ZXing canvas poll — ~4fps
+const DEBOUNCE_MS       = 1200; // same value must wait this long before re-firing after a confirmed detect
+export const DWELL_FRAMES = 6;  // consecutive frames required; exported so UI can scale progress arcs
+
+// ── Candidate — a barcode building toward the dwell threshold ────────────────
+
+export interface DwellCandidate {
+  value:   string;
+  frames:  number;   // how many consecutive frames seen so far
+  bbox:    ScanResult['bbox'];
+  corners: ScanResult['corners'];
+}
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
@@ -136,8 +146,9 @@ export function useBarcodeScanner(
   scanning:  boolean,
   onDetect:  (result: ScanResult) => void,
 ) {
-  const [engineReady, setEngineReady] = useState(false);
-  const [unsupported, setUnsupported] = useState(false);
+  const [engineReady, setEngineReady]       = useState(false);
+  const [unsupported, setUnsupported]       = useState(false);
+  const [candidates, setCandidates]         = useState<DwellCandidate[]>([]);
 
   // Which engine was selected: 'native' | 'zxing' | null
   const engineRef    = useRef<'native' | 'zxing' | null>(null);
@@ -146,6 +157,8 @@ export function useBarcodeScanner(
   // Per-value debounce map — tracks last-fired time for each decoded value
   // independently so two simultaneous codes don't debounce each other.
   const debounceMap  = useRef<Map<string, number>>(new Map());
+  // Per-value dwell counter — consecutive frame count; resets when value disappears
+  const dwellMap     = useRef<Map<string, number>>(new Map());
 
   // Stable callback ref — prevents re-triggering scan loop on parent re-renders
   const onDetectRef = useRef(onDetect);
@@ -200,6 +213,48 @@ export function useBarcodeScanner(
 
     remoteLog('info', `[Scanner] scan loop started (engine=${engineRef.current})`);
 
+    // ── Shared dwell logic ────────────────────────────────────────────────
+    // Called every tick with the full set of decoded values seen this frame.
+    // Increments dwell counters for present values, resets absent ones.
+    // Fires onDetect when a value crosses DWELL_FRAMES.
+    // Returns the current candidate list so it can be published via setCandidates.
+    function processDwell(
+      seenThisFrame: Array<{ value: string; result: ScanResult }>,
+    ): DwellCandidate[] {
+      const now      = Date.now();
+      const seenKeys = new Set(seenThisFrame.map((s) => s.value));
+
+      // Reset counters for any value no longer in frame
+      for (const key of dwellMap.current.keys()) {
+        if (!seenKeys.has(key)) dwellMap.current.delete(key);
+      }
+
+      const nextCandidates: DwellCandidate[] = [];
+
+      for (const { value, result } of seenThisFrame) {
+        const prev  = dwellMap.current.get(value) ?? 0;
+        const count = prev + 1;
+        dwellMap.current.set(value, count);
+
+        if (count >= DWELL_FRAMES) {
+          // Check debounce — don't re-fire the same value too quickly
+          const last = debounceMap.current.get(value) ?? 0;
+          if (now - last > DEBOUNCE_MS) {
+            debounceMap.current.set(value, now);
+            dwellMap.current.set(value, 0); // reset so it must re-dwell before next fire
+            remoteLog('info', `[Scanner] dwell-fire: ${value} (${count} frames)`);
+            onDetectRef.current(result);
+          }
+          // Don't include in candidates once fired — it's done
+        } else {
+          // Still building — include in candidates list
+          nextCandidates.push({ value, frames: count, bbox: result.bbox, corners: result.corners });
+        }
+      }
+
+      return nextCandidates;
+    }
+
     if (engineRef.current === 'native') {
       // Native: rAF loop — await detect() before next frame to avoid races
       const rafRef = { id: 0 };
@@ -216,17 +271,18 @@ export function useBarcodeScanner(
           if (video && video.readyState >= 2 && video.videoWidth > 0 && nativeRef.current) {
             try {
               const results = await nativeRef.current.detect(video);
-              const now = Date.now();
-              for (const r of results) {
-                if (!r.rawValue) continue;
-                const last = debounceMap.current.get(r.rawValue) ?? 0;
-                if (now - last > DEBOUNCE_MS) {
-                  debounceMap.current.set(r.rawValue, now);
-                  remoteLog('info', `[Scanner] decoded: ${r.rawValue} (fmt:${r.format})`);
-                  onDetectRef.current(nativeToScanResult(r));
-                }
-              }
+              const seen = results
+                .filter((r) => r.rawValue)
+                .map((r)  => ({ value: r.rawValue, result: nativeToScanResult(r) }));
+              const cands = processDwell(seen);
+              setCandidates(cands);
             } catch { /* ignore mid-scan errors */ }
+          } else {
+            // No video — ensure stale candidates are cleared
+            if (dwellMap.current.size > 0) {
+              dwellMap.current.clear();
+              setCandidates([]);
+            }
           }
           inFlightRef.current = false;
         }
@@ -236,11 +292,14 @@ export function useBarcodeScanner(
       return () => {
         active = false;
         cancelAnimationFrame(rafRef.id);
+        dwellMap.current.clear();
+        setCandidates([]);
         remoteLog('info', `[Scanner] scan loop stopped after ${tickCount} ticks`);
       };
 
     } else {
       // ZXing: canvas poll at SCAN_INTERVAL_MS
+      // ZXing only returns one result per tick, so it gets a single-element seen array.
       const canvas = document.createElement('canvas');
       let timer: ReturnType<typeof setTimeout>;
 
@@ -268,16 +327,23 @@ export function useBarcodeScanner(
               const result = await reader.decodeFromCanvas(canvas);
               const text   = result.getText();
               const fmt    = result.getBarcodeFormat();
-              const now    = Date.now();
               if (text) {
-                const last = debounceMap.current.get(text) ?? 0;
-                if (now - last > DEBOUNCE_MS) {
-                  debounceMap.current.set(text, now);
-                  remoteLog('info', `[Scanner] decoded: ${text} (fmt:${fmt})`);
-                  onDetectRef.current(zxingToScanResult(text, fmt));
+                const cands = processDwell([{ value: text, result: zxingToScanResult(text, fmt) }]);
+                setCandidates(cands);
+              } else {
+                // Nothing decoded this tick — reset all dwell
+                if (dwellMap.current.size > 0) {
+                  dwellMap.current.clear();
+                  setCandidates([]);
                 }
               }
-            } catch { /* NotFoundException is normal — no code in frame */ }
+            } catch {
+              // NotFoundException is normal — nothing in frame, reset dwell
+              if (dwellMap.current.size > 0) {
+                dwellMap.current.clear();
+                setCandidates([]);
+              }
+            }
           }
         }
         if (active) timer = setTimeout(zxingTick, SCAN_INTERVAL_MS);
@@ -287,10 +353,12 @@ export function useBarcodeScanner(
       return () => {
         active = false;
         clearTimeout(timer);
+        dwellMap.current.clear();
+        setCandidates([]);
         remoteLog('info', `[Scanner] scan loop stopped after ${tickCount} ticks`);
       };
     }
   }, [scanning, engineReady, videoRef]);
 
-  return { engineReady, unsupported, supportedFormats: [] as string[] };
+  return { engineReady, unsupported, candidates, supportedFormats: [] as string[] };
 }
