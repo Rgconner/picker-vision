@@ -284,8 +284,22 @@ Option 3 is the right immediate fix — one-line change to the deployment manife
 **Recurrence count:** 1 (observed live walkthrough 2026-07-29). **Open.**  
 **Effort:** S
 
+
+### QOL-019 · `demo/stop` with no body only cleared the presentation session
+
+**Symptom:** Calling `POST /api/demo/stop` with an empty body (the "Stop Demo" button path) silently no-oped for personal-mode sessions. Only the `demo-presenter` picker's session was stopped; all other pickers' sessions stayed live. Orphaned orders remained in `picking` status and continued to appear on the supervisor dashboard until the 2-hour filter removed them.  
+**Manual workaround applied:** Pass explicit `{"session_id": "..."}` to stop individual sessions.  
+**Fix applied:** `demo/stop` with no body now stops ALL active sessions (personal + presentation) and cancels each session's current `picking` order immediately. Commit `7d58f15` (2026-07-29). **Fixed.**  
+**Effort:** S
+
 ---
 
+### QOL-020 · `demo/start` cancelled ALL picking demo orders, not just the starting picker's
+
+**Symptom:** When any picker started a new demo session via `POST /api/demo/start`, the QOL-010 stale-order cleanup cancelled *every* `Demo (...)` order in `picking` status — including active orders belonging to other pickers running concurrently. In a 5-person demo, one picker pressing "Start Demo" would silently wipe the in-progress orders of the other four.  
+**Manual workaround applied:** None practical — required avoiding concurrent sessions.  
+**Fix applied:** Scoped the cleanup to only `Demo ({picker_id})` customer name (exact match) and additionally skipped any order already tracked by an active in-memory session. Commit `d1fa69f` (2026-07-29). **Fixed.**  
+**Effort:** S
 
 ---
 
