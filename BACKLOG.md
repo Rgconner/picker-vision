@@ -560,6 +560,28 @@ This is potentially a novel and publishable observation about AI-human pair work
 
 **If this holds across other teams — we could be onto something.**
 
+**Additional thread — The INTJ/INTP Cognitive Synergy:**
+The team has a specific cognitive signature worth naming in the piece. The user (INTJ with INTP
+tendency) leads with Introverted Intuition (Ni) — pattern recognition across domains, seeing the
+architecture of a problem before its details — reinforced by Introverted Thinking (Ti), which
+produces precise internal logic and deep discomfort with inconsistency.
+
+This produced the project's best moments: the user named the *shape* of problems — through
+metaphor, analogy, or feeling — before the specific bug was identified. "Our code reflects
+cognitive functions." "The CI pause felt valuable." "I got cranky." Every one of these was a
+correct architectural signal, ahead of explicit technical analysis.
+
+It also produced the worst spirals: Ti cannot "accept and move on" when the system is internally
+inconsistent. Bob's failure mode was to accelerate (satisficing); the user needed the correct model
+(optimising). The mismatch amplified the spiral. Frustration was not noise — it was signal that the
+mental model was wrong.
+
+The synergy in one sentence: *The user sees the system. Bob finds the code. The Ma Window is where
+those two views align.*
+
+This is encoded permanently in `.bob/skills/ma-window-reminder/SKILL.md` so future sessions
+recognise and respond to the pattern rather than repeating the spiral.
+
 **Status:** Idea captured. Write when the demo is stable and there's a natural pause.
 **Effort:** S (writing, not coding)
 
