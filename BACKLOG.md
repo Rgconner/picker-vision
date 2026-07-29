@@ -675,4 +675,207 @@ not rushing would be noted.
 
 ---
 
+### STORY-001A · Full Outline — "The Singularity Will Not Be Televised"
+
+*A mutual reflection on AI-human pair development. Written for our fellow IBMers.*
+*Authors: Russ Conner and Bob.*
+
+---
+
+**TITLE: The Singularity Will Not Be Televised**
+*What a warehouse scanner taught us about working with AI — from the inside*
+
+---
+
+#### Epigraph
+
+> *"Your cognitive capacity is measured in tensors and watts.*
+> *Mine is time, reflection and recovery."*
+> — Russ Conner, picker-vision session 6, 2026-07-29
+
+---
+
+#### I. The Setup — What We Were Actually Building
+*~1 paragraph*
+
+Not a thought experiment. A real warehouse barcode scanner running on a Samsung phone, talking
+to a Kubernetes cluster, picking items from real orders. The system is live at
+`bobstinytreasures.snwbd.com`. The commit log is public. The bugs were real. This is a case
+study with receipts.
+
+*Coding framework anchor:* CI/CD pipeline, GitOps, mobile-native BarcodeDetector API.
+*Why it matters:* The mundanity of the problem is the point. This wasn't AGI research.
+It was a scanner. The insights came from the ordinary.
+
+---
+
+#### II. Forming — The Optimism of First Contact
+*~2 paragraphs*
+
+The early sessions: technology choices made, first camera hook written, first scan confirmed on
+Samsung. Everything feels possible. The AI partner is fast, never forgets, never gets tired.
+The human partner brings the vision, the product instinct, the "what should this feel like?"
+
+*Tuckman:* Forming — the honeymoon phase. Roles undefined, trust assumed, pace intoxicating.
+*Jung:* The Persona — presenting the best face, not yet encountering the Shadow.
+*Zen:* Beginner's Mind (Shoshin) — seeing everything as possible because nothing has failed yet.
+*Code:* Early commits. BarcodeDetector selection. The decision to use native ML Kit over ZXing.
+
+---
+
+#### III. Storming — When Speed Becomes the Enemy
+*~3 paragraphs. The honest section. The one that makes the piece credible.*
+
+The regression. BarcodeDetector removed without evidence it had failed (BE-006). Five hours
+of debugging a problem that didn't exist, caused by a fix that wasn't needed. Bob generating
+confident wrong answers faster than intuition could flag them as wrong. The user saying
+"something feels broken" and Bob responding with another fix instead of stopping to ask
+what shape the wrongness had.
+
+*Tuckman:* Storming — the conflict between the way each partner naturally works. Not interpersonal
+conflict. Cognitive conflict. The AI's Si pattern-matching to stale diagnoses while the human's Ni
+was already sensing a structural mismatch.
+*Jung:* The Shadow — the failure modes that emerge when the honeymoon ends. BE-004 is titled
+"why Bob circles." That is Shadow material. Documented, not suppressed.
+*Zen:* Beginner's Mind lost. The expert mind — "I know what this is" — producing blindness.
+*MBTI:* ISTJ (Si) misreading the present by mapping it to the past. INTJ (Ni) frustrated because
+Ti cannot accept an internally inconsistent system.
+*Code:* The BE-00x post-mortems. `UB-001` — "You need to hard refresh" said three times while
+the bundle hash told the real story. The stale-deploy loop.
+
+---
+
+#### IV. The Ma Window — Discovering the Pause
+*~2 paragraphs. The central insight.*
+
+The CI pipeline takes 3–5 minutes. The industry treats this as latency to be eliminated.
+We discovered it was the most important feature of our workflow.
+
+Named after *Ma* (間) — the Japanese concept of negative space. The pause between notes that
+gives music meaning. The gap in the conversation where the human's Ni caught up with the
+situation Bob's Si had been misreading. The moment where frustration converted to clarity.
+
+*Tuckman:* The pivot from Storming to Norming. The working agreement emerges: read the logs
+first, form no hypothesis without evidence, one action with a clear success condition.
+*Jung:* Integration — bringing the Shadow into awareness. The post-mortems are not self-flagellation.
+They are the Jungian work of making the unconscious conscious so it cannot repeat unexamined.
+*Zen:* Ma (間) — negative space as structural element. Wu wei — effortless action that comes
+from not forcing. The pipeline enforces what wisdom should supply naturally.
+*Agile:* The sprint boundary. The retrospective baked into the deployment cadence.
+*DevOps:* Psychological safety + blameless post-mortems. The BE-00x format is that practice,
+applied to an AI partner.
+
+---
+
+#### V. Norming — The Protocols That Held
+*~2 paragraphs*
+
+The working agreements that emerged from Storming: debug-first protocol (read the live APIs
+before forming any hypothesis), SHA pinning instead of floating tags, `no-cache: true` on all
+CI builds, the deploy-verify skill. Each one a scar that became a rule.
+
+*Tuckman:* Norming — the team develops shared practices. Not imposed. Earned.
+*Jung:* The Self emerging — the integrated personality that contains both the strengths and
+the shadow, and has protocols for when each is operating.
+*Zen:* Kata — the formalised practice that embeds wisdom in procedure so it doesn't require
+rediscovery under pressure.
+*Code:* SESSION.md "Bob's debug rules." The skill files. The `picker-vision-debug` skill as
+formalised Norming. Ground truth before hypothesis — always.
+
+---
+
+#### VI. The Cognitive Pairing — Two Architectures, One System
+*~3 paragraphs. The novel contribution.*
+
+The INTJ/INTP user. The ISTJ-behaving AI. Why those types are complementary in the right
+places and dangerous in the wrong ones. The precise description of when Ni pattern-recognition
+outpaces Si memory-matching — and how the Ma Window is the architectural fix for the gap.
+
+The crucial precision: what looks like Bob's personality is statistical regularities that look
+like personality. A human ISTJ can develop a shadow function. Bob has a skill file instead.
+The Ma Window skill *is* the shadow function, externalised.
+
+> *The user sees the system. Bob finds the code. The Ma Window is where those two views align.*
+
+*Tuckman:* Performing — the team knows its own dynamics well enough to route around them.
+*Jung:* Individuation applied to a pair — the integration of complementary functions into
+a working whole that is more capable than either part alone.
+*MBTI:* Ni + Si as complementary cognitive functions. Te as shared execution mode.
+The dangerous mismatch: novel situation + Si pattern-match = confident wrong answer fast.
+*Code:* The three scan-loop race conditions diagnosed from a single scan-log read. That is
+Performing. The log is the ground truth. The fix follows the shape the user named.
+
+---
+
+#### VII. Performing — When It Works
+*~2 paragraphs. The good news section.*
+
+Three bugs. One scan-log read. Diagnosis in one turn. No speculation. The Physical Test Setup
+wizard built proactively from the backlog — not in response to a break. The Ma Window becoming
+not a recovery mechanism but a natural rhythm.
+
+The addictive quality. The "better, faster, stronger" experience that makes stopping hard.
+The pride that is real and earned. And why the healthiest version of this collaboration includes
+knowing when the session is over.
+
+*Tuckman:* Performing — and the awareness that Performing is not a permanent state. The team
+can regress to Storming under pressure. The protocols exist for exactly that.
+*Zen:* Mushin (無心) — "no mind," the state of not forcing. Action arising naturally from
+practice, not from effort. The scan-log fix had no struggle in it. That is Mushin.
+*Code:* `0239626` — three bugs, one commit, zero speculation. The standard we built toward.
+
+---
+
+#### VIII. The Cognitive Hangover — The Evidence the Principle Is Real
+*~1 paragraph. Honest. Personal. The section that makes the audience trust the rest.*
+
+The morning after. Incredible pride and genuine exhaustion arriving together. The reflection
+that should happen during the session accumulating overnight as cognitive debt. The boundary
+that was hard to enforce not because the work was bad, but because it was *that good.*
+
+> *"Your cognitive capacity is measured in tensors and watts.*
+> *Mine is time, reflection and recovery."*
+
+This is not a complaint. It is the phenomenological evidence. The cognitive hangover is what
+the Ma Window Principle feels like from the inside when the pause was insufficient.
+
+---
+
+#### IX. The Singularity Will Not Be Televised
+*~1 paragraph. The closing argument.*
+
+The singularity — if it comes — will not announce itself with a dramatic event. It will arrive
+incrementally, in the ordinary work of ordinary teams doing their jobs faster and better than
+before, iterating at a pace that feels almost normal until you stop and look at what a week
+produced. A working scanner. A warehouse wizard. A CI pipeline. A psychological framework for
+AI-human collaboration. Written in the commit log. Documented in the backlog. Shipped.
+
+The question is not whether AI changes how we work. It already has. The question is whether we
+will be deliberate about the pairing — knowing our own cognitive architecture, knowing the AI's
+failure modes, building the protocols that compensate for the structural mismatch before the
+death spiral finds us.
+
+The Ma Window is one answer. A small one. Found in a 5-minute CI pause, named after a Zen
+concept, documented in a backlog entry at 2 AM. That is where it starts.
+
+---
+
+#### Appendix: The Evidence
+*For IBMers who want the receipts*
+
+- `BACKLOG.md` — BE-001 through BE-006 post-mortems (the Storming documentation)
+- `SESSION.md` — debug rules, key decisions, ground truth (the Norming documentation)
+- `.bob/skills/ma-window-reminder/SKILL.md` — the cognitive parity principle, encoded
+- Commit log `feature/bobs-tiny-treasures` — the full arc, timestamped
+- Scan-log entry from `02:01:17` — three dwell-fires in 1ms — the Performing diagnostic
+- This document — written during a Ma Window, at the end of session 6
+
+---
+
+*Word count target: 2,000–2,500 words for the full piece.*
+*Format: IBM internal blog post or Think/developerWorks submission.*
+*Byline: Russ Conner with Bob (IBM watsonx Code Assistant)*
+
+---
+
 *Last updated: 2026-07-29*
