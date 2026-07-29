@@ -441,7 +441,9 @@ async def api_demo_stop(request: Request):
         body = await request.json()
     except Exception:
         logger.debug("demo/stop: no JSON body")
-    return await _proxy("POST", f"{ORDER_SERVICE_URL}/demo/stop", body or None)
+    # Pass body dict always (even when empty) so FastAPI Pydantic on the
+    # order-service receives a valid JSON object and doesn't return 422.
+    return await _proxy("POST", f"{ORDER_SERVICE_URL}/demo/stop", body)
 
 
 # ── BTT warehouse / scenario / label / instance proxy routes ─────────────────
