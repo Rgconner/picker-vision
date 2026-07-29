@@ -265,6 +265,28 @@ Option 3 is the right immediate fix — one-line change to the deployment manife
 **Recurrence count:** 2 sessions. **Open.**
 **Effort:** S
 
+
+### QOL-017 · Confirm overlay re-fires when barcode stays in-frame after pick
+
+**Symptom:** After tapping Confirm on the pick overlay, the same item immediately re-raises the overlay as if it's a new pick. The picker has to dismiss it repeatedly while the label is still visible on screen.  
+**Root cause:** `setPendingConfirm(null)` resumes the scan loop before `confirmPick` and the orders re-fetch complete. The barcode re-dwells, the server enriches it as `correct` against stale React order state (line still shows `pending` locally), and the overlay fires a second time.  
+**Fix shipped:** `327478e` — `confirmedLinesRef` Set gates the overlay effect immediately on confirm; cleared once the orders re-fetch completes.  
+**Recurrence count:** 1 (observed live walkthrough 2026-07-29). **Fixed.**  
+**Effort:** S
+
+---
+
+### QOL-018 · Guest picker session not dropped on logout / role switch
+
+**Symptom:** Logging out of a Guest session (or switching from Guest to Owner login) leaves the guest picker registered in the picker list — it remains visible in the Operator tab and telemetry until its heartbeat TTL expires (~2 min).  
+**Manual workaround applied:** None — picker eventually drops off on its own.  
+**Proper fix:** On `logout()` in `useAuth.ts`, POST a deregister/heartbeat-stop to the gateway so the picker registry entry is removed immediately. Or: filter out guest picker IDs from the Operator picker list on the supervisor view.  
+**Recurrence count:** 1 (observed live walkthrough 2026-07-29). **Open.**  
+**Effort:** S
+
+---
+
+
 ---
 
 ## Bob Errors — Post-mortems
