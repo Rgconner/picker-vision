@@ -233,21 +233,12 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
 
     publish(result);
 
-    // Eagerly refresh orders so the gate effect has fresh quantity_picked data
-    // when the WS pickerState response arrives (async fetch races the WS push).
-    fetch('/api/orders').then((r) => r.ok ? r.json() : null).then((data) => {
-      if (data) setOrders(data as Order[]);
-    }).catch(() => {});
   }, [scanning, publish, pendingConfirm]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Pause the scan loop while the ConfirmOverlay is visible.
-  // This prevents:
-  //   (a) the same item re-firing through pendingConfirm guard (debounce records
-  //       a dropped fire, blocking the next legitimate scan for DEBOUNCE_MS)
-  //   (b) the purple dwell arc cycling forever because handleDetect silently drops
-  //       the fire while pendingConfirm is set
-  // On resume, useBarcodeScanner clears dwellMap/debounceMap at loop start so
-  // the next item re-dwells cleanly from zero.
+  // Keep the scan loop running while we wait for the WS confirmation — we need
+  // the server's pickerState.detections to come back with status==='correct' so
+  // the overlay gate can fire. The loop is paused only once pendingConfirm is set
+  // (overlay is showing) to prevent re-fires during confirmation.
   const { unsupported: scannerUnsupported, candidates } =
     useBarcodeScanner(videoRef as React.RefObject<HTMLVideoElement | null>, scanning && !pendingConfirm, handleDetect);
 
@@ -271,28 +262,24 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   }, [pickerState]);
 
   // ── Gate on correct scan from server WebSocket ───────────────────────────────
-  // Previous approach: look for status==='correct' in pickerState.detections.
-  // Problem: the scan loop stops the moment it fires (scanning && !pendingConfirm),
-  // so by the time the WS response arrives there are no active detections — the
-  // event processor sends back an empty detections array and the gate never fires.
-  //
-  // Fix: use lastFiredBarcodeRef (set in handleDetect) as the match signal.
-  // When pickerState arrives and the orders list shows the fired barcode's line
-  // has been credited (quantity_picked incremented OR status=picked), raise the
-  // overlay. This is order-state-driven, not detection-driven.
+  // The scan loop stays running after a dwell-fire so the item remains visible
+  // in the next frame — the event processor enriches it and sends back a WS
+  // pickerState with detections[].status === 'correct'. We match on that signal
+  // plus lastFiredBarcodeRef so we only raise the overlay for the barcode we
+  // actually fired (not any other correct detection in frame).
   useEffect(() => {
     if (!pickerState || pendingConfirm) return;
     const fired = lastFiredBarcodeRef.current;
     if (!fired) return;
     const activeOrder = orders.find((o) => o.status === 'picking');
     if (!activeOrder) return;
-    // Find the line for the fired barcode that has been credited this tick
-    const line = activeOrder.lines.find(
-      (l) => l.product_barcode === fired && l.quantity_picked > 0 && l.status !== 'picked'
-        || l.product_barcode === fired && l.status === 'picked'
+    // Must see the fired barcode confirmed as 'correct' in this WS push
+    const correct = pickerState.detections?.find(
+      (d) => d.value === fired && d.status === 'correct' && d.order_id === activeOrder.id
     );
+    if (!correct) return;
+    const line = activeOrder.lines.find((l) => l.id === correct.line_id);
     if (!line) return;
-    // Clear so we don't re-raise on subsequent pickerState updates
     lastFiredBarcodeRef.current = null;
     setPendingConfirm({
       orderId:     activeOrder.id,
