@@ -175,6 +175,19 @@ Option 3 is the right immediate fix — one-line change to the deployment manife
 
 ---
 
+### QOL-014 · Wrong-item ⊘ overlay not firing on mobile web path
+
+**Symptom:** Scanning a barcode not on the active order shows no visual feedback — no red box, no ⊘ symbol, no HUD strip. The AR overlay and HUD were written against server-enriched `Detection` objects which carry `bbox` from Pi camera nodes. The mobile web client (`BarcodeDetector`) never sends bbox to the server, so `pickerState.detections` has no position data and the overlay has nothing to draw.
+
+**Manual workaround applied:** None — wrong item silently does nothing on mobile. Dwell gate prevents it triggering a pick, but there is no visual indication it was seen.
+
+**Proper fix:** Track wrong-item detections locally in the scanner hook. When `onDetect` fires and the WS response comes back marking the barcode `unexpected`, store that value + its local bbox (from `BarcodeDetector`) in a ref and feed it into the canvas draw loop as a local wrong-item overlay — same pattern as the existing dwell candidate path. No server bbox needed.
+
+**Recurrence count:** 1 session. **Open.**
+**Effort:** S
+
+---
+
 ### QOL-013 · Product descriptions contain em-dash — renders as `???` in some clients
 
 **Symptom:** Product descriptions in demo orders display as e.g. `"Shimmering Sapphire Sprite ??? Tiny Blue Cube"` in the supervisor UI and API responses. The `—` em-dash character (U+2014) stored in the seed data is being mangled somewhere in the SQLite → JSON → browser pipeline when the client or terminal doesn't handle UTF-8 correctly.
