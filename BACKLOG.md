@@ -91,6 +91,25 @@ That shows exactly which bundle the phone will load. Compare to what's in the po
 > Any problem that required manual intervention OR has occurred more than once.
 > These get properly fixed — not worked around again.
 
+### QOL-015 · Phone UI needs a purpose-built minimal layout
+
+**Symptom:** The mobile web UI (`/mobile`) was designed for a tablet. On a phone (≤430px) the pick list, scan strip, controls bar, and camera all compete for 6 inches of screen. One-handed use while walking is impractical.
+
+**Manual workaround applied:** Use tablet for scanning sessions. Phone demoed only on tablet.
+
+**Proper fix (deferred — spec depends on workflow decisions):**
+Options ranked by effort and install friction:
+1. **Responsive phone breakpoint + PWA** — `<430px` layout shows full-screen camera + floating next-item card + single FAB. `manifest.json` + service worker adds home-screen install with no App Store. ~2–3 hrs. Right first step regardless of other choices.
+2. **Expo React Native shell** — minimal native app (~200 lines), native ML Kit scanner, true home-screen install, works on iOS. Sideload APK on Android (no Play Store). iOS needs TestFlight or enterprise cert. Server stack unchanged.
+3. **Existing warehouse scanning app** — nothing off-the-shelf maps cleanly to the WebSocket protocol without more integration work than option 2.
+
+**Do not spec in detail until current workflow issues (multi-object gate, wrong-item feedback, pick flow edge cases) are resolved — the phone layout must reflect the final interaction model, not the current one.**
+
+**Recurrence count:** Every phone demo session. **Open — deferred.**
+**Effort:** M (option 1) → L (option 2)
+
+---
+
 ### QOL-001 · Phone gets stale JS after deploy — hard refresh required
 **Symptom:** After a deploy, phones running the app serve old JS until the user manually hard-refreshes.
 **Manual workaround applied:** Told users to hard refresh. Occurred every deploy.
