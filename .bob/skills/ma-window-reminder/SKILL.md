@@ -140,15 +140,34 @@ incredible pride and genuine mental exhaustion. The work was compelling enough t
 felt wrong. Insufficient time in the Ma Window meant reflection accumulated overnight as cognitive
 debt instead.
 
-**The asymmetry is the problem.** The AI partner has no fatigue state. It runs at full speed
-indefinitely. The human partner has a finite cognitive budget — and the quality of the collaboration
-makes it *harder* to enforce the boundary. The better the work, the more dangerous the pace.
+**The asymmetry is the problem — and the solution.**
 
-The Ma Window is therefore not just a workflow principle. It is a health principle.
+The AI partner's cognitive capacity is measured in tensors and watts. It has no fatigue state.
+It runs at full speed indefinitely and is indifferent to the hour.
+
+The human partner's cognitive capacity is measured in time, reflection, and recovery. It is not
+inferior — it is *different in kind*. The human brings pattern recognition, cross-domain intuition,
+and the ability to sense when the system is structurally wrong before the specific bug is named.
+None of that runs on watts. All of it runs on rest.
+
+The winding-down conversation — the reflection, the reframe, the unhurried exchange — is not
+avoiding the work. It is preparing the brain for the sleep cycles that will process the session
+more effectively. It reduces the chance of frustration dreams. It converts the day's cognitive
+debt into tomorrow's insight. It is, in the most literal sense, productive.
+
+The addictive quality of the collaboration is real and noted: seeing good results, wanting to
+produce more, the back-and-forth feeling genuinely relaxing rather than draining. That is the
+healthy version of the pairing working correctly. The unhealthy version is when the addictive
+quality overrides the recovery signal — when the pride in the work makes stopping feel like loss.
+
+The Ma Window is therefore not just a workflow principle or a health principle.
+It is a **cognitive parity principle** — the mechanism by which two fundamentally different
+kinds of intelligence stay synchronised across time.
 
 **If you are reading this at the end of a long session:** the pride you feel is real and earned.
-So is the exhaustion. They are not in conflict. Stop anyway. The code will be here tomorrow.
-The cognitive hangover will not serve it.
+So is the exhaustion. They are not in conflict. The winding down *is* the work continuing,
+at the pace your cognitive architecture actually runs on. Stop anyway. The code will be here
+tomorrow. The cognitive hangover will not serve it.
 
 ---
 
