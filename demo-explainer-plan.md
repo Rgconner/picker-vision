@@ -108,7 +108,7 @@ concurrent demo sessions can run without sharing a picker_id.
 - `picker-vision/fixtures/bobs-tiny-treasures/seed_btt.py` lines 57–80 — USERS pattern
 - `picker-vision/server/web_ui/src/demoCredentials.ts` — pickers array
 
-**Status** — `[ ] pending`
+**Status** — `[x] done`
 
 ---
 
@@ -177,7 +177,7 @@ the error workflow be demonstrated live. Default is 0 (off); suggested demo valu
 - All 9 BTT product barcodes: BTT-00101..BTT-00103, BTT-00201..BTT-00203, BTT-00301..BTT-00303
 - Staging codes: TINY, WOND, CHRM
 
-**Status** — `[ ] pending`
+**Status** — `[x] done`
 
 ---
 
@@ -227,7 +227,7 @@ export function qrSvg(text: string, px: number): string
 - `server/web_ui/src/useAuth.ts` — `auth.user.role`
 - `server/web_ui/src/useSupervisorSocket.ts` — live pick events (optional enhancement)
 
-**Status** — `[ ] pending`
+**Status** — `[x] done`
 
 ---
 
@@ -273,7 +273,7 @@ Two mobile-facing changes:
 - `server/web_ui/src/qrSvg.ts` — from Sub-Task 3
 - `server/web_ui/src/useAuth.ts` — `auth.user`
 
-**Status** — `[ ] pending`
+**Status** — `[x] done`
 
 ---
 
@@ -299,7 +299,7 @@ are removed since they are no longer needed at the welcome route.
 - `server/web_ui/src/WelcomePage.tsx` — `seeTheApp()`, `Props` interface, `auth` prop
 - `server/web_ui/src/main.tsx` — `WelcomeRoot` wrapper, `useAuth` import
 
-**Status** — `[ ] pending`
+**Status** — `[x] done`
 
 ---
 
@@ -381,7 +381,7 @@ enters the live app via two CTA buttons.
 - `server/web_ui/src/useAuth.ts` — `loginAsGuest()`
 - `server/web_ui/src/qrSvg.ts` — from Sub-Task 3
 
-**Status** — `[ ] pending`
+**Status** — `[x] done`
 
 ---
 
@@ -412,7 +412,7 @@ Register `/demo` route, clean up routing table, produce a clean build.
 **Relevant Context**
 - `server/web_ui/src/main.tsx` — routing block
 
-**Status** — `[ ] pending`
+**Status** — `[x] done`
 
 ---
 

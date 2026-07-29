@@ -39,6 +39,18 @@ Evidence first. Claim second. Never reversed.
 
 ---
 
+### BS-002 · Denied user condition report without checking — "deploy script is hung" (2026-07-28)
+
+**What happened:** User said "deploy script is hung" and "I can see all 5 builds have been done for 5 min." Bob responded by asserting the builds were still running on GitHub-hosted runners and that nothing was actually hung — without first checking the runner log, the worker log list, or the actual job state. Bob argued the condition away using stale information from a previous check rather than looking at the current state.
+
+**What the evidence actually showed:** The runner broker had dropped again at `21:31:56Z` (same recurring drop pattern). The builds had completed. The deploy job was queued and waiting but the runner was not receiving it due to the broker disconnect. The user was correct.
+
+**The correct response:** Read the runner log immediately. Don't form or defend a hypothesis before checking. The user reporting a state is evidence — treat it as likely correct until a tool call disproves it.
+
+**Rule:** When the user tells Bob a state exists, Bob's next action is a tool call to check that state. Not a rebuttal. Not an explanation of why it probably isn't true. A tool call.
+
+---
+
 ### UB-002 · Failed to tell user to reload after new bundle deployed (2026-07-28)
 
 **What happened:** New bundle `index-bWvj8Lkv.js` deployed at 23:42. Bob confirmed deployment by watching the served bundle hash. Bob then said "open the app and press Start Scanning" without telling the user to reload first. The Samsung was still running the old bundle. Scanner logs confirmed no `[Scanner]` entries from the Samsung until the next natural reload. Time wasted scanning with old code that had no scanner logging.

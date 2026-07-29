@@ -9,32 +9,22 @@
 
 ---
 
-## Current State (2026-07-28 — session 4)
+## Current State (2026-07-28 — session 5)
 
 **Branch:** `feature/bobs-tiny-treasures`
-**Last commit:** `25bae1d` — TS fix: navAction + Detection type annotation
-**CI status:** Build triggered for `25bae1d` — runner had not yet picked it up at end of session. Watch for it.
-**Cluster:** All pods on `sha-26c882a`. Once `25bae1d` CI completes, pods will move to `sha-25bae1d`.
+**Last commit:** `1e7f1eb` — ci: retrigger deploy after runner broker drop
+**CI status:** Deployed. Pods confirmed on `sha-1e7f1eb`. Bundle: `index-gWpR9peP.js`.
+**Cluster:** All services running `sha-1e7f1eb` (some replica slots still show floating `feature-bobs-tiny-treasures` tag — expected during rollout, `sha-1e7f1eb` replicas are live).
+**demo_scenario column:** Live — `GET /api/workflow-config` returns `demo_scenario: "web-demo"`.
+**demo-explainer-plan.md:** All 7 sub-tasks confirmed done in codebase and marked `[x] done`.
 
 ---
 
 ## Immediate First Action Next Session
 
-1. Confirm `25bae1d` CI completed and cluster moved:
-   ```powershell
-   & "C:\Users\RussConner\kubectl.exe" get pods -n picker-vision-btt -o json | python -c "
-   import sys,json; pods=json.load(sys.stdin)['items']
-   [print(p['metadata']['name'], p['status']['containerStatuses'][0]['image'].split(':')[-1]) for p in pods if p['status'].get('containerStatuses')]
-   "
-   # Bundle should be NEW hash (not index-Z_9LpMAG.js or index-D3Mz4UNV.js)
-   (Invoke-WebRequest 'https://bobstinytreasures.snwbd.com/mobile' -UseBasicParsing).Content | Select-String 'index-[A-Za-z0-9_-]+\.js'
-   ```
-2. If runner still hasn't picked up the job, restart it:
-   ```powershell
-   Stop-Process -Name "Runner.Listener" -Force
-   Start-Process "C:\Users\RussConner\actions-runner\run.cmd"
-   ```
-3. Once deployed, hit **⟳ Restart Demo** on the supervisor page, then test end-to-end on Samsung.
+1. Hit **⟳ Restart Demo** on the supervisor page to clear any stale demo orders.
+2. Connect Samsung to `/mobile` and start pick flow on the first pending order.
+3. Confirm `ConfirmOverlay` appears, tap Confirm, verify `quantity_picked` increments.
 
 ---
 
@@ -54,8 +44,9 @@ Two errors in the Docker build:
 
 ## What's Next (ordered)
 
-- [ ] **Confirm `25bae1d` deployed** — new bundle hash in pod + `sha-25bae1d` image
-- [ ] **Test end-to-end pick flow on Samsung** — connect phone, scan items on order 2 (`DEMO-E92FD1-002`), confirm ConfirmOverlay appears after each correct scan, tap Confirm, verify `quantity_picked` increments, order reaches `complete`
+- [x] **Confirm `1e7f1eb` deployed** — `sha-1e7f1eb` in pods; bundle `index-gWpR9peP.js` live
+- [x] **WorkflowConfig `demo_scenario` column + endpoint** — live in DB, `PUT /workflow-config` accepts it, `DemoControls.tsx` reads + updates it
+- [ ] **Test end-to-end pick flow on Samsung** — connect phone, scan items, confirm ConfirmOverlay appears after each correct scan, tap Confirm, verify `quantity_picked` increments, order reaches `complete`
 - [ ] **Test ⟳ Restart Demo** — hit it on supervisor, confirm mobile shows new order immediately
 - [ ] **Test scenario switching** — change to Physical Demo in supervisor, confirm overlay shows nav card instruction + 10s button fallback instead of amber Confirm button
 - [ ] **Verify PackWizard auto-surfaces** after order completes (unverified in live flow — `MobilePickerView` listens for `order_complete_pending` WS event)
