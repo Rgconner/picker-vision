@@ -9,55 +9,52 @@
 
 ---
 
-## Current State (2026-07-28 — session 5)
+## Current State (2026-07-29 — session 7)
 
 **Branch:** `feature/bobs-tiny-treasures`
-**Last commit:** `1e7f1eb` — ci: retrigger deploy after runner broker drop
-**CI status:** Deployed. Pods confirmed on `sha-1e7f1eb`. Bundle: `index-gWpR9peP.js`.
-**Cluster:** All services running `sha-1e7f1eb` (some replica slots still show floating `feature-bobs-tiny-treasures` tag — expected during rollout, `sha-1e7f1eb` replicas are live).
-**demo_scenario column:** Live — `GET /api/workflow-config` returns `demo_scenario: "web-demo"`.
-**demo-explainer-plan.md:** All 7 sub-tasks confirmed done in codebase and marked `[x] done`.
+**Last commit:** `78530a1` — feat: close-out-chat skill + box SVG template for physical demo
+**Local HEAD:** 1 commit ahead of origin (not yet pushed — pending this session's wrap-up commit)
+**CI status:** Last deployed `sha-e5d5c71`. Bundle: `index-zMWDuqki.js`. Pod confirmed on `sha-e5d5c71`.
+**singularity-paper repo:** Live at https://github.com/Rgconner/singularity-paper — commit `7769ee9` (init scaffold).
+**BACKLOG.md STORY-001:** Trimmed to pointer — full content now in singularity-paper.
 
 ---
 
 ## Immediate First Action Next Session
 
-1. Hit **⟳ Restart Demo** on the supervisor page to clear any stale demo orders.
-2. Connect Samsung to `/mobile` and start pick flow on the first pending order.
-3. Confirm `ConfirmOverlay` appears, tap Confirm, verify `quantity_picked` increments.
+1. Push picker-vision (1 commit ahead of origin — `78530a1` + BACKLOG/SESSION update).
+2. Hit **⟳ Restart Demo** on the supervisor page to clear any stale demo orders.
+3. Connect Samsung to `/mobile` and start pick flow on the first pending order.
+4. Confirm `ConfirmOverlay` appears, tap Confirm, verify `quantity_picked` increments.
 
 ---
 
-## What We Did This Session (session 4)
+## What We Did This Session (session 7)
 
-### Deploy investigation
-- Cluster was already on `sha-26c882a` at session start — `index-BDmVnm_T.js` was already gone (fixed last session)
-- Commit `a28a24f` (confirm overlay + demo advance) was committed and pushed but CI never ran for it — runner had a broker connection error at 19:51 UTC and the push at ~15:46 local was missed
-- Pushed empty commit `fe75bf5` to re-trigger CI
-
-### TypeScript build errors fixed (`25bae1d`)
-Two errors in the Docker build:
-1. **`MobileLiteView.tsx:74`** — literal `ScanResult` object missing `navAction: null` (field was added to interface but not to this manual-entry code path)
-2. **`MobilePickerView.tsx:249`** — inline type annotation on `.find()` callback used `status: string` but `Detection.status` is `'correct' | 'unexpected' | null` — mismatch. Fixed by dropping the redundant inline annotation and letting TS infer from the `Detection` type.
+### Housekeeping
+- Verified QOL-016 (`lastFireTimeRef` 300ms cooldown) and QOL-014 (`wrongItems` overlay) already committed and live in `sha-e5d5c71` bundle `index-zMWDuqki.js` — confirmed strings `dwell-fire` and `wrongItems` present in pod
+- Amended bad commit `e40f4ae` (garbage message + `~$ACKLOG.md` lock file accidentally staged) → clean commit `78530a1`
+- Pushed singularity-paper to https://github.com/Rgconner/singularity-paper — commit `7769ee9` (9 files, 889 insertions)
+- Trimmed BACKLOG.md STORY-001/001A/poem (~415 lines) to a 19-line pointer to the new repo
 
 ---
 
 ## What's Next (ordered)
 
-- [x] **Confirm `1e7f1eb` deployed** — `sha-1e7f1eb` in pods; bundle `index-gWpR9peP.js` live
-- [x] **WorkflowConfig `demo_scenario` column + endpoint** — live in DB, `PUT /workflow-config` accepts it, `DemoControls.tsx` reads + updates it
+- [ ] **Push picker-vision** — `78530a1` + this BACKLOG/SESSION commit (1–2 commits ahead of origin)
 - [ ] **Test end-to-end pick flow on Samsung** — connect phone, scan items, confirm ConfirmOverlay appears after each correct scan, tap Confirm, verify `quantity_picked` increments, order reaches `complete`
 - [ ] **Test ⟳ Restart Demo** — hit it on supervisor, confirm mobile shows new order immediately
 - [ ] **Test scenario switching** — change to Physical Demo in supervisor, confirm overlay shows nav card instruction + 10s button fallback instead of amber Confirm button
 - [ ] **Verify PackWizard auto-surfaces** after order completes (unverified in live flow — `MobilePickerView` listens for `order_complete_pending` WS event)
 - [ ] **QR size test (deferred)** — see BACKLOG QOL-008
+- [ ] **Write singularity-paper prose draft** — when demo is stable and there's a real pause
 
 ---
 
 ## Open Questions
 
 - Does `PackWizard` actually auto-surface on mobile when an order completes? Plan says done; unverified in live flow.
-- Runner broker reconnect: is it reliably picking up jobs after the 19:51 UTC drop? May need to restart runner service if it misses jobs again.
+- singularity-paper `sessions/` directory and `synopsis-log.md` not yet created — close-out-chat skill will create them on first use.
 
 ---
 
@@ -68,7 +65,7 @@ Two errors in the Docker build:
 | Production URL | `https://bobstinytreasures.snwbd.com` |
 | K8s namespace | `picker-vision-btt` |
 | Active branch | `feature/bobs-tiny-treasures` |
-| Last known-good web-ui image | `sha-26c882a` (`index-Z_9LpMAG.js` + `index-D3Mz4UNV.js`) |
+| Last known-good web-ui image | `sha-e5d5c71` (`index-zMWDuqki.js`) |
 | LM Studio IP | `http://192.168.1.79:1234` |
 | API gateway (BTT) | `http://192.168.11.213` (key: `changeme`) |
 | Web UI (BTT) | `http://192.168.11.214` |
