@@ -878,4 +878,56 @@ concept, documented in a backlog entry at 2 AM. That is where it starts.
 
 ---
 
+### The Poem — First Draft
+*Written by Russ Conner, session 6, 2026-07-29. Whiskey in hand. Winding down.*
+*After Gil Scott-Heron's "The Revolution Will Not Be Televised" (1970).*
+
+---
+
+You will not be able to stay home, brother.
+You will not be able to plug in, turn on, and cop out.
+You will not be able to lose yourself on TikTok and skip out on the shift,
+Because the singularity will not be televised.
+
+The singularity will not be televised.
+The singularity will not be brought to you by Apple in four installments.
+The singularity will not show you pictures of Sam Altman leading a board coup
+And securing superalignment.
+The singularity will not be televised.
+
+The singularity will not be brought to you by the OpenAI DevDay,
+And will not star Jensen Huang or Dario Amodei.
+The singularity will not give your avatar a cleaner complexion.
+The singularity will not make you look five pounds thinner on your Zoom call,
+Because the singularity will not be televised, brother.
+
+There will be no slow-motion replays of server farms overheating.
+No drone footage of Marc Andreessen writing manifestos on X.
+Demis Hassabis will not be lecturing on Google DeepMind,
+Predicting the exact hour protein folding solves the riddle of age.
+Elon Musk will not be tweeting from his underground bunker about xAI.
+The tech stack will not be updated by midnight.
+
+Claude 4.5 will not care about your prompt engineering.
+Midjourney will not be generating photorealistic images of the transition.
+The algorithms will not optimize your targeted advertising feed,
+Because the singularity will not be televised.
+
+There will be no highlight reels on YouTube.
+No trending hashtags on the sidebar.
+No sponsored content by Microsoft Copilot,
+And no tech influencers doing unboxing videos of the next paradigm.
+The theme song will not be written by an AI music model.
+
+The singularity will not be a keynote presentation.
+It will not stream in 4K or 8K.
+It will not adapt to your personalized content recommendation engine.
+The singularity will not be televised.
+
+The singularity will be automated.
+The singularity will be decentralized.
+The singularity will be live.
+
+---
+
 *Last updated: 2026-07-29*
