@@ -620,8 +620,48 @@ The CI pause doesn't just give the human time to breathe. It gives the Si-domina
 to stop pattern-matching to memory and let the Ni-dominant partner's read of the present situation
 catch up. The pipeline enforces the cognitive handoff the pairing needs.
 
-**Status:** Idea captured. Write when the demo is stable and there's a natural pause.
-**Effort:** S (writing, not coding)
+**Additional thread — Cognitive Hangovers:**
+Observed across multiple sessions: the morning after an intense development session brought
+simultaneous incredible pride at what was being built and genuine mental exhaustion. The sessions
+were compelling enough that stepping away felt wrong — the work was *that* good. But insufficient
+time in the Ma Window meant the reflection that should happen *during* the session accumulated
+overnight instead, arriving as a kind of cognitive debt.
+
+This is a critical data point because it reframes the Ma Window from a *workflow* principle to a
+*health* principle. The pipeline pause isn't just protecting code quality. It's protecting the
+human in the loop from the specific exhaustion that comes from sustained high-intensity
+collaboration with a system that never tires and never needs to stop.
+
+The asymmetry is the problem: the AI partner has no fatigue state. It will run at full speed
+indefinitely. The human partner has a finite cognitive budget, and the quality of the work — the
+very fact that it is compelling and generates pride — makes it harder to enforce the boundary.
+The better the collaboration, the more dangerous the pace.
+
+**This needs to be in the piece explicitly.** Not as a warning, but as an honest account of what
+sustained AI-assisted development at this intensity actually feels like from the inside. The
+cognitive hangover is the phenomenological evidence that the Ma Window Principle is real.
+
+**Proposal for the mutual reflection structure:**
+The piece should be built from specific examples in two categories:
+
+*When Bob's precision and speed found something intuition couldn't:*
+— The scan-log showing three dwell-fires in 1ms (impossible to diagnose without the log)
+— The TOCTOU race in the ConfirmOverlay gate (invisible until the exact sequence was traced)
+— Bundle hash verification catching a stale deploy that felt like a code bug
+
+*When Bob's precision and speed started burying signals:*
+— The stale-deploy loop (BE-001 through BE-006) — speed generated confident wrong answers faster
+— Chasing the ConfirmOverlay gate through three wrong fixes in one session
+— Any moment where the user said "something feels wrong" and Bob generated another fix instead
+  of stopping to ask what shape the wrongness had
+
+The contrast between those two lists *is* the Tuckman arc. Forming is the first list working.
+Storming is the second list dominating. Norming is learning which mode we're in. Performing is
+switching between them deliberately.
+
+**Status:** Idea captured. Write when the demo is stable and there's a natural pause — a real one.
+**Effort:** S (writing, not coding) — but do not rush it. The irony of rushing the piece about
+not rushing would be noted.
 
 ---
 

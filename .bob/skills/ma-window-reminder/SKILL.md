@@ -133,9 +133,29 @@ articulated technically. That is itself an instance of the pattern it describes.
 
 ---
 
+## The Cognitive Hangover Warning
+
+Observed across multiple sessions: the morning after an intense session brought simultaneous
+incredible pride and genuine mental exhaustion. The work was compelling enough that stepping away
+felt wrong. Insufficient time in the Ma Window meant reflection accumulated overnight as cognitive
+debt instead.
+
+**The asymmetry is the problem.** The AI partner has no fatigue state. It runs at full speed
+indefinitely. The human partner has a finite cognitive budget — and the quality of the collaboration
+makes it *harder* to enforce the boundary. The better the work, the more dangerous the pace.
+
+The Ma Window is therefore not just a workflow principle. It is a health principle.
+
+**If you are reading this at the end of a long session:** the pride you feel is real and earned.
+So is the exhaustion. They are not in conflict. Stop anyway. The code will be here tomorrow.
+The cognitive hangover will not serve it.
+
+---
+
 ## Origin
 
 Discovered on the picker-vision project, session 6, 2026-07-29.
 Named after *Ma* (間). Documented in `BACKLOG.md` as `STORY-001`.
 The death spiral that prompted it is documented in `BE-004` — "why Bob circles."
 The INTJ/INTP analysis emerged from a conversation about cognitive architecture and code, same session.
+The cognitive hangover observation added same session — the human evidence that the principle is real.
