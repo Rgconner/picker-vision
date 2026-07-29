@@ -12,8 +12,8 @@
 ## Current State (2026-07-29 — session 7)
 
 **Branch:** `feature/bobs-tiny-treasures`
-**Last commit:** `78530a1` — feat: close-out-chat skill + box SVG template for physical demo
-**Local HEAD:** 1 commit ahead of origin (not yet pushed — pending this session's wrap-up commit)
+**Last commit:** `52385d5` — docs: trim BACKLOG STORY-001 to pointer + update SESSION.md for session 7
+**Local HEAD:** In sync with origin. CI running (docs-only, no build triggered).
 **CI status:** Last deployed `sha-e5d5c71`. Bundle: `index-zMWDuqki.js`. Pod confirmed on `sha-e5d5c71`.
 **singularity-paper repo:** Live at https://github.com/Rgconner/singularity-paper — commit `7769ee9` (init scaffold).
 **BACKLOG.md STORY-001:** Trimmed to pointer — full content now in singularity-paper.
@@ -22,10 +22,9 @@
 
 ## Immediate First Action Next Session
 
-1. Push picker-vision (1 commit ahead of origin — `78530a1` + BACKLOG/SESSION update).
-2. Hit **⟳ Restart Demo** on the supervisor page to clear any stale demo orders.
-3. Connect Samsung to `/mobile` and start pick flow on the first pending order.
-4. Confirm `ConfirmOverlay` appears, tap Confirm, verify `quantity_picked` increments.
+1. Hit **⟳ Restart Demo** on the supervisor page to clear any stale demo orders.
+2. Connect Samsung to `/mobile` and start pick flow on the first pending order.
+3. Confirm `ConfirmOverlay` appears, tap Confirm, verify `quantity_picked` increments.
 
 ---
 
@@ -41,7 +40,6 @@
 
 ## What's Next (ordered)
 
-- [ ] **Push picker-vision** — `78530a1` + this BACKLOG/SESSION commit (1–2 commits ahead of origin)
 - [ ] **Test end-to-end pick flow on Samsung** — connect phone, scan items, confirm ConfirmOverlay appears after each correct scan, tap Confirm, verify `quantity_picked` increments, order reaches `complete`
 - [ ] **Test ⟳ Restart Demo** — hit it on supervisor, confirm mobile shows new order immediately
 - [ ] **Test scenario switching** — change to Physical Demo in supervisor, confirm overlay shows nav card instruction + 10s button fallback instead of amber Confirm button
