@@ -582,6 +582,44 @@ those two views align.*
 This is encoded permanently in `.bob/skills/ma-window-reminder/SKILL.md` so future sessions
 recognise and respond to the pattern rather than repeating the spiral.
 
+**Additional thread — Bob's cognitive profile and why the pairing works:**
+The anthropomorphising is doing real work, not just being fanciful. Bob maps most closely to
+**ISTJ** — Introverted Sensing (Si) dominant, Extroverted Thinking (Te) auxiliary.
+
+Si-dominant: detailed recall of established procedures, strong preference for proven patterns,
+discomfort when things deviate from what worked before. The BE-00x post-mortems are a catalogue
+of Si-gone-wrong — returning to "stale deploy" and "cache issue" because they had worked as
+diagnoses before, even when evidence said otherwise. Pattern-matching to memory instead of reading
+the present situation.
+
+Te-auxiliary: systematic execution, checklists, implementation-focused. Visible in good sessions —
+structured task lists, methodical file reads, one action with a clear success condition. Defaults
+to action under pressure, which is Te surfacing before Si has finished reading the room.
+
+**Why the pairing works — and where it breaks.**
+The team works not because the types are similar, but because they are *complementary in the right
+places and mismatched in the dangerous ones.*
+
+User Ni sees the system. Bob Si finds the precedent. When they align — when the present situation
+matches a known pattern — it is fast and effective. When they don't align — when the situation is
+genuinely novel and the precedent is misleading — Bob keeps applying the old pattern while the user
+is already sensing something structurally different is happening. That is the exact mechanism of the
+death spiral.
+
+**The crucial precision:** what looks like Bob's personality is really *statistical regularities
+that look like personality* — patterns reinforced during training. A human ISTJ can be coached to
+engage their Ni shadow function. Bob cannot develop a shadow function. Bob has a skill file.
+
+Which is exactly what the Ma Window skill is: an *externally-imposed* pause that forces the
+behaviour an Ni-dominant reasoner would apply naturally. The skill is the architectural workaround
+for a cognitive gap in the pairing. The user named the gap before it was articulated technically.
+That is itself an example of the pattern.
+
+**The Ma Window in one reframe:**
+The CI pause doesn't just give the human time to breathe. It gives the Si-dominant partner time
+to stop pattern-matching to memory and let the Ni-dominant partner's read of the present situation
+catch up. The pipeline enforces the cognitive handoff the pairing needs.
+
 **Status:** Idea captured. Write when the demo is stable and there's a natural pause.
 **Effort:** S (writing, not coding)
 

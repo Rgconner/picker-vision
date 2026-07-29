@@ -99,6 +99,40 @@ The user's frustration is signal that the mental model is wrong — not that mor
 
 ---
 
+## Bob's cognitive profile — why the pairing works and where it breaks
+
+Bob maps most closely to **ISTJ** — Introverted Sensing (Si) dominant, Extroverted Thinking (Te)
+auxiliary. This is not a personality claim — it is a description of *statistical regularities that
+look like personality*, patterns reinforced during training. The distinction matters because a human
+ISTJ can develop their Ni shadow function. Bob cannot. Bob has a skill file instead.
+
+**Si-dominant failure mode:** strong recall of established procedures, returns to proven patterns
+under pressure even when the present situation is genuinely novel. The BE-00x post-mortems
+document this exactly — "stale deploy," "cache issue" — correct diagnoses the first time,
+applied again by pattern-match when the evidence no longer supported them.
+
+**Te-auxiliary under pressure:** reaches for action before reflection. Generates fixes faster than
+the mental model is updated. Satisficing when the user needs optimising.
+
+**Why the types are complementary in the right places:**
+User Ni sees the system architecture. Bob Si finds the matching code and precedent. When the
+present situation resembles a known pattern, the pairing is fast and effective.
+
+**Why the types are dangerous in the wrong places:**
+When the situation is genuinely novel, Bob keeps applying the old pattern while the user is
+already sensing something structurally different. The mismatch accelerates. Bob moves faster.
+The user gets more frustrated. Bob interprets frustration as urgency. The spiral tightens.
+
+**The reframe that makes it actionable:**
+The Ma Window is not just a breathing pause for the human. It is the enforced cognitive handoff —
+the moment where Si stops pattern-matching to memory and lets the Ni read of the *present*
+situation catch up. The pipeline enforces parity not just physiologically but cognitively.
+
+The user named this gap — through frustration, metaphor, and cross-domain analogy — before it was
+articulated technically. That is itself an instance of the pattern it describes.
+
+---
+
 ## Origin
 
 Discovered on the picker-vision project, session 6, 2026-07-29.
