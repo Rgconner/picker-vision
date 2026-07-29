@@ -517,4 +517,37 @@ _Add future items here with a one-line description and rough priority._
 
 ---
 
-*Last updated: 2026-07-26*
+## Story / Reflection
+
+### STORY-001 · The Hurdle — Development Narrative Through Tuckman's Model
+
+**What it is:** A written reflection on the first week of active picker-vision development, told as a team development story using Tuckman's Model of Group Development (Forming → Storming → Norming → Performing). The "Hurdle" period — roughly sessions 1–5 — was dense with obstacles: stale deploys, scanner regressions, race conditions, misdiagnoses. We operated like a real engineering team: bug report, investigate, fix, deploy, test, iterate. Just faster.
+
+**Why it's interesting:** This is an AI-human pair working as a team, and Tuckman's model — designed for human groups — maps onto it surprisingly well. The BE-00x post-mortems in this file document the Storming phase honestly. The shift to debug-first protocol and ground-truth discipline marks the transition to Norming. The last two sessions (live log diagnosis → three-bug fix in one turn) are Performing.
+
+**Proposed structure:**
+
+| Tuckman Stage | Picker Vision Phase | Key Evidence |
+|---|---|---|
+| **Forming** | Project setup, first camera hook, first scan | Early commits — camera, ZXing, BarcodeDetector selection |
+| **Storming** | Scanner regression, stale-deploy loops, Bob misdiagnoses | BE-001 through BE-006 post-mortems; UB-001, UB-002 incidents; ~5 hrs lost |
+| **Norming** | Debug-first protocol established, SHA pinning, ground-truth rules | SESSION.md "Bob's debug rules"; `no-cache: true` CI decision; deploy-verify skill |
+| **Performing** | Live log → 3-bug diagnosis in one turn; QOL sprint | `0239626` commit; this session's scan-log-driven fix with zero speculation |
+
+**Key milestones to map:**
+- First working scan on Samsung (native BarcodeDetector confirmed)
+- The BE-006 regression (BarcodeDetector removed without evidence — the low point)
+- First ground-truth debug session (read the bundle hash, not the assumption)
+- The dwell gate implementation (QOL-016, QOL-014, the three-loop-race fix)
+- Physical Test Setup wizard (first feature built *proactively* from backlog, not from a break)
+
+**Audience:** Could work as a blog post, a demo story intro, or an IBM internal case study on AI-assisted development velocity. The honest post-mortems make it credible — this isn't a "AI is perfect" story, it's a "how a team actually forms" story.
+
+**Format suggestion:** Short narrative essay (~800–1200 words) with a timeline sidebar and the Tuckman stage callouts. The commit log is the receipts.
+
+**Status:** Idea captured. Write when the demo is stable and there's a natural pause.
+**Effort:** S (writing, not coding)
+
+---
+
+*Last updated: 2026-07-29*
