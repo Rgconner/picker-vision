@@ -194,6 +194,21 @@ Option 3 is the right immediate fix — one-line change to the deployment manife
 
 ---
 
+### QOL-016 · Multi-object isolation gate bypassed when two barcodes cross dwell threshold on consecutive frames
+
+**Symptom:** With 2 objects in frame, the ConfirmOverlay fires before the picker isolates one item. Both barcodes independently accumulate 6 dwell frames at nearly the same time. `processDwell` correctly holds them as candidates while both are building — but when they cross the threshold on consecutive frames (~1 rAF apart), each fires `onDetect` as a lone ready item before the other's counter has been reset. Both `publish()` calls reach the server before either ConfirmOverlay appears.
+
+**Evidence:** Scan log entry `37bb3301` — `BTT-00302` and `BTT-00101` both arrive `correct` in the same server event. Gate was running on correct code (`index-C0Jv43d4.js` confirmed on device).
+
+**Root cause:** `processDwell` fires when `ready.length === 1` — but "ready" is computed per-tick from the current frame only. If item A crosses threshold on tick N and item B crosses on tick N+1, each tick sees only one ready item and fires. The gate needs cross-tick awareness.
+
+**Proper fix:** Track in-flight fires with a ref (`inFlightRef` or a new `recentlyFiredRef`). In `processDwell`, before firing, check if any other candidate has frames ≥ `DWELL_FRAMES - 1` (i.e. will be ready next tick). If yes, suppress. Alternatively: after firing, set a short `multiObjectCooldown` (e.g. 300ms) during which no second fire is allowed regardless of dwell state — simpler and robust. Second option preferred.
+
+**Recurrence count:** 1 confirmed session. **Open.**
+**Effort:** XS
+
+---
+
 ### QOL-014 · Wrong-item ⊘ overlay not firing on mobile web path
 
 **Symptom:** Scanning a barcode not on the active order shows no visual feedback — no red box, no ⊘ symbol, no HUD strip. The AR overlay and HUD were written against server-enriched `Detection` objects which carry `bbox` from Pi camera nodes. The mobile web client (`BarcodeDetector`) never sends bbox to the server, so `pickerState.detections` has no position data and the overlay has nothing to draw.
