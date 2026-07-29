@@ -1245,14 +1245,23 @@ def demo_start(req: _DemoStartRequest):
         else:
             raise HTTPException(status_code=400, detail="mode must be 'personal' or 'presentation'")
 
-        # QOL-010: cancel any stale picking demo orders for this picker before
-        # creating the first order of the new session — prevents scan ambiguity.
+        # QOL-010: cancel stale picking demo orders belonging to *this picker*
+        # before creating the first order of the new session — prevents scan
+        # ambiguity.  Do NOT cancel orders owned by other active sessions
+        # (multi-picker scenario: one picker starting must not wipe others).
+        active_order_ids = {
+            s.get("current_order_id")
+            for s in _demo_sessions.values()
+            if s.get("current_order_id")
+        }
+        expected_customer = f"Demo ({picker_id})"
         stale = db.query(Order).filter(
             Order.status == "picking",
-            Order.customer.like("Demo (%)")
+            Order.customer == expected_customer,
         ).all()
         for o in stale:
-            o.status = "cancelled"
+            if o.id not in active_order_ids:
+                o.status = "cancelled"
         db.commit()
 
         session_id = str(uuid.uuid4())[:8]
