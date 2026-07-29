@@ -175,6 +175,19 @@ Option 3 is the right immediate fix — one-line change to the deployment manife
 
 ---
 
+### QOL-013 · Product descriptions contain em-dash — renders as `???` in some clients
+
+**Symptom:** Product descriptions in demo orders display as e.g. `"Shimmering Sapphire Sprite ??? Tiny Blue Cube"` in the supervisor UI and API responses. The `—` em-dash character (U+2014) stored in the seed data is being mangled somewhere in the SQLite → JSON → browser pipeline when the client or terminal doesn't handle UTF-8 correctly.
+
+**Manual workaround applied:** None — just cosmetically broken; pick flow works.
+
+**Proper fix:** Replace all em-dashes in `seed_btt.py` product `description` fields with a plain ` - ` (space-hyphen-space). No encoding dependency, renders cleanly everywhere.
+
+**Recurrence count:** 1 session observed. **Open.**
+**Effort:** XS
+
+---
+
 ### QOL-011 · Demo session out-of-sync when picker re-registers under a different name
 
 **Symptom:** Supervisor shows order N, Samsung shows order N+1 (or a different order entirely). Scan events arrive with picker_id `Bob (Owner)-2` but the demo session is bound to `Bob (Owner)` — different WS channel, different state feed. The `-2` suffix appears when the phone registers a second time without clearing its prior registration, creating a ghost picker.
