@@ -545,6 +545,9 @@ _Add future items here with a one-line description and rough priority._
 
 **Format suggestion:** Short narrative essay (~800–1200 words) with a timeline sidebar and the Tuckman stage callouts. The commit log is the receipts.
 
+**Additional thread — The CI pause as enforced whitespace:**
+The 3–5 minute deploy cycle turned out to be a feature, not friction. It created mandatory breathing room between sprints — time to reflect on what just happened before the next thing started. When you're moving fast enough that individual bugs are diagnosed and fixed in a single turn, that forced pause becomes the only place reflection can happen. Worth a paragraph: the pipeline as the team's natural sprint boundary, and why that rhythm mattered.
+
 **Status:** Idea captured. Write when the demo is stable and there's a natural pause.
 **Effort:** S (writing, not coding)
 
