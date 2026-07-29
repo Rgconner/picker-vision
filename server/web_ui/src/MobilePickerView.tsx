@@ -171,6 +171,11 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   const [wrongItems, setWrongItems] = useState<WrongItem[]>([]);
   const wrongItemTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Tracks the most recently fired product barcode so the ConfirmOverlay gate
+  // can match it against the order line without relying on pickerState.detections
+  // (which is empty by the time the WS response arrives — scan loop already stopped).
+  const lastFiredBarcodeRef = useRef<string | null>(null);
+
   const videoRef    = useRef<HTMLVideoElement>(null);
   const canvasRef   = useRef<HTMLCanvasElement>(null);
   const isLandscape = useIsLandscape();
@@ -222,13 +227,17 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
       pendingBboxRef.current.set(result.value, result.bbox);
     }
 
+    // Stash the fired barcode — the ConfirmOverlay gate reads this instead of
+    // pickerState.detections (which is empty because the loop stops on fire).
+    lastFiredBarcodeRef.current = result.value;
+
     publish(result);
 
-    // After a correct scan arrives via WebSocket, the pickerState will update.
-    // We detect the correct-scan gate here by checking the enriched detections
-    // from pickerState — but pickerState updates asynchronously. Instead, we
-    // rely on the server pushing the enriched state via WS, then gate in the
-    // pickerState effect below.
+    // Eagerly refresh orders so the gate effect has fresh quantity_picked data
+    // when the WS pickerState response arrives (async fetch races the WS push).
+    fetch('/api/orders').then((r) => r.ok ? r.json() : null).then((data) => {
+      if (data) setOrders(data as Order[]);
+    }).catch(() => {});
   }, [scanning, publish, pendingConfirm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pause the scan loop while the ConfirmOverlay is visible.
@@ -262,24 +271,37 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   }, [pickerState]);
 
   // ── Gate on correct scan from server WebSocket ───────────────────────────────
+  // Previous approach: look for status==='correct' in pickerState.detections.
+  // Problem: the scan loop stops the moment it fires (scanning && !pendingConfirm),
+  // so by the time the WS response arrives there are no active detections — the
+  // event processor sends back an empty detections array and the gate never fires.
+  //
+  // Fix: use lastFiredBarcodeRef (set in handleDetect) as the match signal.
+  // When pickerState arrives and the orders list shows the fired barcode's line
+  // has been credited (quantity_picked incremented OR status=picked), raise the
+  // overlay. This is order-state-driven, not detection-driven.
   useEffect(() => {
     if (!pickerState || pendingConfirm) return;
-    // Only the next unpicked line on the active order — not any correct detection
+    const fired = lastFiredBarcodeRef.current;
+    if (!fired) return;
     const activeOrder = orders.find((o) => o.status === 'picking');
-    const nextLine    = activeOrder?.lines.find((l) => l.status !== 'picked' && l.quantity_picked < l.quantity);
-    if (!activeOrder || !nextLine) return;
-    const correct = pickerState.detections?.find(
-      (d) => d.status === 'correct' && d.order_id === activeOrder.id && d.line_id === nextLine.id
+    if (!activeOrder) return;
+    // Find the line for the fired barcode that has been credited this tick
+    const line = activeOrder.lines.find(
+      (l) => l.product_barcode === fired && l.quantity_picked > 0 && l.status !== 'picked'
+        || l.product_barcode === fired && l.status === 'picked'
     );
-    if (!correct) return;
+    if (!line) return;
+    // Clear so we don't re-raise on subsequent pickerState updates
+    lastFiredBarcodeRef.current = null;
     setPendingConfirm({
-      orderId:     correct.order_id!,
-      lineId:      correct.line_id!,
-      itemName:    nextLine.product_description ?? correct.value,
-      barcode:     correct.value,
-      stagingCode: correct.staging_code ?? nextLine.staging_code ?? null,
+      orderId:     activeOrder.id,
+      lineId:      line.id,
+      itemName:    line.product_description ?? fired,
+      barcode:     fired,
+      stagingCode: line.staging_code ?? null,
     });
-  }, [pickerState]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pickerState, orders]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // QOL-014: when pickerState arrives with unexpected detections, promote them
   // to local wrongItems using the bbox we stashed in handleDetect.
