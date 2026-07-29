@@ -649,6 +649,173 @@ def delete_scenario(scenario_id: str):
 
 
 # ---------------------------------------------------------------------------
+# Bob's Tiny Treasures — Physical Test Setup
+# ---------------------------------------------------------------------------
+#
+# POST /warehouse/physical-test-setup
+#
+# One-shot endpoint for supervisors preparing a physical prop-based demo run.
+# Accepts shelves (rows×cols), packing areas, tote count, and kit count.
+# A "kit" = one of every BTT product (9 items).
+#
+# Actions performed atomically:
+#   1. Generate shelf StagingContainers (rows×cols grid — replaces any existing)
+#   2. Distribute kit stock round-robin across shelf locations
+#   3. Upsert the scratch WarehouseScenario with the resulting layout
+#   4. Save a named WarehouseScenario snapshot: "Physical Test — {name}"
+#
+# Returns: the scenario row + order capacity estimate.
+
+_BTT_ALL_PRODUCTS = [
+    "BTT-00101", "BTT-00102", "BTT-00103",
+    "BTT-00201", "BTT-00202", "BTT-00203",
+    "BTT-00301", "BTT-00302", "BTT-00303",
+]
+_ITEMS_PER_KIT = len(_BTT_ALL_PRODUCTS)   # 9
+
+
+@app.post("/warehouse/physical-test-setup", tags=["btt"])
+async def physical_test_setup(request: Request):
+    """Generate a complete physical-test warehouse layout from kit parameters.
+
+    Body:
+      rows            int  — shelf rows (1–26, default 3)
+      cols            int  — shelf columns per row (1–9, default 3)
+      kits            int  — number of complete kits (each = 1× all 9 BTT products)
+      packing_areas   int  — number of packing areas (informational only, stored in scenario name)
+      totes           int  — number of physical totes (informational only, stored in scenario name)
+      scenario_name   str  — optional; defaults to auto-generated
+
+    Returns:
+      scenario        — saved WarehouseScenario row
+      shelves_created int
+      stock_entries   int
+      order_capacity  { min: int, max: int }  — estimated fillable orders
+    """
+    body           = await request.json()
+    rows           = max(1, min(26, int(body.get("rows", 3))))
+    cols           = max(1, min(9,  int(body.get("cols", 3))))
+    kits           = max(1, int(body.get("kits", 1)))
+    packing_areas  = max(1, int(body.get("packing_areas", 1)))
+    totes          = max(1, int(body.get("totes", 1)))
+    scenario_name  = (body.get("scenario_name") or "").strip() or (
+        f"Physical Test — {rows}×{cols} grid, {kits} kit{'s' if kits != 1 else ''}, "
+        f"{totes} tote{'s' if totes != 1 else ''}"
+    )
+
+    # Total individual items = kits × 9 products; qty per shelf location
+    total_items = kits * _ITEMS_PER_KIT       # e.g. 3 kits × 9 = 27 items
+    shelf_count = rows * cols                  # e.g. 3×3 = 9 shelves
+
+    s = _SessionLocal()
+    try:
+        # ── Step 1: regenerate shelf grid ───────────────────────────────────
+        existing_shelves = s.query(_StagingContainer).filter(
+            _StagingContainer.qr_payload.like("SHELF:%")
+        ).all()
+        for sc in existing_shelves:
+            s.delete(sc)
+        s.flush()
+
+        shelf_codes = []
+        for r in range(rows):
+            for c in range(1, cols + 1):
+                code = f"{_ROW_LETTERS[r]}{c}"
+                sc   = _StagingContainer(
+                    code         = code,
+                    label        = f"Shelf {code}",
+                    staging_type = "area",
+                    qr_payload   = f"SHELF:{code}",
+                    status       = "available",
+                )
+                s.add(sc)
+                shelf_codes.append(code)
+        s.flush()
+
+        # ── Step 2: distribute stock round-robin across shelves ─────────────
+        # Each kit contributes 1 of every product.  We assign products to
+        # shelves round-robin so stock spreads evenly.
+        # stock_map: location_code → {product_barcode → qty}
+        stock_map: dict[str, dict[str, int]] = {code: {} for code in shelf_codes}
+        shelf_idx = 0
+        for _ in range(kits):
+            for barcode in _BTT_ALL_PRODUCTS:
+                loc = shelf_codes[shelf_idx % shelf_count]
+                stock_map[loc][barcode] = stock_map[loc].get(barcode, 0) + 1
+                shelf_idx += 1
+
+        # ── Step 3: upsert scratch scenario ─────────────────────────────────
+        stock_entries = []
+        for loc, products in stock_map.items():
+            for barcode, qty in products.items():
+                stock_entries.append({
+                    "location_code":   loc,
+                    "product_barcode": barcode,
+                    "qty_on_hand":     qty,
+                })
+
+        scratch = s.get(_WarehouseScenario, _SCRATCH_ID)
+        if scratch is None:
+            scratch = _WarehouseScenario(
+                id        = _SCRATCH_ID,
+                name      = "scratch",
+                grid_rows = rows,
+                grid_cols = cols,
+                payload   = "[]",
+            )
+            s.add(scratch)
+            s.flush()
+
+        scratch.grid_rows = rows
+        scratch.grid_cols = cols
+        scratch.payload   = _json.dumps(stock_entries)
+
+        # ── Step 4: save named scenario ─────────────────────────────────────
+        existing_named = s.query(_WarehouseScenario).filter(
+            _WarehouseScenario.name == scenario_name,
+            _WarehouseScenario.id   != _SCRATCH_ID,
+        ).first()
+        if existing_named:
+            existing_named.grid_rows = rows
+            existing_named.grid_cols = cols
+            existing_named.payload   = _json.dumps(stock_entries)
+            scenario_row = existing_named
+        else:
+            import uuid as _uuid_mod
+            scenario_row = _WarehouseScenario(
+                id        = str(_uuid_mod.uuid4()),
+                name      = scenario_name,
+                grid_rows = rows,
+                grid_cols = cols,
+                payload   = _json.dumps(stock_entries),
+            )
+            s.add(scenario_row)
+
+        s.commit()
+        s.refresh(scenario_row)
+
+        # ── Estimate fillable orders ─────────────────────────────────────────
+        # Demo orders draw 2–8 lines at random (without replacement from 9 products).
+        # With total_items individual picks available:
+        #   pessimistic (all 8-line orders): floor(total_items / 8)
+        #   optimistic  (all 2-line orders): floor(total_items / 2)
+        orders_min = max(0, total_items // 8)
+        orders_max = max(0, total_items // 2)
+
+        return {
+            "scenario":      _row_to_dict(scenario_row),
+            "shelves_created": shelf_count,
+            "stock_entries":   len(stock_entries),
+            "total_items":     total_items,
+            "order_capacity":  {"min": orders_min, "max": orders_max},
+            "packing_areas":   packing_areas,
+            "totes":           totes,
+        }
+    finally:
+        s.close()
+
+
+# ---------------------------------------------------------------------------
 # Bob's Tiny Treasures — Pack & Verify endpoints
 # ---------------------------------------------------------------------------
 

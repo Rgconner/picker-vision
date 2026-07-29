@@ -20,7 +20,7 @@ interface ShelfInfo  { code: string; label: string; qr_payload: string }
 interface StockEntry { location_code: string; product_barcode: string; qty_on_hand: number }
 interface Scenario   { id: string; name: string; grid_rows: number; grid_cols: number; payload: string; created_at: string }
 
-type SubTab = 'grid' | 'inventory' | 'scenarios' | 'labels';
+type SubTab = 'grid' | 'inventory' | 'scenarios' | 'labels' | 'physical-test';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -462,6 +462,216 @@ function ScenariosPanel() {
   );
 }
 
+// ── Physical Test sub-tab ────────────────────────────────────────────────────
+//
+// A single-screen wizard: enter shelves (rows×cols), packing areas, totes,
+// and kit count → see an instant order-capacity estimate → Apply & Save.
+// Calls POST /api/order/warehouse/physical-test-setup (one atomic endpoint).
+
+interface PhysicalTestResult {
+  scenario:       { id: string; name: string; grid_rows: number; grid_cols: number };
+  shelves_created: number;
+  stock_entries:   number;
+  total_items:     number;
+  order_capacity:  { min: number; max: number };
+  packing_areas:   number;
+  totes:           number;
+}
+
+function PhysicalTestPanel() {
+  const [rows,          setRows]          = useState(3);
+  const [cols,          setCols]          = useState(3);
+  const [kits,          setKits]          = useState(1);
+  const [packingAreas,  setPackingAreas]  = useState(1);
+  const [totes,         setTotes]         = useState(3);
+  const [scenarioName,  setScenarioName]  = useState('');
+  const [busy,          setBusy]          = useState(false);
+  const [result,        setResult]        = useState<PhysicalTestResult | null>(null);
+  const [error,         setError]         = useState<string | null>(null);
+
+  // Live capacity estimate — no server round-trip needed
+  const totalItems   = kits * 9;
+  const ordersMin    = Math.floor(totalItems / 8);
+  const ordersMax    = Math.floor(totalItems / 2);
+  const shelves      = rows * cols;
+
+  async function handleApply() {
+    setBusy(true); setError(null); setResult(null);
+    try {
+      const data: PhysicalTestResult = await apiFetch('/warehouse/physical-test-setup', {
+        method: 'POST',
+        body: JSON.stringify({
+          rows,
+          cols,
+          kits,
+          packing_areas: packingAreas,
+          totes,
+          scenario_name: scenarioName.trim() || undefined,
+        }),
+      });
+      setResult(data);
+    } catch (e: unknown) {
+      setError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const inputCls = "w-20 px-3 py-2 rounded-lg bg-[#0f1117] border border-[#2d3142] text-[#e2e8f0] text-center text-lg font-bold focus:outline-none focus:border-[#f59e0b]";
+  const labelCls = "flex flex-col gap-1 text-sm text-[#94a3b8]";
+
+  return (
+    <div className="flex flex-col gap-5">
+      <p className="text-sm text-[#94a3b8]">
+        Configure a physical demo run with props. Enter your shelf layout, kit count,
+        packing areas, and totes — then hit <strong className="text-[#f59e0b]">Apply &amp; Save</strong> to
+        generate the warehouse layout and save it as a named scenario.
+      </p>
+
+      {/* ── Inputs ── */}
+      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
+
+        {/* Shelf grid */}
+        <div className="flex flex-col gap-3 p-4 rounded-xl bg-[#0f1117] border border-[#2d3142]">
+          <span className="text-xs font-semibold text-[#f59e0b] uppercase tracking-wider">Stock Shelves</span>
+          <div className="flex items-end gap-3">
+            <label className={labelCls}>
+              Rows
+              <input type="number" min={1} max={26} value={rows}
+                onChange={e => setRows(Math.max(1, Math.min(26, +e.target.value)))}
+                className={inputCls} />
+            </label>
+            <span className="text-xl text-[#57606a] mb-2">×</span>
+            <label className={labelCls}>
+              Cols
+              <input type="number" min={1} max={9} value={cols}
+                onChange={e => setCols(Math.max(1, Math.min(9, +e.target.value)))}
+                className={inputCls} />
+            </label>
+          </div>
+          <span className="text-xs text-[#57606a]">{shelves} shelf location{shelves !== 1 ? 's' : ''} total</span>
+        </div>
+
+        {/* Kits */}
+        <div className="flex flex-col gap-3 p-4 rounded-xl bg-[#0f1117] border border-[#2d3142]">
+          <span className="text-xs font-semibold text-[#f59e0b] uppercase tracking-wider">Kits</span>
+          <label className={labelCls}>
+            Number of kits
+            <input type="number" min={1} max={99} value={kits}
+              onChange={e => setKits(Math.max(1, +e.target.value))}
+              className={inputCls} />
+          </label>
+          <span className="text-xs text-[#57606a]">
+            1 kit = 9 items (1× each BTT product)<br />
+            {kits} kit{kits !== 1 ? 's' : ''} = {totalItems} items
+          </span>
+        </div>
+
+        {/* Packing areas */}
+        <div className="flex flex-col gap-3 p-4 rounded-xl bg-[#0f1117] border border-[#2d3142]">
+          <span className="text-xs font-semibold text-[#f59e0b] uppercase tracking-wider">Packing Areas</span>
+          <label className={labelCls}>
+            Areas
+            <input type="number" min={1} max={9} value={packingAreas}
+              onChange={e => setPackingAreas(Math.max(1, +e.target.value))}
+              className={inputCls} />
+          </label>
+          <span className="text-xs text-[#57606a]">Informational — stored in scenario name</span>
+        </div>
+
+        {/* Totes */}
+        <div className="flex flex-col gap-3 p-4 rounded-xl bg-[#0f1117] border border-[#2d3142]">
+          <span className="text-xs font-semibold text-[#f59e0b] uppercase tracking-wider">Totes</span>
+          <label className={labelCls}>
+            Physical totes
+            <input type="number" min={1} max={99} value={totes}
+              onChange={e => setTotes(Math.max(1, +e.target.value))}
+              className={inputCls} />
+          </label>
+          <span className="text-xs text-[#57606a]">Informational — stored in scenario name</span>
+        </div>
+      </div>
+
+      {/* ── Live estimator ── */}
+      <div className="flex flex-col gap-2 p-4 rounded-xl border border-[#f59e0b]/30"
+           style={{ background: 'rgba(245,158,11,0.07)' }}>
+        <span className="text-xs font-semibold text-[#f59e0b] uppercase tracking-wider">Order Capacity Estimate</span>
+        <div className="text-2xl font-bold text-[#e2e8f0]">
+          {ordersMin === ordersMax
+            ? `~${ordersMin} order${ordersMin !== 1 ? 's' : ''}`
+            : `${ordersMin}–${ordersMax} orders`}
+        </div>
+        <div className="text-xs text-[#94a3b8] leading-relaxed">
+          {totalItems} items ÷ 8 lines/order (pessimistic) = {ordersMin} &nbsp;|&nbsp;
+          {totalItems} items ÷ 2 lines/order (optimistic) = {ordersMax}<br />
+          Demo orders draw 2–8 product lines at random from the 9 BTT products.
+        </div>
+      </div>
+
+      {/* ── Scenario name (optional) ── */}
+      <div className="flex flex-col gap-1">
+        <label className="text-sm text-[#94a3b8]">Scenario name <span className="text-[#57606a]">(optional — auto-generated if blank)</span></label>
+        <input
+          type="text"
+          placeholder={`Physical Test — ${rows}×${cols} grid, ${kits} kit${kits !== 1 ? 's' : ''}, ${totes} tote${totes !== 1 ? 's' : ''}`}
+          value={scenarioName}
+          onChange={e => setScenarioName(e.target.value)}
+          className="px-3 py-2 rounded-lg bg-[#0f1117] border border-[#2d3142] text-[#e2e8f0] text-sm focus:outline-none focus:border-[#f59e0b] placeholder-[#57606a]"
+        />
+      </div>
+
+      {/* ── Apply button ── */}
+      <button
+        onClick={handleApply}
+        disabled={busy}
+        className="self-start px-8 py-3 rounded-xl bg-[#f59e0b] text-black font-bold text-sm hover:bg-[#fbbf24] disabled:opacity-50 transition-all"
+      >
+        {busy ? 'Applying…' : '⚡ Apply & Save'}
+      </button>
+
+      {/* ── Error ── */}
+      {error && (
+        <div className="text-sm text-[#ef4444] bg-[#ef4444]/10 border border-[#ef4444]/30 rounded-lg px-3 py-2">
+          {error}
+        </div>
+      )}
+
+      {/* ── Result ── */}
+      {result && (
+        <div className="flex flex-col gap-3 p-4 rounded-xl bg-[#0f1117] border border-[#22c55e]/40">
+          <div className="flex items-center gap-2">
+            <span className="text-[#22c55e] text-lg">✓</span>
+            <span className="text-sm font-semibold text-[#22c55e]">Warehouse configured successfully</span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-[#94a3b8]">
+            <span>Scenario saved</span>
+            <span className="text-[#e2e8f0] font-mono truncate">{result.scenario.name}</span>
+            <span>Grid</span>
+            <span className="text-[#e2e8f0]">{result.scenario.grid_rows}×{result.scenario.grid_cols}</span>
+            <span>Shelf locations</span>
+            <span className="text-[#e2e8f0]">{result.shelves_created}</span>
+            <span>Stock entries</span>
+            <span className="text-[#e2e8f0]">{result.stock_entries}</span>
+            <span>Total items</span>
+            <span className="text-[#e2e8f0]">{result.total_items}</span>
+            <span>Packing areas</span>
+            <span className="text-[#e2e8f0]">{result.packing_areas}</span>
+            <span>Totes</span>
+            <span className="text-[#e2e8f0]">{result.totes}</span>
+            <span>Est. orders</span>
+            <span className="text-[#f59e0b] font-bold">
+              {result.order_capacity.min}–{result.order_capacity.max}
+            </span>
+          </div>
+          <p className="text-xs text-[#57606a]">
+            Inventory is now live in the scratch scenario. Start the demo loop to begin picking.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Logo inline SVG ────────────────────────────────────────────────────────
 
 function BttLogo() {
@@ -488,14 +698,15 @@ function BttLogo() {
 // ── Main panel ─────────────────────────────────────────────────────────────
 
 const SUB_TABS: { id: SubTab; label: string }[] = [
-  { id: 'grid',      label: '⬛ Grid' },
-  { id: 'inventory', label: '📦 Inventory' },
-  { id: 'scenarios', label: '💾 Scenarios' },
-  { id: 'labels',    label: '🏷️ Labels' },
+  { id: 'physical-test', label: '🧪 Physical Test' },
+  { id: 'grid',          label: '⬛ Grid' },
+  { id: 'inventory',     label: '📦 Inventory' },
+  { id: 'scenarios',     label: '💾 Scenarios' },
+  { id: 'labels',        label: '🏷️ Labels' },
 ];
 
 export function BttSetupPanel() {
-  const [sub, setSub] = useState<SubTab>('grid');
+  const [sub, setSub] = useState<SubTab>('physical-test');
 
   return (
     <div className="flex flex-col h-full overflow-hidden gap-3">
@@ -528,10 +739,11 @@ export function BttSetupPanel() {
 
       {/* Panel content */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        {sub === 'grid'      && <GridPanel />}
-        {sub === 'inventory' && <InventoryPanel />}
-        {sub === 'scenarios' && <ScenariosPanel />}
-        {sub === 'labels'    && <BttLabelsPanel />}
+        {sub === 'physical-test' && <PhysicalTestPanel />}
+        {sub === 'grid'          && <GridPanel />}
+        {sub === 'inventory'     && <InventoryPanel />}
+        {sub === 'scenarios'     && <ScenariosPanel />}
+        {sub === 'labels'        && <BttLabelsPanel />}
       </div>
     </div>
   );

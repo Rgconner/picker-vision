@@ -441,6 +441,69 @@ async def api_demo_stop(request: Request):
     return await _proxy("POST", f"{ORDER_SERVICE_URL}/demo/stop", body or None)
 
 
+# ── BTT warehouse / scenario / label / instance proxy routes ─────────────────
+# These were previously only reachable in Vite dev mode via /api/order/* prefix.
+# All routes below proxy directly to the order-service under /api/order/*.
+
+@app.get("/api/order/instance-profile")
+async def api_instance_profile():
+    return await _proxy("GET", f"{ORDER_SERVICE_URL}/instance-profile")
+
+@app.post("/api/order/warehouse/grid")
+async def api_warehouse_grid(request: Request):
+    return await _proxy("POST", f"{ORDER_SERVICE_URL}/warehouse/grid", await request.json())
+
+@app.post("/api/order/warehouse/inventory")
+async def api_warehouse_inventory(request: Request):
+    return await _proxy("POST", f"{ORDER_SERVICE_URL}/warehouse/inventory", await request.json())
+
+@app.get("/api/order/warehouse/scenarios")
+async def api_warehouse_scenarios():
+    return await _proxy("GET", f"{ORDER_SERVICE_URL}/warehouse/scenarios")
+
+@app.post("/api/order/warehouse/scenarios")
+async def api_warehouse_scenarios_save(request: Request):
+    return await _proxy("POST", f"{ORDER_SERVICE_URL}/warehouse/scenarios", await request.json())
+
+@app.get("/api/order/warehouse/scenarios/{scenario_id}")
+async def api_warehouse_scenario_get(scenario_id: str):
+    return await _proxy("GET", f"{ORDER_SERVICE_URL}/warehouse/scenarios/{scenario_id}")
+
+@app.delete("/api/order/warehouse/scenarios/{scenario_id}", status_code=204)
+async def api_warehouse_scenario_delete(scenario_id: str):
+    return await _proxy("DELETE", f"{ORDER_SERVICE_URL}/warehouse/scenarios/{scenario_id}")
+
+@app.post("/api/order/warehouse/physical-test-setup")
+async def api_physical_test_setup(request: Request):
+    return await _proxy("POST", f"{ORDER_SERVICE_URL}/warehouse/physical-test-setup", await request.json())
+
+@app.get("/api/order/labels/products")
+async def api_labels_products():
+    return await _proxy("GET", f"{ORDER_SERVICE_URL}/labels/products")
+
+@app.post("/api/order/labels/generate")
+async def api_labels_generate(request: Request):
+    import httpx as _httpx
+    body = await request.json()
+    async with _httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.post(
+            f"{ORDER_SERVICE_URL}/labels/generate",
+            json=body,
+            headers={"Content-Type": "application/json"},
+        )
+    from fastapi.responses import Response as _GwResponse
+    return _GwResponse(
+        content=r.content,
+        status_code=r.status_code,
+        media_type=r.headers.get("content-type", "application/pdf"),
+        headers={"Content-Disposition": r.headers.get("content-disposition", "attachment")},
+    )
+
+@app.post("/api/demo/advance")
+async def api_demo_advance(request: Request):
+    return await _proxy("POST", f"{ORDER_SERVICE_URL}/demo/advance", await request.json())
+
+
 @app.get("/api/scan-log")
 async def api_scan_log(limit: int = 50):
     return await _proxy("GET", f"{EVENT_PROCESSOR_URL}/scan-log?limit={limit}")
