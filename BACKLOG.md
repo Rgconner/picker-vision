@@ -545,8 +545,20 @@ _Add future items here with a one-line description and rough priority._
 
 **Format suggestion:** Short narrative essay (~800–1200 words) with a timeline sidebar and the Tuckman stage callouts. The commit log is the receipts.
 
-**Additional thread — The CI pause as enforced whitespace:**
-The 3–5 minute deploy cycle turned out to be a feature, not friction. It created mandatory breathing room between sprints — time to reflect on what just happened before the next thing started. When you're moving fast enough that individual bugs are diagnosed and fixed in a single turn, that forced pause becomes the only place reflection can happen. Worth a paragraph: the pipeline as the team's natural sprint boundary, and why that rhythm mattered.
+**Additional thread — The Ma Window:**
+Named after *Ma* (間) — the Japanese/Zen concept of negative space, the intentional pause between notes that gives music its meaning. The gap is not empty. It is load-bearing.
+
+The 3–5 minute CI deploy cycle turned out to be a feature, not friction. It created mandatory breathing room between sprints — time to reflect on what just shipped before the next thing started. When you're moving fast enough that individual bugs are diagnosed and fixed in a single turn, the Ma Window is the *only* place reflection can happen.
+
+Without it, we found out what happens: the death spiral. Both sides moving too fast, chasing incomplete ideas, no moment to ask "wait, is this actually the right direction?" The BE-004 post-mortem ("why Bob circles") documents it from the AI side. The user experienced it as frustration and cognitive overload. Same phenomenon, both ends of the pair.
+
+The hypothesis worth naming explicitly:
+
+> **The Ma Window Principle:** In AI-assisted development, the enforced latency of the deployment pipeline functions as the team's natural sprint boundary. It is not waste to be eliminated. Removing it — through instant deploys or continuous flow — collapses the reflection gap and increases the probability of cascading errors, misaligned direction, and human burnout. The pause is the feature.
+
+This is potentially a novel and publishable observation about AI-human pair workflows. Most of the industry is racing toward zero-latency deployment. This is the counterargument: some latency is cognitively protective for the human in the loop. The machine never needs to breathe. The human always does. The pipeline enforces parity.
+
+**If this holds across other teams — we could be onto something.**
 
 **Status:** Idea captured. Write when the demo is stable and there's a natural pause.
 **Effort:** S (writing, not coding)
