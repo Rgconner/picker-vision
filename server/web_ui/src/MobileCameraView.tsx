@@ -16,6 +16,12 @@ import type { Detection, StagingRegion } from './types';
 import type { CameraDevice, CameraFacing } from './useMobileCamera';
 import type { ScanResult, DwellCandidate } from './useBarcodeScanner';
 
+/** A wrong-item overlay drawn from local bbox data (no server bbox needed). */
+export interface WrongItem {
+  value: string;
+  bbox:  ScanResult['bbox'];  // null if scanner had no bbox (ZXing path)
+}
+
 interface Props {
   stream:         MediaStream | null;
   devices:        CameraDevice[];
@@ -39,6 +45,8 @@ interface Props {
   canvasRef?:     React.RefObject<HTMLCanvasElement | null>;
   /** Show the debug info panel overlay (activated via ?debug=1) */
   debugMode?:     boolean;
+  /** QOL-014: wrong-item overlays tracked locally when server marks a scan unexpected */
+  wrongItems?:    WrongItem[];
 }
 
 const COLOURS = {
@@ -57,6 +65,7 @@ export function MobileCameraView({
   videoRef,
   canvasRef: externalCanvasRef,
   debugMode = false,
+  wrongItems = [],
 }: Props) {
   const internalCanvasRef = useRef<HTMLCanvasElement>(null);
   // Use the externally-supplied ref if provided, otherwise use the internal one
@@ -71,11 +80,13 @@ export function MobileCameraView({
   const lastScanRef       = useRef(lastScan);
   const candidatesRef     = useRef(candidates);
   const dwellFramesRef    = useRef(dwellFrames);
+  const wrongItemsRef     = useRef(wrongItems);
   useEffect(() => { detectionsRef.current  = detections;     }, [detections]);
   useEffect(() => { stagingRef.current     = stagingRegions; }, [stagingRegions]);
   useEffect(() => { lastScanRef.current    = lastScan;       }, [lastScan]);
   useEffect(() => { candidatesRef.current  = candidates;     }, [candidates]);
   useEffect(() => { dwellFramesRef.current = dwellFrames;    }, [dwellFrames]);
+  useEffect(() => { wrongItemsRef.current  = wrongItems;     }, [wrongItems]);
 
   // Attach stream to video element
   useEffect(() => {
@@ -243,6 +254,46 @@ export function MobileCameraView({
       ctx.globalAlpha = 0.8;
       ctx.fillText(cand.value, x2 + 2, y2 > 14 ? y2 - 3 : y2 + h2 + 12);
       ctx.globalAlpha = 1;
+    }
+
+    // ── QOL-014: Draw locally-tracked wrong-item overlays ─────────────────────
+    // These are items the server marked 'unexpected' on the mobile path where the
+    // server has no bbox — we use the local BarcodeDetector bbox instead.
+    for (const wi of wrongItemsRef.current) {
+      if (!wi.bbox) continue;
+      const { x: bx3, y: by3, w: bw3, h: bh3 } = wi.bbox;
+      const x3 = bx3 * sx, y3 = by3 * sy, w3 = bw3 * sx, h3 = bh3 * sy;
+
+      ctx.strokeStyle = COLOURS.unexpected;
+      ctx.lineWidth   = 4;
+      ctx.strokeRect(x3, y3, w3, h3);
+
+      ctx.fillStyle = 'rgba(239,68,68,0.15)';
+      ctx.fillRect(x3, y3, w3, h3);
+
+      ctx.save();
+      ctx.strokeStyle = COLOURS.unexpected;
+      ctx.lineWidth   = 3;
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath(); ctx.moveTo(x3, y3);         ctx.lineTo(x3 + w3, y3 + h3); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x3 + w3, y3);    ctx.lineTo(x3, y3 + h3);      ctx.stroke();
+      ctx.restore();
+
+      const fontSize3 = Math.max(28, Math.min(w3, h3) * 0.5);
+      ctx.font        = `bold ${fontSize3}px sans-serif`;
+      ctx.fillStyle   = COLOURS.unexpected;
+      ctx.globalAlpha = 0.85;
+      ctx.textAlign   = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('⊘', x3 + w3 / 2, y3 + h3 / 2);
+      ctx.globalAlpha  = 1;
+      ctx.textAlign    = 'left';
+      ctx.textBaseline = 'alphabetic';
+
+      ctx.fillStyle = COLOURS.unexpected;
+      ctx.font      = '13px monospace';
+      const labelBelow3 = y3 <= 30;
+      ctx.fillText(wi.value, x3 + 2, labelBelow3 ? y3 + h3 + 14 : y3 - 4);
     }
 
     rafRef.current = requestAnimationFrame(draw);

@@ -34,6 +34,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Order } from './types';
 import { useMobileCamera } from './useMobileCamera';
 import { useBarcodeScanner, DWELL_FRAMES, type ScanResult } from './useBarcodeScanner';
+import type { WrongItem } from './MobileCameraView';
 import { setRemoteLogPickerId } from './useRemoteLogger';
 import { useMobilePickerSession } from './useMobilePickerSession';
 import { MobileCameraView } from './MobileCameraView';
@@ -165,6 +166,11 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   interface PendingConfirm { orderId: string; lineId: string; itemName: string; barcode: string; stagingCode: string | null; }
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
 
+  // QOL-014: local bbox store — populated when a scan fires, used if server says unexpected
+  const pendingBboxRef = useRef<Map<string, ScanResult['bbox']>>(new Map());
+  const [wrongItems, setWrongItems] = useState<WrongItem[]>([]);
+  const wrongItemTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const videoRef    = useRef<HTMLVideoElement>(null);
   const canvasRef   = useRef<HTMLCanvasElement>(null);
   const isLandscape = useIsLandscape();
@@ -210,6 +216,11 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     if (pendingConfirm) return;
     // Ignore NAV scans when no overlay is showing
     if (result.type === 'nav') return;
+
+    // QOL-014: stash bbox so we can draw a local wrong-item overlay if server says unexpected
+    if (result.type === 'product') {
+      pendingBboxRef.current.set(result.value, result.bbox);
+    }
 
     publish(result);
 
@@ -261,6 +272,28 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
       stagingCode: correct.staging_code ?? nextLine.staging_code ?? null,
     });
   }, [pickerState]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // QOL-014: when pickerState arrives with unexpected detections, promote them
+  // to local wrongItems using the bbox we stashed in handleDetect.
+  // Auto-expire the overlay after 2 s so it doesn't linger indefinitely.
+  useEffect(() => {
+    if (!pickerState?.detections) return;
+    const unexpected = pickerState.detections.filter((d) => d.status === 'unexpected');
+    if (unexpected.length === 0) return;
+
+    const items: WrongItem[] = unexpected.map((d) => ({
+      value: d.value,
+      // Prefer server bbox (tuple → object) when present, else local stash
+      bbox: d.bbox && (d.bbox[2] > 0 || d.bbox[3] > 0)
+        ? { x: d.bbox[0], y: d.bbox[1], w: d.bbox[2], h: d.bbox[3] }
+        : (pendingBboxRef.current.get(d.value) ?? null),
+    }));
+
+    setWrongItems(items);
+
+    if (wrongItemTimerRef.current) clearTimeout(wrongItemTimerRef.current);
+    wrongItemTimerRef.current = setTimeout(() => setWrongItems([]), 2000);
+  }, [pickerState]);
 
   const handleConfirm = useCallback(async () => {
     if (!pendingConfirm) return;
@@ -401,6 +434,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
       videoRef={videoRef as React.RefObject<HTMLVideoElement | null>}
       canvasRef={canvasRef as React.RefObject<HTMLCanvasElement | null>}
       debugMode={debugMode}
+      wrongItems={wrongItems}
     />
   );
 

@@ -159,6 +159,10 @@ export function useBarcodeScanner(
   const debounceMap  = useRef<Map<string, number>>(new Map());
   // Per-value dwell counter — consecutive frame count; resets when value disappears
   const dwellMap     = useRef<Map<string, number>>(new Map());
+  // Cross-tick cooldown — prevents a second fire within 300 ms of any previous fire.
+  // Fixes QOL-016: two barcodes crossing the dwell threshold on consecutive frames
+  // each see ready.length === 1 and both fire before either ConfirmOverlay clears them.
+  const lastFireTimeRef = useRef<number>(0);
 
   // Stable callback ref — prevents re-triggering scan loop on parent re-renders
   const onDetectRef = useRef(onDetect);
@@ -248,6 +252,18 @@ export function useBarcodeScanner(
       // hasn't cleared the frame yet; hold everything as candidates.
       if (ready.length === 1) {
         const { value, result } = ready[0];
+
+        // QOL-016 cooldown: suppress if another fire happened within the last 300 ms.
+        // Roll the just-crossed item's dwell counter back to DWELL_FRAMES - 1 so it
+        // remains a visible candidate and re-fires on the very next frame if truly alone.
+        if (now - lastFireTimeRef.current < 300) {
+          dwellMap.current.set(value, DWELL_FRAMES - 1);
+          return seenThisFrame.map(({ value: v, result: r }) => ({
+            value: v, frames: dwellMap.current.get(v) ?? 0, bbox: r.bbox, corners: r.corners,
+          }));
+        }
+
+        lastFireTimeRef.current = now;
         debounceMap.current.set(value, now);
         dwellMap.current.set(value, 0); // must re-dwell before next fire
         remoteLog('info', `[Scanner] dwell-fire: ${value}`);

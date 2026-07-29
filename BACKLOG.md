@@ -202,9 +202,9 @@ Option 3 is the right immediate fix — one-line change to the deployment manife
 
 **Root cause:** `processDwell` fires when `ready.length === 1` — but "ready" is computed per-tick from the current frame only. If item A crosses threshold on tick N and item B crosses on tick N+1, each tick sees only one ready item and fires. The gate needs cross-tick awareness.
 
-**Proper fix:** Track in-flight fires with a ref (`inFlightRef` or a new `recentlyFiredRef`). In `processDwell`, before firing, check if any other candidate has frames ≥ `DWELL_FRAMES - 1` (i.e. will be ready next tick). If yes, suppress. Alternatively: after firing, set a short `multiObjectCooldown` (e.g. 300ms) during which no second fire is allowed regardless of dwell state — simpler and robust. Second option preferred.
+**Fix applied (`feature/bobs-tiny-treasures`, session 6):** Added `lastFireTimeRef = useRef(0)` to `useBarcodeScanner`. In `processDwell`, before calling `onDetectRef.current(result)`, if `Date.now() - lastFireTimeRef.current < 300` the fire is suppressed and the crossing item's dwell counter is reset to `DWELL_FRAMES - 1` (stays visible as a candidate). Otherwise `lastFireTimeRef.current` is updated and the fire proceeds. 300 ms cross-tick cooldown between any two fires.
 
-**Recurrence count:** 1 confirmed session. **Open.**
+**Recurrence count:** 1 confirmed session. **Fixed.**
 **Effort:** XS
 
 ---
@@ -215,9 +215,9 @@ Option 3 is the right immediate fix — one-line change to the deployment manife
 
 **Manual workaround applied:** None — wrong item silently does nothing on mobile. Dwell gate prevents it triggering a pick, but there is no visual indication it was seen.
 
-**Proper fix:** Track wrong-item detections locally in the scanner hook. When `onDetect` fires and the WS response comes back marking the barcode `unexpected`, store that value + its local bbox (from `BarcodeDetector`) in a ref and feed it into the canvas draw loop as a local wrong-item overlay — same pattern as the existing dwell candidate path. No server bbox needed.
+**Fix applied (`feature/bobs-tiny-treasures`, session 6):** In `MobilePickerView`, `handleDetect` now stashes `{ value → bbox }` in `pendingBboxRef` for every product scan. A new `useEffect` watches `pickerState.detections` — when any detection has `status === 'unexpected'`, it builds a `WrongItem[]` using the stashed local bbox (falling back to the server's bbox tuple if non-zero) and sets `wrongItems` state. `wrongItems` auto-expires after 2 s. A new `wrongItems` prop is forwarded to `MobileCameraView` where the draw loop renders the full ⊘ overlay (red box + X lines + ⊘ glyph + label) from local coordinates — no server bbox needed.
 
-**Recurrence count:** 1 session. **Open.**
+**Recurrence count:** 1 session. **Fixed.**
 **Effort:** S
 
 ---
