@@ -183,7 +183,10 @@ async def api_key_middleware(request: Request, call_next):
 
 async def _proxy(method: str, url: str, body: dict | None = None) -> dict:
     async with httpx.AsyncClient(timeout=10.0) as client:
-        if body:
+        # Use `is not None` so an empty dict {} is still serialised as a JSON
+        # object body — `if body` treats {} as falsy and omits the body,
+        # causing FastAPI Pydantic 422 errors on endpoints that require a body.
+        if body is not None:
             resp = await client.request(method, url, json=body)
         else:
             resp = await client.request(method, url)

@@ -1,15 +1,15 @@
-"""Bob's Tiny Treasures — BTT fixture seed script.
+﻿"""Bob's Tiny Treasures â€” BTT fixture seed script.
 
 Populates the database with the full Bob's Tiny Treasures test scenario:
-  - 9 products (3 size classes × 3 colourful names)
-  - 9 shelf locations (default 3×3 grid, configurable via GRID_ROWS / GRID_COLS)
+  - 9 products (3 size classes Ã— 3 colourful names)
+  - 9 shelf locations (default 3Ã—3 grid, configurable via GRID_ROWS / GRID_COLS)
   - 3 Tiny Tote delivery zones
-  - 3 sample orders (each ≤ 100 g — fits in a single tote)
+  - 3 sample orders (each â‰¤ 100 g â€” fits in a single tote)
   - 3 BTT users (Bob the owner/supervisor + 2 pickers)
   - 1 "Tiny Tray" cart type
   - WorkflowConfig.instance_profile set to "bobs-tiny-treasures"
 
-Safe to run multiple times — idempotent (guards on BTT product presence).
+Safe to run multiple times â€” idempotent (guards on BTT product presence).
 Does NOT touch the base picker-vision seed data.
 
 Usage:
@@ -28,7 +28,7 @@ import sys
 import pathlib
 from datetime import datetime
 
-# ── Resolve the order-service root so models.py is importable ────────────────
+# â”€â”€ Resolve the order-service root so models.py is importable â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 _SERVICE_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent / "server" / "order_service"
 if str(_SERVICE_ROOT) not in sys.path:
     sys.path.insert(0, str(_SERVICE_ROOT))
@@ -42,7 +42,7 @@ from models import (
 )
 
 # ---------------------------------------------------------------------------
-# Grid constants — change here to alter the default warehouse layout
+# Grid constants â€” change here to alter the default warehouse layout
 # ---------------------------------------------------------------------------
 
 GRID_ROWS = 3   # A, B, C
@@ -131,8 +131,8 @@ USERS = [
 
 # ---------------------------------------------------------------------------
 # Cart Types
-# "Tiny Tray" — a small picking tray sized for Tiny Treasures
-# Dimensions: 6×4×2 inches converted to cm (1 in = 2.54 cm)
+# "Tiny Tray" â€” a small picking tray sized for Tiny Treasures
+# Dimensions: 6Ã—4Ã—2 inches converted to cm (1 in = 2.54 cm)
 # max_weight slightly over the tote cap so the tray can hold a full order
 # before items are split into individual totes at pack time.
 # ---------------------------------------------------------------------------
@@ -141,7 +141,7 @@ CART_TYPES = [
     {
         "id":          "btt-cart-0001-0001-0001-0001-000000000001",
         "name":        "Tiny Tray",
-        "max_weight":  0.15,            # 150 g — a tray can hold more than one tote's worth
+        "max_weight":  0.15,            # 150 g â€” a tray can hold more than one tote's worth
         "weight_unit": "kg",
         "length_cm":   15.24,           # 6 in
         "width_cm":    10.16,           # 4 in
@@ -152,22 +152,22 @@ CART_TYPES = [
 ]
 
 # ---------------------------------------------------------------------------
-# Products — Bob's Tiny Treasures catalogue
+# Products â€” Bob's Tiny Treasures catalogue
 #
 # Three 3D-printed size primitives, three fun names each.
 # Weights are intentionally light (grams) to respect the 100 g tote cap.
-# volume_cm3 is approximate (footprint area × ~2.5 cm height for 1×1,
+# volume_cm3 is approximate (footprint area Ã— ~2.5 cm height for 1Ã—1,
 # proportionally scaled for larger sizes).
 #
 # Barcode prefix: BTT-  (clearly distinct from base WH- barcodes)
-# Location:       set to None — assigned at run-time via the inventory scanner
+# Location:       set to None â€” assigned at run-time via the inventory scanner
 # ---------------------------------------------------------------------------
 
 PRODUCTS = [
-    # ── 1×1 inch (≈ 2.54 × 2.54 cm footprint) ─────────────────────────────
+    # â”€â”€ 1Ã—1 inch (â‰ˆ 2.54 Ã— 2.54 cm footprint) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         "barcode":     "BTT-00101",
-        "description": "Glittering Goblin Gem · Tiny Green Cube",
+        "description": "Glittering Goblin Gem Â· Tiny Green Cube",
         "sku":         "BTT-S-001",
         "weight_kg":   0.008,           # 8 g
         "location":    None,            # assigned at inventory scan
@@ -178,7 +178,7 @@ PRODUCTS = [
     },
     {
         "barcode":     "BTT-00102",
-        "description": "Shimmering Sapphire Sprite · Tiny Blue Cube",
+        "description": "Shimmering Sapphire Sprite Â· Tiny Blue Cube",
         "sku":         "BTT-S-002",
         "weight_kg":   0.012,           # 12 g
         "location":    None,
@@ -189,7 +189,7 @@ PRODUCTS = [
     },
     {
         "barcode":     "BTT-00103",
-        "description": "Rosy Rascal Ruby · Tiny Red Cube",
+        "description": "Rosy Rascal Ruby Â· Tiny Red Cube",
         "sku":         "BTT-S-003",
         "weight_kg":   0.010,           # 10 g
         "location":    None,
@@ -199,10 +199,10 @@ PRODUCTS = [
         "size_inches": "1x1",
     },
 
-    # ── 2x1 inch (approx 5.08 x 2.54 cm footprint) ─────────────────────────────
+    # â”€â”€ 2x1 inch (approx 5.08 x 2.54 cm footprint) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         "barcode":     "BTT-00201",
-        "description": "Peculiar Purple Prism · Oblong Mystery Block",
+        "description": "Peculiar Purple Prism Â· Oblong Mystery Block",
         "sku":         "BTT-M-001",
         "weight_kg":   0.022,           # 22 g
         "location":    None,
@@ -213,7 +213,7 @@ PRODUCTS = [
     },
     {
         "barcode":     "BTT-00202",
-        "description": "Tangerine Trickster Token · Orange Oblong",
+        "description": "Tangerine Trickster Token Â· Orange Oblong",
         "sku":         "BTT-M-002",
         "weight_kg":   0.018,           # 18 g
         "location":    None,
@@ -224,7 +224,7 @@ PRODUCTS = [
     },
     {
         "barcode":     "BTT-00203",
-        "description": "Cobalt Captain's Cube · Rectangular Blue Brick",
+        "description": "Cobalt Captain's Cube Â· Rectangular Blue Brick",
         "sku":         "BTT-M-003",
         "weight_kg":   0.025,           # 25 g
         "location":    None,
@@ -234,10 +234,10 @@ PRODUCTS = [
         "size_inches": "2x1",
     },
 
-    # ── 2x2 inch (approx 5.08 x 5.08 cm footprint) ─────────────────────────────
+    # â”€â”€ 2x2 inch (approx 5.08 x 5.08 cm footprint) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     {
         "barcode":     "BTT-00301",
-        "description": "Magnificent Magenta Monolith · Big Pink Slab",
+        "description": "Magnificent Magenta Monolith Â· Big Pink Slab",
         "sku":         "BTT-L-001",
         "weight_kg":   0.045,           # 45 g
         "location":    None,
@@ -248,7 +248,7 @@ PRODUCTS = [
     },
     {
         "barcode":     "BTT-00302",
-        "description": "Whimsical White Whopper · Giant Pale Cube",
+        "description": "Whimsical White Whopper Â· Giant Pale Cube",
         "sku":         "BTT-L-002",
         "weight_kg":   0.038,           # 38 g
         "location":    None,
@@ -259,7 +259,7 @@ PRODUCTS = [
     },
     {
         "barcode":     "BTT-00303",
-        "description": "Dazzling Diamond Dynamo · Heavyweight Black Block",
+        "description": "Dazzling Diamond Dynamo Â· Heavyweight Black Block",
         "sku":         "BTT-L-003",
         "weight_kg":   0.050,           # 50 g
         "location":    None,
@@ -272,11 +272,11 @@ PRODUCTS = [
 
 
 # ---------------------------------------------------------------------------
-# Shelf locations — generated from the grid constants above
+# Shelf locations â€” generated from the grid constants above
 #
 # staging_type = "area"    (a shelf location the picker checks into)
 # QR payload   = "SHELF:A1" etc.
-# Code         = 2-char row+col, e.g. "A1" — fits the String(4) constraint
+# Code         = 2-char row+col, e.g. "A1" â€” fits the String(4) constraint
 # ---------------------------------------------------------------------------
 
 def _make_shelf_locations(rows: int = GRID_ROWS, cols: int = GRID_COLS) -> list[dict]:
@@ -299,7 +299,7 @@ SHELF_LOCATIONS = _make_shelf_locations()
 
 
 # ---------------------------------------------------------------------------
-# Delivery zones — the Tiny Totes go here when an order is packed
+# Delivery zones â€” the Tiny Totes go here when an order is packed
 # staging_type = "delivery"
 # ---------------------------------------------------------------------------
 
@@ -331,16 +331,16 @@ DELIVERY_ZONES = [
 # Sample orders
 #
 # Each order is designed to fit comfortably within one 100 g Tiny Tote.
-# Tote assignment is NOT pre-set here — it is computed at pack time by
-# packer.py when the order transitions complete → packing.
+# Tote assignment is NOT pre-set here â€” it is computed at pack time by
+# packer.py when the order transitions complete â†’ packing.
 #
 # staging_code on OrderLines is set to the expected delivery zone as a
 # pre-pack hint; the actual tote assignment lives in ToteLineAssignment.
 #
 # Total weights:
-#   BTT-2024-001:  3 × 8 g + 1 × 22 g = 46 g  ✓
-#   BTT-2024-002:  2 × 18 g + 1 × 12 g = 48 g  ✓
-#   BTT-2024-003:  1 × 45 g + 1 × 10 g = 55 g  ✓
+#   BTT-2024-001:  3 Ã— 8 g + 1 Ã— 22 g = 46 g  âœ“
+#   BTT-2024-002:  2 Ã— 18 g + 1 Ã— 12 g = 48 g  âœ“
+#   BTT-2024-003:  1 Ã— 45 g + 1 Ã— 10 g = 55 g  âœ“
 # ---------------------------------------------------------------------------
 
 _O1 = "btt-ord-0001-0001-0001-0001-000000000001"
@@ -355,10 +355,10 @@ ORDERS = [
         "status":     "pending",
         "created_at": datetime(2024, 6, 1, 9, 0, 0),
         "lines": [
-            # 3 × Glittering Goblin Gem (8 g each = 24 g) → Tiny Tote Line 1
+            # 3 Ã— Glittering Goblin Gem (8 g each = 24 g) â†’ Tiny Tote Line 1
             {"id": "btt-ln-0101-0001-0001-0001-000000000001",
              "product_barcode": "BTT-00101", "quantity": 3, "staging_code": "TINY"},
-            # 1 × Peculiar Purple Prism (22 g) → Tiny Tote Line 1
+            # 1 Ã— Peculiar Purple Prism (22 g) â†’ Tiny Tote Line 1
             {"id": "btt-ln-0101-0001-0001-0001-000000000002",
              "product_barcode": "BTT-00201", "quantity": 1, "staging_code": "TINY"},
         ],
@@ -370,10 +370,10 @@ ORDERS = [
         "status":     "pending",
         "created_at": datetime(2024, 6, 1, 10, 30, 0),
         "lines": [
-            # 2 × Tangerine Trickster Token (18 g each = 36 g) → Wonderland Bay
+            # 2 Ã— Tangerine Trickster Token (18 g each = 36 g) â†’ Wonderland Bay
             {"id": "btt-ln-0202-0002-0002-0002-000000000001",
              "product_barcode": "BTT-00202", "quantity": 2, "staging_code": "WOND"},
-            # 1 × Shimmering Sapphire Sprite (12 g) → Wonderland Bay
+            # 1 Ã— Shimmering Sapphire Sprite (12 g) â†’ Wonderland Bay
             {"id": "btt-ln-0202-0002-0002-0002-000000000002",
              "product_barcode": "BTT-00102", "quantity": 1, "staging_code": "WOND"},
         ],
@@ -385,10 +385,10 @@ ORDERS = [
         "status":     "pending",
         "created_at": datetime(2024, 6, 1, 11, 0, 0),
         "lines": [
-            # 1 × Magnificent Magenta Monolith (45 g) → Charm Dispatch
+            # 1 Ã— Magnificent Magenta Monolith (45 g) â†’ Charm Dispatch
             {"id": "btt-ln-0303-0003-0003-0003-000000000001",
              "product_barcode": "BTT-00301", "quantity": 1, "staging_code": "CHRM"},
-            # 1 × Rosy Rascal Ruby (10 g) → Charm Dispatch
+            # 1 Ã— Rosy Rascal Ruby (10 g) â†’ Charm Dispatch
             {"id": "btt-ln-0303-0003-0003-0003-000000000002",
              "product_barcode": "BTT-00103", "quantity": 1, "staging_code": "CHRM"},
         ],
@@ -403,7 +403,7 @@ ORDERS = [
 def run_btt_seed(session) -> None:
     """Populate the database with Bob's Tiny Treasures data.
 
-    Idempotent — checks for existing BTT products before inserting.
+    Idempotent â€” checks for existing BTT products before inserting.
     Never touches the base picker-vision seed data.
     """
     # Guard: if any BTT product already exists, skip entirely
@@ -411,10 +411,10 @@ def run_btt_seed(session) -> None:
         Product.barcode.like("BTT-%")
     ).first()
     if existing is not None:
-        print("BTT seed already present — skipping.")
+        print("BTT seed already present â€” skipping.")
         return
 
-    print("Seeding Bob's Tiny Treasures data…")
+    print("Seeding Bob's Tiny Treasures dataâ€¦")
 
     # Users
     for u in USERS:
@@ -424,7 +424,7 @@ def run_btt_seed(session) -> None:
     for c in CART_TYPES:
         session.add(CartType(**c))
 
-    # Products (size_inches is a new column — pass as kwarg)
+    # Products (size_inches is a new column â€” pass as kwarg)
     for p in PRODUCTS:
         session.add(Product(**p))
 
@@ -458,8 +458,8 @@ def run_btt_seed(session) -> None:
         wc.instance_profile = "bobs-tiny-treasures"
 
     session.commit()
-    print("✓ Bob's Tiny Treasures data seeded successfully.")
-    print(f"  Products  : {len(PRODUCTS)} ({GRID_ROWS}×{GRID_COLS} default grid)")
+    print("âœ“ Bob's Tiny Treasures data seeded successfully.")
+    print(f"  Products  : {len(PRODUCTS)} ({GRID_ROWS}Ã—{GRID_COLS} default grid)")
     print(f"  Shelves   : {len(SHELF_LOCATIONS)}")
     print(f"  Zones     : {len(DELIVERY_ZONES)}")
     print(f"  Orders    : {len(ORDERS)}")
@@ -496,3 +496,4 @@ if __name__ == "__main__":
         run_btt_seed(session)
     finally:
         session.close()
+
