@@ -1287,14 +1287,30 @@ def demo_status():
 
 @app.post("/demo/stop", status_code=204, tags=["demo"])
 def demo_stop(req: _DemoStopRequest):
-    """Stop a demo session.  Omit session_id to stop the presentation session."""
-    if req.session_id:
-        _demo_sessions.pop(req.session_id, None)
-    else:
-        # Stop presentation session
-        for sid, s in list(_demo_sessions.items()):
-            if s["picker_id"] == _PRESENTATION_PICKER_ID:
-                del _demo_sessions[sid]
+    """Stop a demo session.  Omit session_id to stop ALL active sessions."""
+    db = _SessionLocal()
+    try:
+        def _cancel_session(sid: str, s: dict) -> None:
+            """Remove session and cancel its current picking order."""
+            order_id = s.get("current_order_id")
+            if order_id:
+                o = db.get(Order, order_id)
+                if o and o.status == "picking":
+                    o.status = "cancelled"
+            del _demo_sessions[sid]
+
+        if req.session_id:
+            s = _demo_sessions.get(req.session_id)
+            if s:
+                _cancel_session(req.session_id, s)
+        else:
+            # Stop ALL active sessions (presentation + personal)
+            for sid, s in list(_demo_sessions.items()):
+                _cancel_session(sid, s)
+
+        db.commit()
+    finally:
+        db.close()
 
 
 @app.post("/demo/advance", tags=["demo"])
