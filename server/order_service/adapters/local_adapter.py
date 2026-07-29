@@ -1,9 +1,10 @@
 """Local SQLite adapter — implements BaseAdapter against the SQLAlchemy models."""
 
 import os
+from datetime import datetime, timezone, timedelta
 from typing import Any
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 
 from .base_adapter import BaseAdapter
@@ -82,7 +83,14 @@ class LocalAdapter(BaseAdapter):
     # ------------------------------------------------------------------
 
     def get_orders(self) -> list[dict[str, Any]]:
-        """Return all orders with status 'pending' or 'picking'."""
+        """Return all orders with status 'pending' or 'picking'.
+
+        Orphaned demo orders — picking-status orders whose customer name matches
+        the demo pattern and that were created more than 2 hours ago — are
+        excluded.  They accumulate when a guest browser session ends without
+        completing the order, and would otherwise appear on every new visitor's
+        pick list indefinitely.
+        """
         session = _get_session()
         try:
             orders = (
@@ -90,7 +98,23 @@ class LocalAdapter(BaseAdapter):
                 .filter(Order.status.in_(["pending", "picking"]))
                 .all()
             )
-            return [_order_to_dict(o, session) for o in orders]
+            cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
+            result = []
+            for o in orders:
+                # Suppress orphaned demo orders older than 2 hours
+                if (
+                    o.customer and o.customer.startswith("Demo (")
+                    and o.status == "picking"
+                    and o.created_at is not None
+                ):
+                    created = o.created_at
+                    # created_at may be naive (no tzinfo) — normalise to UTC
+                    if created.tzinfo is None:
+                        created = created.replace(tzinfo=timezone.utc)
+                    if created < cutoff:
+                        continue
+                result.append(_order_to_dict(o, session))
+            return result
         finally:
             session.close()
 
@@ -138,10 +162,17 @@ class LocalAdapter(BaseAdapter):
             if staging is None:
                 return None
 
-            # Collect current order references for this staging target
+            # Only include orders that are still active (pending/picking/packing).
+            # Completed, packed, and cancelled orders are historical noise that
+            # made the staging detail look permanently occupied.
+            active_statuses = ("pending", "picking", "packing")
             lines = (
                 session.query(OrderLine)
-                .filter(OrderLine.staging_code == code)
+                .join(Order, OrderLine.order_id == Order.id)
+                .filter(
+                    OrderLine.staging_code == code,
+                    Order.status.in_(active_statuses),
+                )
                 .all()
             )
             order_ids = list({line.order_id for line in lines})
@@ -162,11 +193,15 @@ class LocalAdapter(BaseAdapter):
     # ------------------------------------------------------------------
 
     def mark_picked(self, order_id: str, line_id: str) -> dict[str, Any]:
-        """Increment quantity_picked by 1.
+        """Atomically increment quantity_picked by 1.
 
-        * When quantity_picked >= quantity → set line status to "picked".
-        * When all lines in the order are "picked" → set order status to "complete".
-        Returns the updated line dict.
+        Uses a conditional UPDATE (WHERE quantity_picked < quantity) so that
+        concurrent requests for the same line are safe: only one write succeeds
+        per pick slot.  A second concurrent call for an already-full line is a
+        no-op — it returns the current line state without error or double-credit.
+
+        * When quantity_picked reaches quantity → line status becomes "picked".
+        * When all lines in the order are "picked" → order status becomes "complete".
 
         Raises ValueError if order or line is not found.
         """
@@ -180,18 +215,34 @@ class LocalAdapter(BaseAdapter):
             if line is None or line.order_id != order_id:
                 raise ValueError(f"Line {line_id!r} not found in order {order_id!r}")
 
-            # Increment and update status
-            line.quantity_picked = min(line.quantity_picked + 1, line.quantity)
-            if line.quantity_picked >= line.quantity:
-                line.status = "picked"
+            # Atomic conditional increment — only fires when there is still
+            # capacity.  Returns the number of rows actually updated (0 or 1).
+            rows_updated = session.execute(
+                text(
+                    "UPDATE order_lines "
+                    "SET quantity_picked = quantity_picked + 1 "
+                    "WHERE id = :lid "
+                    "  AND order_id = :oid "
+                    "  AND quantity_picked < quantity"
+                ),
+                {"lid": line_id, "oid": order_id},
+            ).rowcount
 
-            # Check if the whole order is now complete
-            all_lines = session.query(OrderLine).filter(OrderLine.order_id == order_id).all()
-            if all(ln.status == "picked" for ln in all_lines):
-                order.status = "complete"
+            if rows_updated:
+                session.refresh(line)
+                if line.quantity_picked >= line.quantity:
+                    line.status = "picked"
 
-            session.commit()
-            session.refresh(line)
+                all_lines = session.query(OrderLine).filter(
+                    OrderLine.order_id == order_id
+                ).all()
+                if all(ln.status == "picked" for ln in all_lines):
+                    order.status = "complete"
+
+                session.commit()
+                session.refresh(line)
+            # rows_updated == 0: line already at capacity — return current
+            # state unchanged; no commit needed.
 
             product = session.get(Product, line.product_barcode)
             staging = session.get(StagingContainer, line.staging_code)

@@ -167,18 +167,18 @@ PRODUCTS = [
     # ── 1×1 inch (≈ 2.54 × 2.54 cm footprint) ─────────────────────────────
     {
         "barcode":     "BTT-00101",
-        "description": "Glittering Goblin Gem — Tiny Green Cube",
+        "description": "Glittering Goblin Gem · Tiny Green Cube",
         "sku":         "BTT-S-001",
         "weight_kg":   0.008,           # 8 g
         "location":    None,            # assigned at inventory scan
-        "volume_cm3":  16.1,            # 2.54 × 2.54 × 2.5 cm
+        "volume_cm3":  16.1,            # 2.54 x 2.54 x 2.5 cm
         "size_class":  "S",
         "value_class": "standard",
         "size_inches": "1x1",
     },
     {
         "barcode":     "BTT-00102",
-        "description": "Shimmering Sapphire Sprite — Tiny Blue Cube",
+        "description": "Shimmering Sapphire Sprite · Tiny Blue Cube",
         "sku":         "BTT-S-002",
         "weight_kg":   0.012,           # 12 g
         "location":    None,
@@ -189,7 +189,7 @@ PRODUCTS = [
     },
     {
         "barcode":     "BTT-00103",
-        "description": "Rosy Rascal Ruby — Tiny Red Cube",
+        "description": "Rosy Rascal Ruby · Tiny Red Cube",
         "sku":         "BTT-S-003",
         "weight_kg":   0.010,           # 10 g
         "location":    None,
@@ -199,21 +199,21 @@ PRODUCTS = [
         "size_inches": "1x1",
     },
 
-    # ── 2×1 inch (≈ 5.08 × 2.54 cm footprint) ─────────────────────────────
+    # ── 2x1 inch (approx 5.08 x 2.54 cm footprint) ─────────────────────────────
     {
         "barcode":     "BTT-00201",
-        "description": "Peculiar Purple Prism — Oblong Mystery Block",
+        "description": "Peculiar Purple Prism · Oblong Mystery Block",
         "sku":         "BTT-M-001",
         "weight_kg":   0.022,           # 22 g
         "location":    None,
-        "volume_cm3":  32.3,            # 5.08 × 2.54 × 2.5 cm
+        "volume_cm3":  32.3,            # 5.08 x 2.54 x 2.5 cm
         "size_class":  "M",
         "value_class": "standard",
         "size_inches": "2x1",
     },
     {
         "barcode":     "BTT-00202",
-        "description": "Tangerine Trickster Token — Orange Oblong",
+        "description": "Tangerine Trickster Token · Orange Oblong",
         "sku":         "BTT-M-002",
         "weight_kg":   0.018,           # 18 g
         "location":    None,
@@ -224,7 +224,7 @@ PRODUCTS = [
     },
     {
         "barcode":     "BTT-00203",
-        "description": "Cobalt Captain's Cube — Rectangular Blue Brick",
+        "description": "Cobalt Captain's Cube · Rectangular Blue Brick",
         "sku":         "BTT-M-003",
         "weight_kg":   0.025,           # 25 g
         "location":    None,
@@ -234,21 +234,21 @@ PRODUCTS = [
         "size_inches": "2x1",
     },
 
-    # ── 2×2 inch (≈ 5.08 × 5.08 cm footprint) ─────────────────────────────
+    # ── 2x2 inch (approx 5.08 x 5.08 cm footprint) ─────────────────────────────
     {
         "barcode":     "BTT-00301",
-        "description": "Magnificent Magenta Monolith — Big Pink Slab",
+        "description": "Magnificent Magenta Monolith · Big Pink Slab",
         "sku":         "BTT-L-001",
         "weight_kg":   0.045,           # 45 g
         "location":    None,
-        "volume_cm3":  64.5,            # 5.08 × 5.08 × 2.5 cm
+        "volume_cm3":  64.5,            # 5.08 x 5.08 x 2.5 cm
         "size_class":  "L",
         "value_class": "high",
         "size_inches": "2x2",
     },
     {
         "barcode":     "BTT-00302",
-        "description": "Whimsical White Whopper — Giant Pale Cube",
+        "description": "Whimsical White Whopper · Giant Pale Cube",
         "sku":         "BTT-L-002",
         "weight_kg":   0.038,           # 38 g
         "location":    None,
@@ -259,7 +259,7 @@ PRODUCTS = [
     },
     {
         "barcode":     "BTT-00303",
-        "description": "Dazzling Diamond Dynamo — Heavyweight Black Block",
+        "description": "Dazzling Diamond Dynamo · Heavyweight Black Block",
         "sku":         "BTT-L-003",
         "weight_kg":   0.050,           # 50 g
         "location":    None,

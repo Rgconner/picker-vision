@@ -188,6 +188,9 @@ async def _proxy(method: str, url: str, body: dict | None = None) -> dict:
         else:
             resp = await client.request(method, url)
         resp.raise_for_status()
+        # 204 No Content has no body — return empty dict rather than crashing on .json()
+        if resp.status_code == 204 or not resp.content:
+            return {}
         return resp.json()
 
 
