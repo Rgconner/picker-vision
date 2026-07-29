@@ -215,6 +215,14 @@ export function useBarcodeScanner(
     let active    = true;
     let tickCount = 0;
 
+    // Clear stale dwell state from the previous scan session.
+    // Without this, items that were in frame when Stop was pressed still have
+    // counters at DWELL_FRAMES and immediately re-fire on the first tick of the
+    // new session — causing the "3 fires in 1 ms on restart" bug.
+    dwellMap.current.clear();
+    debounceMap.current.clear();
+    lastFireTimeRef.current = 0;
+
     remoteLog('info', `[Scanner] scan loop started (engine=${engineRef.current})`);
 
     // ── Shared dwell logic ────────────────────────────────────────────────

@@ -231,8 +231,16 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     // pickerState effect below.
   }, [scanning, publish, pendingConfirm]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Pause the scan loop while the ConfirmOverlay is visible.
+  // This prevents:
+  //   (a) the same item re-firing through pendingConfirm guard (debounce records
+  //       a dropped fire, blocking the next legitimate scan for DEBOUNCE_MS)
+  //   (b) the purple dwell arc cycling forever because handleDetect silently drops
+  //       the fire while pendingConfirm is set
+  // On resume, useBarcodeScanner clears dwellMap/debounceMap at loop start so
+  // the next item re-dwells cleanly from zero.
   const { unsupported: scannerUnsupported, candidates } =
-    useBarcodeScanner(videoRef as React.RefObject<HTMLVideoElement | null>, scanning, handleDetect);
+    useBarcodeScanner(videoRef as React.RefObject<HTMLVideoElement | null>, scanning && !pendingConfirm, handleDetect);
 
   // Debug snapshot — posts composite JPEG every 2 s when ?debug=1
   useDebugSnapshot(
