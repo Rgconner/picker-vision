@@ -183,11 +183,17 @@ async def api_key_middleware(request: Request, call_next):
 
 async def _proxy(method: str, url: str, body: dict | None = None) -> dict:
     async with httpx.AsyncClient(timeout=10.0) as client:
-        if body:
+        # Use `is not None` so an empty dict {} is still serialised as a JSON
+        # object body — `if body` treats {} as falsy and omits the body,
+        # causing FastAPI Pydantic 422 errors on endpoints that require a body.
+        if body is not None:
             resp = await client.request(method, url, json=body)
         else:
             resp = await client.request(method, url)
         resp.raise_for_status()
+        # 204 No Content has no body — return empty dict rather than crashing on .json()
+        if resp.status_code == 204 or not resp.content:
+            return {}
         return resp.json()
 
 
@@ -438,7 +444,9 @@ async def api_demo_stop(request: Request):
         body = await request.json()
     except Exception:
         logger.debug("demo/stop: no JSON body")
-    return await _proxy("POST", f"{ORDER_SERVICE_URL}/demo/stop", body or None)
+    # Pass body dict always (even when empty) so FastAPI Pydantic on the
+    # order-service receives a valid JSON object and doesn't return 422.
+    return await _proxy("POST", f"{ORDER_SERVICE_URL}/demo/stop", body)
 
 
 # ── BTT warehouse / scenario / label / instance proxy routes ─────────────────

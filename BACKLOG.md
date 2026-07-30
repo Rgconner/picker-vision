@@ -265,6 +265,42 @@ Option 3 is the right immediate fix — one-line change to the deployment manife
 **Recurrence count:** 2 sessions. **Open.**
 **Effort:** S
 
+
+### QOL-017 · Confirm overlay re-fires when barcode stays in-frame after pick
+
+**Symptom:** After tapping Confirm on the pick overlay, the same item immediately re-raises the overlay as if it's a new pick. The picker has to dismiss it repeatedly while the label is still visible on screen.  
+**Root cause:** `setPendingConfirm(null)` resumes the scan loop before `confirmPick` and the orders re-fetch complete. The barcode re-dwells, the server enriches it as `correct` against stale React order state (line still shows `pending` locally), and the overlay fires a second time.  
+**Fix shipped:** `327478e` — `confirmedLinesRef` Set gates the overlay effect immediately on confirm; cleared once the orders re-fetch completes.  
+**Recurrence count:** 1 (observed live walkthrough 2026-07-29). **Fixed.**  
+**Effort:** S
+
+---
+
+### QOL-018 · Guest picker session not dropped on logout / role switch
+
+**Symptom:** Logging out of a Guest session (or switching from Guest to Owner login) leaves the guest picker registered in the picker list — it remains visible in the Operator tab and telemetry until its heartbeat TTL expires (~2 min).  
+**Manual workaround applied:** None — picker eventually drops off on its own.  
+**Proper fix:** On `logout()` in `useAuth.ts`, POST a deregister/heartbeat-stop to the gateway so the picker registry entry is removed immediately. Or: filter out guest picker IDs from the Operator picker list on the supervisor view.  
+**Recurrence count:** 1 (observed live walkthrough 2026-07-29). **Open.**  
+**Effort:** S
+
+
+### QOL-019 · `demo/stop` with no body only cleared the presentation session
+
+**Symptom:** Calling `POST /api/demo/stop` with an empty body (the "Stop Demo" button path) silently no-oped for personal-mode sessions. Only the `demo-presenter` picker's session was stopped; all other pickers' sessions stayed live. Orphaned orders remained in `picking` status and continued to appear on the supervisor dashboard until the 2-hour filter removed them.  
+**Manual workaround applied:** Pass explicit `{"session_id": "..."}` to stop individual sessions.  
+**Fix applied:** `demo/stop` with no body now stops ALL active sessions (personal + presentation) and cancels each session's current `picking` order immediately. Commit `7d58f15` (2026-07-29). **Fixed.**  
+**Effort:** S
+
+---
+
+### QOL-020 · `demo/start` cancelled ALL picking demo orders, not just the starting picker's
+
+**Symptom:** When any picker started a new demo session via `POST /api/demo/start`, the QOL-010 stale-order cleanup cancelled *every* `Demo (...)` order in `picking` status — including active orders belonging to other pickers running concurrently. In a 5-person demo, one picker pressing "Start Demo" would silently wipe the in-progress orders of the other four.  
+**Manual workaround applied:** None practical — required avoiding concurrent sessions.  
+**Fix applied:** Scoped the cleanup to only `Demo ({picker_id})` customer name (exact match) and additionally skipped any order already tracked by an active in-memory session. Commit `d1fa69f` (2026-07-29). **Fixed.**  
+**Effort:** S
+
 ---
 
 ## Bob Errors — Post-mortems

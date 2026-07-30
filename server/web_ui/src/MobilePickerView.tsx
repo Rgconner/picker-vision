@@ -176,6 +176,11 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   // (which is empty by the time the WS response arrives — scan loop already stopped).
   const lastFiredBarcodeRef = useRef<string | null>(null);
 
+  // Recently-confirmed line IDs — populated by handleConfirm, cleared when
+  // orders state refreshes.  Prevents the overlay re-firing on the same line
+  // when the barcode stays in-frame after confirmation but before setOrders runs.
+  const confirmedLinesRef = useRef<Set<string>>(new Set());
+
   const videoRef    = useRef<HTMLVideoElement>(null);
   const canvasRef   = useRef<HTMLCanvasElement>(null);
   const isLandscape = useIsLandscape();
@@ -280,6 +285,10 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     if (!correct) return;
     const line = activeOrder.lines.find((l) => l.id === correct.line_id);
     if (!line) return;
+    // Guard: skip if this line was already confirmed this session but orders
+    // state hasn't refreshed yet — prevents the overlay re-firing on a
+    // barcode that stays in-frame after confirmation.
+    if (confirmedLinesRef.current.has(line.id)) return;
     lastFiredBarcodeRef.current = null;
     setPendingConfirm({
       orderId:     activeOrder.id,
@@ -315,6 +324,10 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   const handleConfirm = useCallback(async () => {
     if (!pendingConfirm) return;
     const { orderId, lineId } = pendingConfirm;
+
+    // Mark confirmed immediately so the overlay gate blocks re-fires while
+    // confirmPick and the orders re-fetch are still in flight.
+    confirmedLinesRef.current.add(lineId);
     setPendingConfirm(null);
 
     await confirmPick(orderId, lineId);
@@ -324,6 +337,9 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
       const res = await fetch(`/api/orders/${orderId}`);
       if (res.ok) {
         const order: Order = await res.json();
+        // Clear confirmed-lines entries for this order now that orders state
+        // is fresh — lines will correctly show as 'picked' going forward.
+        order.lines.forEach((l) => confirmedLinesRef.current.delete(l.id));
         const allPicked = order.lines.every((l) => l.status === 'picked' || l.quantity_picked >= l.quantity);
         if (allPicked) {
           await fetch('/api/demo/advance', {

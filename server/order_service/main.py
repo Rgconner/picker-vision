@@ -165,14 +165,7 @@ def get_order(order_id: str):
 )
 def mark_line_picked(order_id: str, line_id: str):
     try:
-        result = _get_adapter().mark_picked(order_id, line_id)
-        # If the order just became complete, advance any watching demo session
-        if result.get("status") == "picked":
-            # Check if ALL lines are now picked by re-fetching the order
-            order = _get_adapter().get_order(order_id)
-            if order and order.get("status") == "complete":
-                _advance_demo_session(order_id)
-        return result
+        return _get_adapter().mark_picked(order_id, line_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
@@ -1252,14 +1245,23 @@ def demo_start(req: _DemoStartRequest):
         else:
             raise HTTPException(status_code=400, detail="mode must be 'personal' or 'presentation'")
 
-        # QOL-010: cancel any stale picking demo orders for this picker before
-        # creating the first order of the new session — prevents scan ambiguity.
+        # QOL-010: cancel stale picking demo orders belonging to *this picker*
+        # before creating the first order of the new session — prevents scan
+        # ambiguity.  Do NOT cancel orders owned by other active sessions
+        # (multi-picker scenario: one picker starting must not wipe others).
+        active_order_ids = {
+            s.get("current_order_id")
+            for s in _demo_sessions.values()
+            if s.get("current_order_id")
+        }
+        expected_customer = f"Demo ({picker_id})"
         stale = db.query(Order).filter(
             Order.status == "picking",
-            Order.customer.like("Demo (%)")
+            Order.customer == expected_customer,
         ).all()
         for o in stale:
-            o.status = "cancelled"
+            if o.id not in active_order_ids:
+                o.status = "cancelled"
         db.commit()
 
         session_id = str(uuid.uuid4())[:8]
@@ -1294,23 +1296,43 @@ def demo_status():
 
 @app.post("/demo/stop", status_code=204, tags=["demo"])
 def demo_stop(req: _DemoStopRequest):
-    """Stop a demo session.  Omit session_id to stop the presentation session."""
-    if req.session_id:
-        _demo_sessions.pop(req.session_id, None)
-    else:
-        # Stop presentation session
-        for sid, s in list(_demo_sessions.items()):
-            if s["picker_id"] == _PRESENTATION_PICKER_ID:
-                del _demo_sessions[sid]
+    """Stop a demo session.  Omit session_id to stop ALL active sessions."""
+    db = _SessionLocal()
+    try:
+        def _cancel_session(sid: str, s: dict) -> None:
+            """Remove session and cancel its current picking order."""
+            order_id = s.get("current_order_id")
+            if order_id:
+                o = db.get(Order, order_id)
+                if o and o.status == "picking":
+                    o.status = "cancelled"
+            del _demo_sessions[sid]
+
+        if req.session_id:
+            s = _demo_sessions.get(req.session_id)
+            if s:
+                _cancel_session(req.session_id, s)
+        else:
+            # Stop ALL active sessions (presentation + personal)
+            for sid, s in list(_demo_sessions.items()):
+                _cancel_session(sid, s)
+
+        db.commit()
+    finally:
+        db.close()
 
 
 @app.post("/demo/advance", tags=["demo"])
 def demo_advance(body: dict):
-    """Called by the mobile client after it writes a confirm-pick and detects
-    all lines are now picked.  Advances the demo session to the next order.
+    """Called by the mobile client after confirming the last pick on an order.
+
+    Idempotent: if the session has already moved past this order_id (because a
+    concurrent call already advanced it), the current state is returned without
+    creating another order.  This eliminates the double-advance race that occurs
+    when two pickers both confirm the final line of the same order.
 
     Body: {"order_id": str, "picker_id": str}
-    Returns the new current_order_id, or {} if session not found / cap reached.
+    Returns the current session state, or {} if no session owns this order.
     """
     order_id  = body.get("order_id")
     picker_id = body.get("picker_id")
@@ -1320,8 +1342,11 @@ def demo_advance(body: dict):
     db = _SessionLocal()
     try:
         for sid, s in list(_demo_sessions.items()):
+            # Idempotency gate: if session already moved past this order, return
+            # current state without touching orders_completed or creating a new order.
             if s.get("current_order_id") != order_id:
                 continue
+
             s["orders_completed"] += 1
             if s["orders_completed"] >= _DEMO_MAX_ORDERS:
                 del _demo_sessions[sid]
@@ -1329,6 +1354,7 @@ def demo_advance(body: dict):
             new_order_id = _create_demo_order(s, db)
             s["current_order_id"] = new_order_id
             return {"current_order_id": new_order_id, "orders_completed": s["orders_completed"]}
-        return {}  # session not found for this order_id
+        # No session currently owns this order_id — already advanced or no session.
+        return {}
     finally:
         db.close()

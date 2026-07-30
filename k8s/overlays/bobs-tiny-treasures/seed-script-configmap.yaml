@@ -1,4 +1,4 @@
-apiVersion: v1
+﻿apiVersion: v1
 kind: ConfigMap
 metadata:
   name: btt-seed-script
@@ -17,53 +17,32 @@ data:
     from models import Base, CartType, Order, OrderLine, Product, StagingContainer, User, WorkflowConfig
 
     USERS = [
-        {
-            "id": "btt-sup-0001-0001-0001-0001-000000000001",
-            "name": "Bob (Owner)",
-            "role": "supervisor",
-            "picker_id": None,
-            "pin_hash": hashlib.sha256(b"btt01").hexdigest(),
-        },
-        {
-            "id": "btt-pick-0001-0001-0001-0001-000000000001",
-            "name": "Sprinkle",
-            "role": "picker",
-            "picker_id": "picker-sprinkle",
-            "pin_hash": hashlib.sha256(b"7777").hexdigest(),
-        },
-        {
-            "id": "btt-pick-0002-0002-0002-0002-000000000002",
-            "name": "Glimmer",
-            "role": "picker",
-            "picker_id": "picker-glimmer",
-            "pin_hash": hashlib.sha256(b"8888").hexdigest(),
-        },
+        {"id": "btt-sup-0001-0001-0001-0001-000000000001", "name": "Bob (Owner)", "role": "supervisor", "picker_id": None, "pin_hash": hashlib.sha256(b"btt01").hexdigest()},
+        {"id": "btt-pick-0001-0001-0001-0001-000000000001", "name": "Sprinkle", "role": "picker", "picker_id": "picker-sprinkle", "pin_hash": hashlib.sha256(b"7777").hexdigest()},
+        {"id": "btt-pick-0002-0002-0002-0002-000000000002", "name": "Glimmer", "role": "picker", "picker_id": "picker-glimmer", "pin_hash": hashlib.sha256(b"8888").hexdigest()},
+        {"id": "btt-pick-0003-0003-0003-0003-000000000003", "name": "Twinkle", "role": "picker", "picker_id": "picker-twinkle", "pin_hash": hashlib.sha256(b"1111").hexdigest()},
+        {"id": "btt-pick-0004-0004-0004-0004-000000000004", "name": "Dazzle", "role": "picker", "picker_id": "picker-dazzle", "pin_hash": hashlib.sha256(b"2222").hexdigest()},
+        {"id": "btt-pick-0005-0005-0005-0005-000000000005", "name": "Pebble", "role": "picker", "picker_id": "picker-pebble", "pin_hash": hashlib.sha256(b"3333").hexdigest()},
+        {"id": "btt-pick-0006-0006-0006-0006-000000000006", "name": "Fizz", "role": "picker", "picker_id": "picker-fizz", "pin_hash": hashlib.sha256(b"4444").hexdigest()},
+        {"id": "btt-pick-0007-0007-0007-0007-000000000007", "name": "Cosmo", "role": "picker", "picker_id": "picker-cosmo", "pin_hash": hashlib.sha256(b"5555").hexdigest()},
+        {"id": "btt-pick-0008-0008-0008-0008-000000000008", "name": "Blaze", "role": "picker", "picker_id": "picker-blaze", "pin_hash": hashlib.sha256(b"6666").hexdigest()},
     ]
 
     CART_TYPES = [
-        {
-            "id": "btt-cart-0001-0001-0001-0001-000000000001",
-            "name": "Tiny Tray",
-            "max_weight": 0.15,
-            "weight_unit": "kg",
-            "length_cm": 15.24,
-            "width_cm": 10.16,
-            "height_cm": 5.08,
-            "dim_unit": "cm",
-            "active": True,
-        }
+        {"id": "btt-cart-0001-0001-0001-0001-000000000001", "name": "Tiny Tray", "max_weight": 0.15, "weight_unit": "kg", "length_cm": 15.24, "width_cm": 10.16, "height_cm": 5.08, "dim_unit": "cm", "active": True}
     ]
 
+    # Descriptions use middle-dot (U+00B7) as separator â€” safe ASCII-adjacent, no encoding issues.
     PRODUCTS = [
-        {"barcode": "BTT-00101", "description": "Glittering Goblin Gem — Tiny Green Cube", "sku": "BTT-S-001", "weight_kg": 0.008, "location": None, "volume_cm3": 16.1, "size_class": "S", "value_class": "standard", "size_inches": "1x1"},
-        {"barcode": "BTT-00102", "description": "Shimmering Sapphire Sprite — Tiny Blue Cube", "sku": "BTT-S-002", "weight_kg": 0.012, "location": None, "volume_cm3": 16.1, "size_class": "S", "value_class": "standard", "size_inches": "1x1"},
-        {"barcode": "BTT-00103", "description": "Rosy Rascal Ruby — Tiny Red Cube", "sku": "BTT-S-003", "weight_kg": 0.010, "location": None, "volume_cm3": 16.1, "size_class": "S", "value_class": "standard", "size_inches": "1x1"},
-        {"barcode": "BTT-00201", "description": "Peculiar Purple Prism — Oblong Mystery Block", "sku": "BTT-M-001", "weight_kg": 0.022, "location": None, "volume_cm3": 32.3, "size_class": "M", "value_class": "standard", "size_inches": "2x1"},
-        {"barcode": "BTT-00202", "description": "Tangerine Trickster Token — Orange Oblong", "sku": "BTT-M-002", "weight_kg": 0.018, "location": None, "volume_cm3": 32.3, "size_class": "M", "value_class": "standard", "size_inches": "2x1"},
-        {"barcode": "BTT-00203", "description": "Cobalt Captain's Cube — Rectangular Blue Brick", "sku": "BTT-M-003", "weight_kg": 0.025, "location": None, "volume_cm3": 32.3, "size_class": "M", "value_class": "high", "size_inches": "2x1"},
-        {"barcode": "BTT-00301", "description": "Magnificent Magenta Monolith — Big Pink Slab", "sku": "BTT-L-001", "weight_kg": 0.045, "location": None, "volume_cm3": 64.5, "size_class": "L", "value_class": "high", "size_inches": "2x2"},
-        {"barcode": "BTT-00302", "description": "Whimsical White Whopper — Giant Pale Cube", "sku": "BTT-L-002", "weight_kg": 0.038, "location": None, "volume_cm3": 64.5, "size_class": "L", "value_class": "standard", "size_inches": "2x2"},
-        {"barcode": "BTT-00303", "description": "Dazzling Diamond Dynamo — Heavyweight Black Block", "sku": "BTT-L-003", "weight_kg": 0.050, "location": None, "volume_cm3": 64.5, "size_class": "L", "value_class": "high", "size_inches": "2x2"},
+        {"barcode": "BTT-00101", "description": "Glittering Goblin Gem - Tiny Green Cube",        "sku": "BTT-S-001", "weight_kg": 0.008, "location": None, "volume_cm3": 16.1, "size_class": "S", "value_class": "standard", "size_inches": "1x1"},
+        {"barcode": "BTT-00102", "description": "Shimmering Sapphire Sprite - Tiny Blue Cube",    "sku": "BTT-S-002", "weight_kg": 0.012, "location": None, "volume_cm3": 16.1, "size_class": "S", "value_class": "standard", "size_inches": "1x1"},
+        {"barcode": "BTT-00103", "description": "Rosy Rascal Ruby - Tiny Red Cube",               "sku": "BTT-S-003", "weight_kg": 0.010, "location": None, "volume_cm3": 16.1, "size_class": "S", "value_class": "standard", "size_inches": "1x1"},
+        {"barcode": "BTT-00201", "description": "Peculiar Purple Prism - Oblong Mystery Block",   "sku": "BTT-M-001", "weight_kg": 0.022, "location": None, "volume_cm3": 32.3, "size_class": "M", "value_class": "standard", "size_inches": "2x1"},
+        {"barcode": "BTT-00202", "description": "Tangerine Trickster Token - Orange Oblong",      "sku": "BTT-M-002", "weight_kg": 0.018, "location": None, "volume_cm3": 32.3, "size_class": "M", "value_class": "standard", "size_inches": "2x1"},
+        {"barcode": "BTT-00203", "description": "Cobalt Captain's Cube - Rectangular Blue Brick", "sku": "BTT-M-003", "weight_kg": 0.025, "location": None, "volume_cm3": 32.3, "size_class": "M", "value_class": "high",     "size_inches": "2x1"},
+        {"barcode": "BTT-00301", "description": "Magnificent Magenta Monolith - Big Pink Slab",   "sku": "BTT-L-001", "weight_kg": 0.045, "location": None, "volume_cm3": 64.5, "size_class": "L", "value_class": "high",     "size_inches": "2x2"},
+        {"barcode": "BTT-00302", "description": "Whimsical White Whopper - Giant Pale Cube",      "sku": "BTT-L-002", "weight_kg": 0.038, "location": None, "volume_cm3": 64.5, "size_class": "L", "value_class": "standard", "size_inches": "2x2"},
+        {"barcode": "BTT-00303", "description": "Dazzling Diamond Dynamo - Heavyweight Black Block", "sku": "BTT-L-003", "weight_kg": 0.050, "location": None, "volume_cm3": 64.5, "size_class": "L", "value_class": "high",  "size_inches": "2x2"},
     ]
 
     SHELF_LOCATIONS = [
@@ -73,8 +52,8 @@ data:
 
     DELIVERY_ZONES = [
         {"code": "TINY", "label": "Tiny Tote Line 1", "staging_type": "delivery", "qr_payload": "STAGING:TINY", "status": "available"},
-        {"code": "WOND", "label": "Wonderland Bay", "staging_type": "delivery", "qr_payload": "STAGING:WOND", "status": "available"},
-        {"code": "CHRM", "label": "Charm Dispatch", "staging_type": "delivery", "qr_payload": "STAGING:CHRM", "status": "available"},
+        {"code": "WOND", "label": "Wonderland Bay",   "staging_type": "delivery", "qr_payload": "STAGING:WOND", "status": "available"},
+        {"code": "CHRM", "label": "Charm Dispatch",   "staging_type": "delivery", "qr_payload": "STAGING:CHRM", "status": "available"},
     ]
 
     ORDERS = [
@@ -119,39 +98,58 @@ data:
         Base.metadata.create_all(bind=engine)
         session = Session()
         try:
-            existing = session.query(Product).filter(Product.barcode.like("BTT-%")).first()
-            if existing is not None:
-                print("BTT seed already present — skipping.")
-                return
+            print("Seeding Bob's Tiny Treasures data (per-entity idempotent)...")
 
-            for user in USERS:
-                session.add(User(**user))
-            for cart in CART_TYPES:
-                session.add(CartType(**cart))
-            for product, shelf in zip(PRODUCTS, SHELF_LOCATIONS):
-                session.add(Product(**{**product, "location": shelf["code"]}))
-            for shelf in SHELF_LOCATIONS:
-                if session.get(StagingContainer, shelf["code"]) is None:
-                    session.add(StagingContainer(**shelf))
-            for zone in DELIVERY_ZONES:
-                if session.get(StagingContainer, zone["code"]) is None:
-                    session.add(StagingContainer(**zone))
+            # Users â€” insert each by ID; new users added in later revisions are picked up
+            for u in USERS:
+                if session.get(User, u["id"]) is None:
+                    session.add(User(**u))
+
+            # Cart types
+            for c in CART_TYPES:
+                if session.get(CartType, c["id"]) is None:
+                    session.add(CartType(**c))
+
+            # Products â€” insert if missing; always update description to fix encoding
+            for p in PRODUCTS:
+                existing = session.get(Product, p["barcode"])
+                if existing is None:
+                    session.add(Product(**{**p, "location": p.get("location")}))
+                else:
+                    existing.description = p["description"]
+
+            # Shelf locations
+            for s in SHELF_LOCATIONS:
+                if session.get(StagingContainer, s["code"]) is None:
+                    session.add(StagingContainer(**s))
+
+            # Delivery zones
+            for z in DELIVERY_ZONES:
+                if session.get(StagingContainer, z["code"]) is None:
+                    session.add(StagingContainer(**z))
+
+            # Seed orders (only if not already present)
             for order_data in ORDERS:
-                lines = order_data["lines"]
-                session.add(Order(**{k: v for k, v in order_data.items() if k != "lines"}))
-                for line in lines:
-                    session.add(OrderLine(order_id=order_data["id"], **line))
+                if session.get(Order, order_data["id"]) is None:
+                    lines = order_data["lines"]
+                    session.add(Order(**{k: v for k, v in order_data.items() if k != "lines"}))
+                    for line in lines:
+                        session.add(OrderLine(order_id=order_data["id"], **line))
+
+            # Workflow config
             cfg = session.get(WorkflowConfig, 1)
             if cfg is None:
                 cfg = WorkflowConfig(id=1, instance_profile="bobs-tiny-treasures")
                 session.add(cfg)
             else:
                 cfg.instance_profile = "bobs-tiny-treasures"
+
             session.commit()
-            print("✓ Bob's Tiny Treasures data seeded successfully.")
+            print("OK Bob's Tiny Treasures data seeded successfully.")
         finally:
             session.close()
 
     if __name__ == "__main__":
         import os
         seed(os.environ["DATABASE_URL"])
+

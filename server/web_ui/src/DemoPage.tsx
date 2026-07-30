@@ -148,13 +148,15 @@ export function DemoPage() {
   }, []);
 
   function tryScanning() {
-    auth.loginAsGuest();
+    // loginAsGuest() navigates to /app — override to /mobile instead
+    const guest = { id: 'guest', name: 'Guest', role: 'guest' as const, picker_id: null };
+    try { sessionStorage.setItem('pv_session', JSON.stringify(guest)); } catch { /* ignore */ }
     window.location.href = '/mobile';
   }
 
   function browseDashboard() {
+    // loginAsGuest() handles navigation to /app internally — no second redirect needed
     auth.loginAsGuest();
-    window.location.href = '/app';
   }
 
   return (
