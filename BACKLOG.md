@@ -570,3 +570,43 @@ _Add future items here with a one-line description and rough priority._
 **Byline:** Russ Conner with Bob (IBM watsonx Code Assistant)
 
 *Last updated: 2026-07-29*
+
+---
+
+### STORY-002 · TechExchange Demo — Three-Instance Tuckman Deployment
+
+**Status:** Scoped. Not started. Requires venue confirmation before building.
+**Effort:** M (cluster config, namespace manifests, compute node assessment)
+**Context:** For the TechExchange 60-minute presentation format of *"What I Learned Working with Bob: We Learned by Doing"*
+
+**The concept:**
+Deploy three simultaneous instances of picker-vision to the cluster, each representing a distinct stage of the Tuckman arc. The audience does not hear about Forming / Storming / Performing — they navigate to it. Three browser tabs. Three running systems.
+
+**The three states:**
+
+| Instance | Commit / Branch | Tuckman stage | What it shows |
+|---|---|---|---|
+| **1 — Forming** | End of `feature/mobile-web-client` — last stable state before BTT fork | Forming | Scanner works. System stable. Everything possible. |
+| **2 — Storming** | `d66dbc6` — BarcodeDetector removed without evidence, the regression commit (BE-006) | Storming | Scanner fails or behaves incorrectly. The Sorcerer's Apprentice, deployed. |
+| **3 — Performing** | Current `feature/bobs-tiny-treasures` HEAD | Performing | Full BTT. 94× of value. Working. |
+
+**Why this matters on stage:**
+Most case studies show the success. Nobody shows the failure, live, in production, because they deleted it. We kept it. The commit log is not just auditability — it is evidence. The five-hour spiral is not a story. It is a running URL.
+
+**Scoping work required:**
+
+- [ ] Confirm exact SHA for Instance 1 — last stable `feature/mobile-web-client` commit before BTT fork
+- [ ] Confirm `d66dbc6` as Instance 2 anchor — verify this is the regression state (BE-006 root cause)
+- [ ] Assess whether current cluster handles three simultaneous namespaces comfortably
+- [ ] Assess whether additional compute node is needed — Russ notes this is likely required
+- [ ] Create three Kubernetes namespace overlays: `pv-forming`, `pv-storming`, `pv-performing`
+- [ ] Three separate ingress routes / subdomains
+- [ ] Seed data appropriate for each instance — Instance 2 may need minimal seed, just enough to show the failure
+- [ ] Stage the live demo sequence: Instance 1 (works) → Instance 2 (fails) → Instance 3 (works + more)
+
+**Relationship to talk structure:**
+The three-instance demo replaces the verbal description of Storming in the TechExchange deep dive slot (minutes 31–41). The commit log archaeology (`d66dbc6`, BE-006 post-mortem) is shown in that slot. The live instances are the demo slot (minutes 16–31).
+
+**Note:** Do not build until venue and date confirmed. The Storming instance (`d66dbc6`) is intentionally broken — do not expose it to production traffic outside a controlled demo context.
+
+*Filed: 2026-07-30*
