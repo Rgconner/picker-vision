@@ -4,13 +4,14 @@ import { SupervisorView } from './SupervisorView';
 import { SystemView } from './SystemView';
 import { MobilePickerView } from './MobilePickerView';
 import { ManagementView } from './ManagementView';
+import { LoadGenView } from './LoadGenView';
 import { LoginScreen } from './LoginScreen';
 import { HealthStrip } from './HealthStrip';
 import { useSystemHealth } from './useSystemHealth';
 import { useAuth } from './useAuth';
 
 // Supervisor sees all tabs; picker sees only Mobile
-type SupervisorMode = 'operator' | 'supervisor' | 'mobile' | 'system' | 'management';
+type SupervisorMode = 'operator' | 'supervisor' | 'mobile' | 'system' | 'management' | 'load-gen';
 type PickerMode     = 'mobile';
 type Mode = SupervisorMode | PickerMode;
 
@@ -20,6 +21,7 @@ const SUPERVISOR_TABS: { id: SupervisorMode; label: string }[] = [
   { id: 'mobile',     label: '📱 Mobile' },
   { id: 'system',     label: 'System' },
   { id: 'management', label: '⚙ Manage' },
+  { id: 'load-gen',   label: '⚡ Load Gen' },
 ];
 
 export default function App() {
@@ -63,7 +65,7 @@ export default function App() {
         {(isSupervisor || isGuest) && (
           <nav className="flex gap-1 ml-4">
             {SUPERVISOR_TABS
-              .filter((t) => !(isGuest && t.id === 'management'))
+              .filter((t) => !(isGuest && (t.id === 'management' || t.id === 'load-gen')))
               .map((t) => (
                 <button
                   key={t.id}
@@ -142,6 +144,9 @@ export default function App() {
         )}
         {currentMode === 'management'  && isSupervisor && !isGuest && (
           <ManagementView auth={auth} />
+        )}
+        {currentMode === 'load-gen'    && isSupervisor && !isGuest && (
+          <LoadGenView auth={auth} />
         )}
       </main>
 

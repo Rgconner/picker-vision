@@ -636,6 +636,67 @@ async def api_telemetry():
     return await _collect_telemetry()
 
 
+# ---------------------------------------------------------------------------
+# Load-gen assertion endpoint
+# ---------------------------------------------------------------------------
+
+@app.get("/api/load-gen/assert")
+async def api_load_gen_assert(
+    scans_sent: int = 0,
+    picks_confirmed: int = 0,
+    picker_count: int = 0,
+):
+    """Compare load-generator client counters against live server telemetry.
+
+    Query params:
+      scans_sent      — total detection POSTs the client sent
+      picks_confirmed — total successful PATCH /lines calls the client made
+      picker_count    — expected number of registered pickers (0 = skip check)
+
+    Returns a structured pass/fail report.  Always HTTP 200 (the result is
+    data, not an error).  API-key protected by the existing middleware.
+    """
+    telem = await _collect_telemetry()
+    ep = telem.get("services", {}).get("event-processor", {})
+    wsh = telem.get("services", {}).get("websocket-hub", {})
+
+    events_received  = (ep.get("counters") or {}).get("events_received",  0)
+    events_processed = (ep.get("counters") or {}).get("events_processed", 0)
+    active_sockets   = (wsh.get("counters") or {}).get("active_picker_sockets", 0)
+
+    proc_rate_pct = round((events_processed / events_received * 100) if events_received > 0 else 100)
+
+    checks = []
+
+    # 1. Server saw at least as many events as client sent
+    checks.append({
+        "name":     "events_received >= scans_sent",
+        "expected": f">={scans_sent}",
+        "actual":   events_received,
+        "pass":     events_received >= scans_sent,
+    })
+
+    # 2. Processing success rate >= 95%
+    checks.append({
+        "name":     "processing_success_rate >= 95%",
+        "expected": ">=95%",
+        "actual":   f"{proc_rate_pct}%",
+        "pass":     proc_rate_pct >= 95,
+    })
+
+    # 3. Optional: active socket count matches expected picker count
+    if picker_count > 0:
+        checks.append({
+            "name":     "active_picker_sockets >= picker_count",
+            "expected": f">={picker_count}",
+            "actual":   active_sockets,
+            "pass":     active_sockets >= picker_count,
+        })
+
+    overall = all(c["pass"] for c in checks)
+    return {"pass": overall, "checks": checks}
+
+
 @app.get("/api/telemetry/stream")
 async def api_telemetry_stream():
     """Server-Sent Events stream — pushes telemetry every 5 seconds."""

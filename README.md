@@ -287,3 +287,76 @@ The grid auto-updates as pickers register and deregister. No controls are availa
 | ORD-2024-001 | Acme Corp | WH-00001×2 → ALPH, WH-00003×1 → ALPH, WH-00007×3 → BETA |
 | ORD-2024-002 | Globex Ltd | WH-00002×1 → GAMM, WH-00005×2 → GAMM, WH-00009×4 → DELT |
 | ORD-2024-003 | Initech Inc | WH-00004×2 → EPSN, WH-00006×5 → EPSN, WH-00008×1 → EPSN |
+
+---
+
+## Load Generator & Automated Regression
+
+The **⚡ Load Gen** tab (supervisor-only) simulates up to 20 virtual pickers
+entirely in the browser.  Each agent mirrors the full mobile-picker lifecycle:
+register, heartbeat, WebSocket, scan detection events, confirm picks, advance
+demo orders — with configurable scan noise.
+
+### Scan Noise Model
+
+| Parameter | Default | Description |
+|---|---|---|
+| Scan interval | 800 ms | Base time between detection events (±20% jitter) |
+| Miscan rate | 10% | Wrong product sent before correct one |
+| Multi-scan rate | 25% | 2–3 barcodes in one detection event |
+| Duplicate rate | 15% | Same barcode twice in one event |
+| Staging rate | 60% | Staging QR region included in event |
+
+### Running a Load Test
+
+1. Sign in as supervisor at `https://bobstinytreasures.snwbd.com`.
+2. Navigate to the **⚡ Load Gen** tab.
+3. Set picker count, scan speed, and noise rates.
+4. Click **▶ Start Swarm** — agents register, open WebSocket connections, and
+   begin scanning through demo orders automatically.
+5. Watch the swarm table and the **Server Telemetry** strip to confirm both
+   sides are in agreement.
+6. Click **▶ Run Assertion** for a PASS/FAIL regression report.
+
+### Headless CI Assertion (PowerShell)
+
+After a load-gen session, call the server-side assertion endpoint to verify
+the system processed events correctly:
+
+```powershell
+# Minimal smoke test — verify endpoint reachable and processing rate >= 95%
+.\tools\load-gen-assert.ps1
+
+# Full regression — 3 pickers, expect at least 30 scans received, wait 10s
+.\tools\load-gen-assert.ps1 -PickerCount 3 -ScansExpected 30 -WaitSeconds 10
+
+# Custom target
+.\tools\load-gen-assert.ps1 `
+    -BaseUrl "http://192.168.11.213" `
+    -ApiKey  "changeme" `
+    -PickerCount 5 `
+    -ScansExpected 100 `
+    -WaitSeconds 15
+```
+
+Exit code 0 = all checks passed. Exit code 1 = one or more checks failed.
+
+### Assertion Endpoint (API)
+
+`GET /api/load-gen/assert?scans_sent=N&picks_confirmed=M&picker_count=P`
+
+Requires `X-API-Key` header.  Returns:
+
+```json
+{
+  "pass": true,
+  "checks": [
+    { "name": "events_received >= scans_sent",   "expected": ">=30", "actual": 34,   "pass": true },
+    { "name": "processing_success_rate >= 95%",  "expected": ">=95%","actual": "97%","pass": true },
+    { "name": "active_picker_sockets >= picker_count", "expected": ">=3", "actual": 3, "pass": true }
+  ]
+}
+```
+
+Always HTTP 200 — use the `pass` field to determine success.
+
