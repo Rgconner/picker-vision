@@ -637,6 +637,33 @@ async def api_telemetry():
 
 
 # ---------------------------------------------------------------------------
+# Load-gen proxy routes — forward to the load-gen service (BTT only)
+# ---------------------------------------------------------------------------
+
+LOAD_GEN_URL = os.getenv("LOAD_GEN_URL", "http://load-gen:8004")
+
+
+@app.post("/api/load-gen/start")
+async def api_load_gen_start(request: Request):
+    return await _proxy("POST", f"{LOAD_GEN_URL}/start", await request.json())
+
+
+@app.post("/api/load-gen/stop")
+async def api_load_gen_stop(request: Request):
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        pass
+    return await _proxy("POST", f"{LOAD_GEN_URL}/stop", body)
+
+
+@app.get("/api/load-gen/status")
+async def api_load_gen_status():
+    return await _proxy("GET", f"{LOAD_GEN_URL}/status")
+
+
+# ---------------------------------------------------------------------------
 # Load-gen assertion endpoint
 # ---------------------------------------------------------------------------
 

@@ -35,6 +35,8 @@ jobs:
             context: server/websocket_hub
           - service: web-ui
             context: server/web_ui
+          - service: load-gen
+            context: server/load_gen
 
     steps:
       - name: Checkout
@@ -204,7 +206,7 @@ jobs:
         run: |
           $tag = "${{ steps.tag.outputs.sha }}"
           $ns  = "picker-vision-btt"
-          foreach ($svc in @("api-gateway","order-service","event-processor","websocket-hub","web-ui")) {
+          foreach ($svc in @("api-gateway","order-service","event-processor","websocket-hub","web-ui","load-gen")) {
             & "C:\Users\RussConner\kubectl.exe" set image deployment/$svc ${svc}=ghcr.io/rgconner/picker-vision/${svc}:$tag -n $ns
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
@@ -213,7 +215,7 @@ jobs:
         if: github.ref_name == 'feature/bobs-tiny-treasures'
         shell: powershell
         run: |
-          foreach ($d in @("api-gateway","order-service","event-processor","websocket-hub","web-ui")) {
+          foreach ($d in @("api-gateway","order-service","event-processor","websocket-hub","web-ui","load-gen")) {
             & "C:\Users\RussConner\kubectl.exe" rollout status deployment/$d -n picker-vision-btt --timeout=300s
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }

@@ -1,0 +1,62 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-gen
+  namespace: picker-vision-btt
+  labels:
+    app: load-gen
+spec:
+  # Always 1 — manages internal concurrency via asyncio Tasks
+  replicas: 1
+  selector:
+    matchLabels:
+      app: load-gen
+  template:
+    metadata:
+      labels:
+        app: load-gen
+    spec:
+      containers:
+        - name: load-gen
+          image: ghcr.io/rgconner/picker-vision/load-gen:feature-bobs-tiny-treasures
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8004
+          env:
+            - name: API_GATEWAY_URL
+              value: "http://api-gateway:8000"
+            - name: API_KEY
+              value: ""
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 20
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: load-gen
+  namespace: picker-vision-btt
+spec:
+  type: ClusterIP
+  selector:
+    app: load-gen
+  ports:
+    - port: 8004
+      targetPort: 8004
