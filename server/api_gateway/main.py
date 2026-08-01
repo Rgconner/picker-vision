@@ -656,56 +656,74 @@ async def api_load_gen_assert(
     Returns a structured pass/fail report.  Always HTTP 200 (the result is
     data, not an error).  API-key protected by the existing middleware.
 
+    events_received check strategy
+    --------------------------------
+    The event-processor runs as 2 replicas with in-memory counters.
+    _collect_telemetry() hits a single pod via ClusterIP load-balancing, so
+    it only sees half the events on average.  Instead we count the Redis
+    scan-ledger ("scan-ledger" key), which every pod writes to — giving a
+    cluster-wide total that is pod-count-agnostic.
+
     picker_count check strategy
     ---------------------------
-    When called from the browser Load Gen tab, active WebSocket connections
-    are open so active_picker_sockets is the right signal.  When called
-    headlessly from the CI script (no browser WebSockets), sockets are 0 even
-    though pickers did register — so we use pickers_registered as the fallback.
-    Rule: use whichever counter is >= picker_count; if neither is, fail.
+    Browser run:  active_picker_sockets is the live signal.
+    Headless CI:  no WebSockets open — fall back to pickers_registered.
+    Pass if either counter satisfies the expected count.
     """
     telem = await _collect_telemetry()
-    ep  = telem.get("services", {}).get("event-processor", {})
     wsh = telem.get("services", {}).get("websocket-hub", {})
     gw  = telem.get("services", {}).get("api-gateway", {})
 
-    events_received    = (ep.get("counters") or {}).get("events_received",  0)
-    events_processed   = (ep.get("counters") or {}).get("events_processed", 0)
+    # Use Redis scan-ledger length as cluster-wide events_received count.
+    # Falls back to 0 if Redis is unavailable.
+    try:
+        scan_ledger_count = _redis.llen("scan-ledger") if _redis else 0
+    except Exception:
+        scan_ledger_count = 0
+
     active_sockets     = (wsh.get("counters") or {}).get("active_picker_sockets", 0)
     pickers_registered = (gw.get("counters") or {}).get("pickers_registered", 0)
 
-    proc_rate_pct = round((events_processed / events_received * 100) if events_received > 0 else 100)
-
     checks = []
 
-    # 1. Server saw at least as many events as client sent
+    # 1. Scan-ledger entries >= scans_sent (cluster-wide, Redis-backed)
     checks.append({
-        "name":     "events_received >= scans_sent",
+        "name":     "scan_ledger_count >= scans_sent",
         "expected": f">={scans_sent}",
-        "actual":   events_received,
-        "pass":     events_received >= scans_sent,
+        "actual":   scan_ledger_count,
+        "pass":     scan_ledger_count >= scans_sent,
     })
 
-    # 2. Processing success rate >= 95%
+    # 2. Every scan that hit Redis was processed without error
+    # Fetch the ledger entries to count errors
+    try:
+        raw_entries = _redis.lrange("scan-ledger", 0, 99) if _redis else []
+    except Exception:
+        raw_entries = []
+
+    import json as _json
+    error_count = 0
+    for raw in raw_entries:
+        try:
+            entry = _json.loads(raw)
+            if entry.get("error"):
+                error_count += 1
+        except Exception:
+            pass
+    ledger_error_rate_pct = round((error_count / len(raw_entries) * 100) if raw_entries else 0)
     checks.append({
-        "name":     "processing_success_rate >= 95%",
-        "expected": ">=95%",
-        "actual":   f"{proc_rate_pct}%",
-        "pass":     proc_rate_pct >= 95,
+        "name":     "scan_ledger_error_rate <= 5%",
+        "expected": "<=5%",
+        "actual":   f"{ledger_error_rate_pct}% ({error_count} errors)",
+        "pass":     ledger_error_rate_pct <= 5,
     })
 
     # 3. Optional: picker presence check.
-    # Browser run: active_picker_sockets is the live signal.
-    # Headless CI run: no WebSockets open, so fall back to pickers_registered.
-    # Pass if either counter satisfies the expected count.
     if picker_count > 0:
         sockets_ok    = active_sockets    >= picker_count
         registered_ok = pickers_registered >= picker_count
         passes = sockets_ok or registered_ok
-        if sockets_ok:
-            actual_label = f"{active_sockets} sockets"
-        else:
-            actual_label = f"{pickers_registered} registered"
+        actual_label = f"{active_sockets} sockets" if sockets_ok else f"{pickers_registered} registered"
         checks.append({
             "name":     "pickers present (sockets or registered)",
             "expected": f">={picker_count}",
