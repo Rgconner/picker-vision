@@ -138,9 +138,27 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   const [editId, setEditId]       = useState<string>(initialId);
   const [editMode, setEditMode]   = useState<boolean>(!initialId && !lockedPickerId);
 
-  // Option A: track active demo session for the Join Demo banner
+  // Option A: track active demo session for the Join Demo banner.
+  // Auto-join: when a demo starts for a different picker_id and we are NOT
+  // on the /mobile standalone page (i.e. defaultPickerId was supplied by auth),
+  // switch to the demo picker ID automatically so the human flow "start demo on
+  // laptop, pick up phone" just works without a manual tap.
   const demoPickerId = useActiveDemoPickerId();
   const showJoinBanner = demoPickerId && demoPickerId !== pickerId;
+
+  // Auto-join when defaultPickerId is set (rendered inside /app with auth identity)
+  // and a demo session starts for a different picker. Skip if picker ID is locked
+  // (role=picker) or if we are already on the right ID.
+  useEffect(() => {
+    if (!demoPickerId) return;
+    if (demoPickerId === pickerId) return;
+    if (lockedPickerId) return;
+    if (!defaultPickerId) return; // standalone /mobile — user set ID manually, don't override
+    savePickerId(demoPickerId);
+    setPickerId(demoPickerId);
+    setEditId(demoPickerId);
+    setEditMode(false);
+  }, [demoPickerId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleJoinDemo() {
     if (!demoPickerId) return;
