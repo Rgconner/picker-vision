@@ -301,6 +301,42 @@ Options ranked by effort and install friction:
 
 ---
 
+
+### QOL-030 · Yellow bounding box lingers on screen after pick is confirmed
+
+**Symptom:** Picker confirms a pick. The yellow scan bounding box around the item remains visible on the camera feed after the ConfirmOverlay dismisses. Looks like the scan is still active or something went wrong — confusing to the user.  
+**Manual workaround applied:** None — it fades eventually (session 9, noted by Russ).  
+**Proper fix:** On `handleConfirm`, immediately clear the AR overlay (bounding boxes and detection dots) in addition to dismissing the overlay. The `wrongItems` state and any active detection highlights should be reset to empty at the same moment `setPendingConfirm(null)` fires, so the camera feed goes clean the instant the picker taps ✓.  
+**Recurrence count:** 1 (session 9)  
+**Effort:** XS
+
+---
+
+
+
+### QOL-029 · Phone reverts to auth identity (Bob Owner) after supervisor Reset — picker-sprinkle state lost
+
+**Symptom:** Supervisor taps ⟳ Reset. Phone's picker ID reverts from `picker-sprinkle` back to `Bob (Owner)` (the auth identity). Picker has to manually re-enter `picker-sprinkle` before the next demo can start.  
+**Manual workaround applied:** Tap picker ID field, retype `picker-sprinkle` (session 9).  
+**Proper fix:** The picker ID chosen during a demo session should be persisted in `localStorage` and survive a demo reset — it is a device/session identity, not a demo-scoped value. The auto-join `useEffect` (QOL-021 fix) re-joins when a new demo starts, but only if the stored ID already matches. Root cause: the auto-join writes `picker-sprinkle` to localStorage, but something (page reload or WS reconnect after pod restart) is re-initialising `pickerId` from `defaultPickerId` (auth name) instead of `savedPickerId()`. Investigate initialisation order in `MobilePickerView`.  
+**Recurrence count:** 1 (session 9)  
+**Effort:** S
+
+---
+
+
+
+### QOL-028 · ⟳ Reset does not notify the mobile client — phone keeps scanning after demo is cleared
+
+**Symptom:** Supervisor taps ⟳ Reset. All demo orders cancelled on the server. But the phone has no idea — it keeps scanning, the scan loop stays active, and the pick list eventually goes empty with no explanation. Picker is left in limbo.  
+**Manual workaround applied:** Picker must manually tap ■ Stop on the phone (session 9).  
+**Proper fix:** When `demo/stop` is called (with or without session_id), the server should push a WS message to all connected pickers: `{ type: "demo_reset" }`. The mobile client listens for this event and responds by stopping the scan loop and showing a "Demo ended by supervisor — tap to start a new session" screen.  
+**Recurrence count:** 1 (session 9, noted by Russ)  
+**Effort:** S
+
+---
+
+
 ### QOL-026 · Pod restart mid-demo drops in-memory session — supervisor shows "no demo running" but order still exists and phone still scanning
 
 **Symptom:** A CI push causes a pod restart mid-demo. The order-service loses its in-memory `_demo_sessions` dict. Supervisor shows "No demo running" (correct — session gone). But the orphaned order remains in `picking` status in the DB, and the phone's scan loop is still active and scanning against it. Phone and supervisor are now out of sync — supervisor thinks idle, phone thinks active.
