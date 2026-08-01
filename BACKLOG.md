@@ -371,6 +371,47 @@ export function trace<T>(moduleName: string, fnName: string, fn: () => T): T {
 
 ---
 
+### ARCH-002 · The Hairless Ape Protocol (THA Protocol)
+
+**Directive (2026-08-01):** No bug is considered fully closed until it has been tested by The Hairless Ape (THA) — a real human, on real hardware, walking through the actual failure path — and all observed failure modes are handled gracefully.
+
+**What "gracefully" means:**
+
+| Failure mode | Graceful handling |
+|---|---|
+| Network drop mid-flow | UI shows a clear error state; retry is possible without full page reload |
+| Wrong item scanned | Red overlay with item name; scan loop continues; no data written |
+| Tapping buttons rapidly / double-tap | Idempotent — second tap is a no-op or shows loading state; no duplicate writes |
+| Server returns 4xx or 5xx | UI surfaces a human-readable message; does not show a raw stack trace or blank screen |
+| Pod restarts during a session | Session recovers or fails cleanly with a "reconnecting…" state |
+| Scanner not supported on device | Warning banner shown immediately; fallback path offered |
+| Empty / null data from API | Component renders an empty state, not a JS crash |
+| PackWizard / wizard steps out of order | Each step guards its preconditions; bad state shows an error card with a retry option |
+
+**The protocol:**
+
+1. **Bob closes the bug in code** — fix committed, deployed, verified in pod.
+2. **THA test step added to SESSION.md** — the exact steps a human needs to walk through are written down before the bug is marked done.
+3. **THA runs the test** — on real hardware (Samsung phone, laptop browser, or relevant device), following the written steps.
+4. **All failure modes exercised** — THA deliberately triggers every graceful-handling case listed above that is relevant to this bug.
+5. **Only then is the bug closed** — until THA signs off, the item stays open in SESSION.md "What's Next" with a `[THA needed]` tag.
+
+**How it changes the workflow:**
+
+- Bug fix commits get a companion line in SESSION.md:
+  `- [ ] [THA needed] Bug #N — <what to test and how to break it>`
+- When THA confirms, the line moves to done and a short note is appended:
+  `Confirmed by THA YYYY-MM-DD — [what was tested, any edge cases found]`
+- If THA finds a new failure mode, it becomes a new bug entry and the cycle restarts.
+
+**Retroactive application:**
+The 7 bugs fixed in session 8 are all marked `[THA needed]` in SESSION.md until walked through live on the Samsung.
+
+**Effort:** 0 (process change, not a code change)
+**Priority:** Effective immediately — applies to all future bug closures.
+
+---
+
 ## Bob Errors — Post-mortems
 
 These are confirmed mistakes made by Bob that cost real time and money. Logged so the pattern is not repeated.
