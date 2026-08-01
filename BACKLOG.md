@@ -301,6 +301,16 @@ Options ranked by effort and install friction:
 
 ---
 
+### QOL-026 · Pod restart mid-demo drops in-memory session — supervisor shows "no demo running" but order still exists and phone still scanning
+
+**Symptom:** A CI push causes a pod restart mid-demo. The order-service loses its in-memory `_demo_sessions` dict. Supervisor shows "No demo running" (correct — session gone). But the orphaned order remains in `picking` status in the DB, and the phone's scan loop is still active and scanning against it. Phone and supervisor are now out of sync — supervisor thinks idle, phone thinks active.
+**Manual workaround applied:** Tap ⟳ Reset on supervisor to cancel the orphaned order; restart demo manually (session 9).
+**Proper fix:** (1) This is exactly what QOL-025's "ready for next order" gate would partially solve — if the session is gone, the phone's end-of-order screen prevents auto-advance. (2) The phone's scan loop should detect that its WS picker state has no active order and auto-pause, showing "Session lost — tap to reconnect" rather than continuing to scan into the void. (3) Long term: persist demo sessions to Redis so they survive pod restarts.
+**Recurrence count:** 1 (session 9 — triggered by CI push during live walkthrough)
+**Effort:** M
+
+---
+
 ### QOL-025 · Next order assigned immediately after last pick — no "ready for next order?" gate
 
 **Symptom:** Picker confirms the last item on an order. The demo immediately advances and assigns a new order without asking if the picker is ready. A worker finishing before a break, or needing to stage the completed order first, gets a new order assigned that they cannot immediately start — it has to be put back in the queue.
