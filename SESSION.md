@@ -9,88 +9,90 @@
 
 ---
 
-## Current State (2026-08-01 — session 8)
+## Current State (2026-08-01 — session 9)
 
 **Branch:** `feature/bobs-tiny-treasures`
-**Last commit:** `44acc09` — docs: THA = Russ, named throughout
-**CI status:** `sha-44acc09` deployed on all pods. Bundle: `index-BOLSjcmy.js`.
-**System state:** All 4 services healthy. DB clean. Ready for walkthrough.
+**Last commit:** `03d4fca` — docs: session 9 backlog updates
+**CI status:** `sha-8211e08` deployed on all pods (web-ui + order-service updated this session).
+**System state:** All 4 services healthy. DB may have orphaned orders — run ⟳ Reset before starting.
 
 ---
 
 ## Immediate First Action Next Session
 
-**→ Use the walkthrough prompt. System is clean and ready.**
-
-1. Open `https://bobstinytreasures.snwbd.com/app` on laptop — log in as Bob (Owner) / `btt01`.
-2. In DemoControls: click **⟳ Reset** (clears any orphaned orders from prior sessions/restarts).
-3. Select **Sprinkle** in the picker dropdown → click **▶ Personal**.
-4. On the Samsung: scan the "Join Demo" QR code shown on the supervisor screen, or navigate to `https://bobstinytreasures.snwbd.com/mobile?picker_id=picker-sprinkle`.
-5. Tap **▶ Scan Items**. Point camera at the "Next item to scan" QR on the supervisor screen.
-6. ConfirmOverlay appears → tap **✓ Confirm**. Repeat for each item.
-7. After last item: pick list immediately shows `DEMO-...-002` (new order).
-8. PackWizard auto-opens → product names visible → tap **✅ Layer Verified** per layer → **Order Packed!**
-9. **Then deliberately break it** — see Russ Sign-off Queue below.
+**→ Read this file, then execute the session 10 build plan below. Do NOT run a walkthrough first — build everything, deploy, verify, THEN walk.**
 
 ---
 
-## What We Did This Session (session 8)
+## What We Did This Session (session 9)
 
-### Demo Walkthrough — 7 Bugs Found and Fixed
+### Live Walkthrough with Russ — Real Hardware (Samsung phone + laptop)
 
-All bugs were found by methodically simulating the demo flow via API calls and reading source code.
+| # | Bug / Issue | Fix | Commit |
+|---|---|---|---|
+| 1 | THA-003 — re-verify layer had no guard, auto-seal re-ran | Added idempotency guard to `verify_layer` PATCH | `62060e0` |
+| 2 | QOL-021 — `/app` Mobile tab used auth identity, ConfirmOverlay never fired | Auto-join `useEffect` switches to demo picker ID | `7278f80` |
+| 3 | QOL-017 (partial) — confirm overlay re-fired on barcode in frame | 2-second per-barcode blackout (band-aid — proper fix in session 10) | `8211e08` |
+| 4 | QR Join Demo encoded relative URL — camera couldn't open it | Full `https://` URL + EC-L qrSvg for 78-byte capacity | `8211e08` |
 
-| # | Bug | Fix | Commit |
-|---|-----|-----|--------|
-| 1 | `PackWizard` `ORDER_API` base path was `/api/order` — calls generated `/api/order/orders/{id}/pack` (404) | Changed to `/api` so paths become `/api/orders/{id}/pack` | `05a6102` |
-| 2 | Gateway had no proxy routes for `POST /api/orders/{id}/pack` or `PATCH /api/orders/{id}/totes/{tote_id}/layers/{layer_id}` | Added two gateway routes | `05a6102` |
-| 3 | `PackWizard` layer items showed truncated UUID (`Line item (a8e13f88…)`) instead of product names | Parallel-fetch order on init, build `lineNames` Map, use in display | `8d657a2` |
-| 4 | `MobilePickList` Pack Order button was dead code — `GET /api/orders` only returns `pending`/`picking` so complete orders are never in the list | Auto-open PackWizard via `order_complete_pending` WS event + `useEffect` | `8d657a2` |
-| 5 | `POST /api/demo/stop {}` didn't cancel orphaned demo orders whose session was lost on pod restart | Extended `demo/stop` to cancel all `Demo (%` `picking` orders in DB when `session_id` is omitted | `9f088ed` |
-| 6 | No Reset button in idle DemoControls — supervisor couldn't clean stale orders without a running session | Added **⟳ Reset** button to idle state panel (calls `demo/stop {}`) | `9f088ed` |
-| 7 | After `demo/advance` created a new order, mobile pick list didn't refresh to show it (only refreshed on `pickerState` changes) | After `demo/advance` succeeds, immediately fetch `/api/orders` and call `setOrders` | `833cc53` |
+### New Issues Found by Russ (all logged in BACKLOG.md)
+
+| QOL | Title | Effort |
+|---|---|---|
+| QOL-022 | Landing page out of sync with app | S |
+| QOL-023 | Mobile tab defaults to auth name not picker-style ID | S |
+| QOL-024 | Multi-qty pick looks like failure — no "1 of 2" feedback | S |
+| QOL-025 | No "ready for next order?" gate — order auto-assigned | M |
+| QOL-026 | Pod restart drops in-memory session — phone keeps scanning | M |
+| QOL-027 | Reset button styling inconsistent idle vs running | S |
+| QOL-028 | Reset doesn't notify phone — picker left scanning void | S |
+| QOL-029 | Phone reverts to auth identity after Reset | S |
+| QOL-030 | Yellow bbox lingers after confirm — looks broken | XS |
 
 ---
 
-## What's Next (ordered)
+## Session 10 Build Plan (approved by Russ)
 
-### Russ Sign-off Queue (session 8 bugs — not closed until Russ tests on real hardware)
+Build everything below between sessions. Do NOT walk until all are deployed and verified.
 
-- [ ] `[Russ needed]` **Bug #1+2 — PackWizard opens and pack flow completes**
-  - Open `/app`, log in as Bob, start demo for Sprinkle, pick all items on phone
-  - Tap **📦 Pack Order** (or let it auto-open) — wizard must show product names, not UUIDs
-  - Tap ✅ Layer Verified for every layer — wizard must reach "Order Packed!" screen
-  - **Break it:** tap Verify twice rapidly — must not create duplicate layer records
-  - **Break it:** close the wizard mid-flow and reopen — must resume from where it left off (idempotent `POST /pack`)
+### Must fix (4.5 hr)
 
-- [ ] `[Russ needed]` **Bug #4 — PackWizard auto-opens via WS order_complete_pending**
-  - Pick all items on phone; after last Confirm tap, PackWizard must open automatically within ~5 s
-  - No manual "Pack Order" tap required
-  - **Break it:** close wizard, re-confirm same order (already packed) — wizard must show "done" state, not an error
+| # | Item | File(s) | What to build |
+|---|---|---|---|
+| 1 | **QOL-030** XS | `MobilePickerView.tsx` | In `handleConfirm`: call `setWrongItems([])` and clear `lastScan` immediately when `setPendingConfirm(null)` fires. Yellow bbox gone instantly on confirm. |
+| 2 | **QOL-029** S | `MobilePickerView.tsx` | Fix `initialId` priority: `savedPickerId()` must beat `defaultPickerId` when a non-empty saved value exists. Change line 136 from `urlPickerId \|\| defaultPickerId \|\| savedPickerId()` to `urlPickerId \|\| savedPickerId() \|\| defaultPickerId`. |
+| 3 | **QOL-024** S | `ConfirmOverlay.tsx`, `MobilePickerView.tsx` | Pass `quantityPicked` and `quantity` into `ConfirmOverlay`. When `quantity > 1` and this is not the last pick, show subtitle: `"${quantityPicked + 1} of ${quantity} — scan again after confirming"`. |
+| 4 | **QOL-017** M | `MobilePickerView.tsx`, `MobileControls.tsx` | After `handleConfirm`, stop the scan loop (`setScanning(false)`) and enter a new `'confirmed'` UI state. Show a brief overlay: `"✓ Picked — move item away, then tap to continue"`. Picker taps → `setScanning(true)` resumes. Remove the 2-second blackout band-aid (it's superseded by this). |
+| 5 | **QOL-028** S | `order_service/main.py`, `websocket_hub`, `useMobilePickerSession.ts` | On `demo/stop` (any path), push `{"type":"demo_reset"}` WS message to all connected picker sockets. In `useMobilePickerSession.onmessage`, handle `type==="demo_reset"`: call `setPickerState(null)`. In `MobilePickerView`, detect null pickerState after scanning was active → stop scan loop, show "Demo ended by supervisor" screen. |
 
-- [ ] `[Russ needed]` **Bug #5+6 — ⟳ Reset clears orphaned orders**
-  - Start a demo, kill the tab (simulating pod restart / lost session)
-  - Reopen supervisor, confirm stale order visible in active orders list
-  - Tap **⟳ Reset** — active orders list must be empty immediately
-  - **Break it:** tap Reset twice — must be idempotent, no error on second call
+### Should fix (3.25 hr)
 
-- [ ] `[Russ needed]` **Bug #7 — New order appears immediately after last pick**
-  - Confirm last item on phone — pick list must update to show `DEMO-...-002` within 1–2 s
-  - **Break it:** confirm last item while phone is on a slow connection (throttle to 3G) — order must still appear within a few seconds of reconnect, not hang forever
+| # | Item | File(s) | What to build |
+|---|---|---|---|
+| 6 | **QOL-025** M | `MobilePickerView.tsx`, `order_service/main.py` | After last pick confirmed, do NOT call `demo/advance` automatically. Instead enter an `'order_complete'` UI state showing "Order DEMO-XXX complete — Ready for next order?" with ✓ Accept / ✗ Not yet. Only call `demo/advance` on Accept. Not yet → idle state, no order assigned. |
+| 7 | **QOL-023** S | `App.tsx` | When `auth.user.picker_id` is null, generate default as `picker-${auth.user.name.toLowerCase().split(' ')[0]}` (e.g. `picker-bob`) instead of raw `auth.user.name`. |
+| 8 | **QOL-027** S | `DemoControls.tsx` | Unify Reset/Restart button: same colour (`#f1c21b` border/text), same position (top-right of DemoControls panel), same icon (⟳) in both idle and running states. |
+| 9 | **QR URL** XS | Already in `sha-8211e08` | Verify deployed — grep `window.location.origin` in running web-ui pod. If not present, redeploy. |
 
-### Ongoing walkthrough items
+---
 
-- [ ] **Test Presentation mode** — Start Presentation, verify demo-presenter picker ID flow
-- [ ] **Physical demo scenario** — switch to Physical Demo, scan NAV:CONFIRM nav card
-- [ ] **Print nav_card.pdf** — run `python tools/generate_test_barcodes.py`, print and laminate
-- [ ] **QR size test (deferred)** — see BACKLOG QOL-008
+## Russ Sign-off Queue (carried from session 8 — not yet tested)
+
+These were never reached during session 9 due to the flow issues found:
+
+- [ ] `[Russ needed]` **PackWizard opens and pack flow completes** — tap Pack Order, verify product names (not UUIDs), tap Layer Verified per layer → Order Packed!
+- [ ] `[Russ needed]` **PackWizard auto-opens via WS** — after last pick, wizard opens automatically within ~5s
+- [ ] `[Russ needed]` **Tap Verify twice rapidly** — must be idempotent (THA-003 fixed, needs live confirmation)
+- [ ] `[Russ needed]` **Close wizard mid-flow, reopen** — must resume from same layer
+- [ ] `[Russ needed]` **⟳ Reset clears orphaned orders** — tap Reset, active orders list empties
+- [ ] `[Russ needed]` **Reset twice** — idempotent, no error
 
 ---
 
 ## Open Questions
 
-- Does `order_complete_pending` WS event reliably arrive at the mobile client? The event fires from `event-processor` when it reads a picking order with all lines `picked`. The mobile client needs to have sent at least one scan event after the last pick for the event-processor to re-evaluate. If `pickerState` never updates post-last-pick, the `order_complete_pending` may not arrive. **Fallback:** the Pack Order button still works if the order happens to appear in the list (e.g. status=packing/complete). Worth testing live.
-- singularity-paper `sessions/` directory and `synopsis-log.md` not yet created.
+- Does `order_complete_pending` WS event reliably arrive after last pick? Never confirmed live — `order_complete_pending` depends on a scan event arriving after all lines are `picked`. With QOL-025 in place (explicit "ready?" gate), this becomes less critical — PackWizard can be triggered by the gate screen instead of the WS event.
+- QOL-025 and QOL-028 share a design: the picker explicitly controls readiness. Consider building them as one coherent "session control flow" pass rather than two separate fixes.
 
 ---
 
@@ -101,7 +103,7 @@ All bugs were found by methodically simulating the demo flow via API calls and r
 | Production URL | `https://bobstinytreasures.snwbd.com` |
 | K8s namespace | `picker-vision-btt` |
 | Active branch | `feature/bobs-tiny-treasures` |
-| Last known-good web-ui image | `sha-833cc53` (`index-BWrQB54f.js`) |
+| Last known-good web-ui image | `sha-8211e08` |
 | LM Studio IP | `http://192.168.1.79:1234` |
 | API gateway (BTT) | `http://192.168.11.213` (key: `changeme`) |
 | Web UI (BTT) | `http://192.168.11.214` |
@@ -119,7 +121,8 @@ All bugs were found by methodically simulating the demo flow via API calls and r
 | `BarcodeDetector` primary, ZXing canvas fallback | Native ML Kit confirmed working on Samsung; ZXing for Firefox/Safari/Vuzix |
 | Full format list for `BarcodeDetector` constructor | Narrowing to 4 formats broke QR detection — do not narrow again without testing |
 | All on-screen codes use `qrSvg` not `dmSvg` | Samsung `BarcodeDetector` does not support `data_matrix` |
-| `qrSvg` payloads must be ≤32 bytes | QR v1-4 EC-M limit — use short relative URLs |
+| `qrSvg` now uses EC-L (not EC-M) | EC-L gives 78-byte capacity at v4 — needed for full `https://` Join Demo URL |
+| `qrSvg` payloads must be ≤78 bytes | QR v4 EC-L limit |
 | ZXing hints: QR/Code128/EAN only | No data_matrix in ZXing either — no BTT use case |
 | Per-value debounce Map | Two simultaneous codes (EPSN+DELT) must debounce independently |
 | CI uses `no-cache: true` on all builds | GHA layer cache caused stale bundles to ship silently — never cache Docker builds on this project |
@@ -128,3 +131,4 @@ All bugs were found by methodically simulating the demo flow via API calls and r
 | Picks written by mobile `confirmPick` only | Pi auto-pick removed from event-processor. All picks via `PATCH /api/orders/{id}/lines/{line_id}` called from mobile confirm action. |
 | `PackWizard` ORDER_API base is `/api` | Paths start with `/orders/…` — final URL is `/api/orders/…` matching gateway routes. |
 | `demo/stop {}` also cancels orphaned DB orders | Prevents stale `picking` orders surviving pod restarts. Safe because only cancels `Demo (%` customers. |
+| Do NOT push to CI during a live walkthrough | Pod restart destroys in-memory demo session (QOL-026). All code changes must be batched and deployed before the walkthrough begins. |
