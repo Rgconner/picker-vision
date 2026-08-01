@@ -347,6 +347,12 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ order_id: orderId, picker_id: pickerId }),
           });
+          // Fetch all orders so the new demo order appears immediately on mobile
+          const allRes = await fetch('/api/orders');
+          if (allRes.ok) {
+            setOrders(await allRes.json());
+            return; // orders state fully refreshed — no need to do partial update below
+          }
         }
         setOrders((prev) => prev.map((o) => o.id === orderId ? order : o));
       }
