@@ -1008,6 +1008,16 @@ async def verify_layer(order_id: str, tote_id: str, layer_id: str, request: Requ
         if not tote or tote.order_id != order_id:
             raise HTTPException(status_code=404, detail="Tote not found")
 
+        # THA-003: idempotency guard — if already verified/skipped, return
+        # current plan immediately without re-running auto-seal logic.
+        if layer.status in ("verified", "skipped"):
+            return _pack_plan_to_dict(
+                s.query(_OrderTote)
+                .filter(_OrderTote.order_id == order_id)
+                .order_by(_OrderTote.tote_seq)
+                .all()
+            )
+
         layer.status              = new_status
         layer.verification_method = body.get("verification_method", "none")
         layer.verification_result = body.get("verification_result")
