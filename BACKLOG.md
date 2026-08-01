@@ -408,6 +408,16 @@ Options ranked by effort and install friction:
 
 ---
 
+### QOL-032 · Supervisor QR panel shows total remaining count but not per-line breakdown
+
+**Symptom:** The "Next item to scan" panel in `DemoControls.tsx` shows "N items remaining in this order" as a single number. During a demo walkthrough the supervisor can't see at a glance which specific products still need to be scanned.
+**Observed:** Session 12 planning — identified as useful context for supervisor during live walkthrough.
+**Proper fix:** Replace the single remaining-count line with a compact per-line remaining breakdown: show each unpicked line as `ProductName ×qty` so the supervisor can follow along with the picker in real time. Data is already available in `order.lines` — purely a UI change in `DemoControls.tsx`.
+**Affects:** `DemoControls.tsx` — running state QR panel, lines 385–388.
+**Effort:** XS
+
+---
+
 ### ARCH-001 · Structured debug/trace harness for all modules
 
 **Directive (2026-08-01):** Every module going forward must have a full testing harness / debug functionality that can be set to discrete debug levels at runtime.

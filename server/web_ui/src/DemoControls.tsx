@@ -211,7 +211,15 @@ export function DemoControls({ auth }: Props) {
 
   // Find the next unpicked line across the active order
   const nextLine = order?.lines.find((l) => l.status !== 'picked') ?? null;
-  const remainingCount = order?.lines.filter((l) => l.status !== 'picked').length ?? 0;
+
+  // QOL-032: per-line remaining breakdown for supervisor panel
+  // Each line: remaining = quantity - quantity_picked (clamped ≥ 0)
+  const remainingLines = order?.lines
+    .map((l) => ({
+      desc: l.product_description ?? l.product_barcode,
+      qty:  Math.max(0, l.quantity - l.quantity_picked),
+    }))
+    .filter((l) => l.qty > 0) ?? [];
 
   const activeSession = sessions[0] ?? null;
 
@@ -382,9 +390,17 @@ export function DemoControls({ auth }: Props) {
             {nextLine.product_description && (
               <span className="text-[#94a3b8] text-sm">{nextLine.product_description}</span>
             )}
-            <span className="text-[#57606a] text-xs mt-1">
-              {remainingCount} item{remainingCount !== 1 ? 's' : ''} remaining in this order
-            </span>
+            {/* QOL-032: per-line remaining breakdown */}
+            {remainingLines.length > 0 && (
+              <div className="flex flex-col gap-0.5 mt-1">
+                {remainingLines.map((l, i) => (
+                  <span key={i} className="text-[#57606a] text-xs">
+                    <span className="text-[#94a3b8] font-mono">×{l.qty}</span>
+                    {' '}{l.desc}
+                  </span>
+                ))}
+              </div>
+            )}
             {activeSession.mistake_probability > 0 && (
               <span className="text-[#f1c21b] text-xs mt-1">
                 ⚠ This order may contain a deliberate mistake — watch for the error workflow
