@@ -18,9 +18,25 @@
 
 ---
 
+## 🏁 MILESTONE — 2026-08-01 (session 10)
+
+**3 full orders. 3 mechanically flawless end-to-end picks. Wrong scans handled correctly.**
+
+This is the first time the complete pick flow has run without a single mechanical failure on real hardware:
+- Correct scan → ConfirmOverlay → Picked! gate → resume scanning
+- Wrong scan → yellow bbox rejection, scan loop continues, no false confirm
+- Last pick → Order complete gate → Accept → next order assigned
+- All 3 orders completed in sequence
+
+The core demo loop — scan, confirm, gate, advance — is stable. This is the foundation everything else builds on.
+
+**Signed off by:** Russ Conner, 2026-08-01
+
+---
+
 ## Immediate First Action Next Session
 
-**→ Read this file, then run the full walkthrough with Russ (session 10 build plan is complete).**
+**→ Read this file. Core pick flow is stable. Next focus: PackWizard sign-off queue (carry items below).**
 
 ---
 
