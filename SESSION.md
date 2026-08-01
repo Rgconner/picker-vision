@@ -53,27 +53,27 @@ All bugs were found by methodically simulating the demo flow via API calls and r
 
 ## What's Next (ordered)
 
-### THA Sign-off Queue (session 8 bugs — not closed until tested on real hardware)
+### Russ Sign-off Queue (session 8 bugs — not closed until Russ tests on real hardware)
 
-- [ ] `[THA needed]` **Bug #1+2 — PackWizard opens and pack flow completes**
+- [ ] `[Russ needed]` **Bug #1+2 — PackWizard opens and pack flow completes**
   - Open `/app`, log in as Bob, start demo for Sprinkle, pick all items on phone
   - Tap **📦 Pack Order** (or let it auto-open) — wizard must show product names, not UUIDs
   - Tap ✅ Layer Verified for every layer — wizard must reach "Order Packed!" screen
   - **Break it:** tap Verify twice rapidly — must not create duplicate layer records
   - **Break it:** close the wizard mid-flow and reopen — must resume from where it left off (idempotent `POST /pack`)
 
-- [ ] `[THA needed]` **Bug #4 — PackWizard auto-opens via WS order_complete_pending**
+- [ ] `[Russ needed]` **Bug #4 — PackWizard auto-opens via WS order_complete_pending**
   - Pick all items on phone; after last Confirm tap, PackWizard must open automatically within ~5 s
   - No manual "Pack Order" tap required
   - **Break it:** close wizard, re-confirm same order (already packed) — wizard must show "done" state, not an error
 
-- [ ] `[THA needed]` **Bug #5+6 — ⟳ Reset clears orphaned orders**
+- [ ] `[Russ needed]` **Bug #5+6 — ⟳ Reset clears orphaned orders**
   - Start a demo, kill the tab (simulating pod restart / lost session)
   - Reopen supervisor, confirm stale order visible in active orders list
   - Tap **⟳ Reset** — active orders list must be empty immediately
   - **Break it:** tap Reset twice — must be idempotent, no error on second call
 
-- [ ] `[THA needed]` **Bug #7 — New order appears immediately after last pick**
+- [ ] `[Russ needed]` **Bug #7 — New order appears immediately after last pick**
   - Confirm last item on phone — pick list must update to show `DEMO-...-002` within 1–2 s
   - **Break it:** confirm last item while phone is on a slow connection (throttle to 3G) — order must still appear within a few seconds of reconnect, not hang forever
 

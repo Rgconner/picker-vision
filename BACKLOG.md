@@ -373,7 +373,11 @@ export function trace<T>(moduleName: string, fnName: string, fn: () => T): T {
 
 ### ARCH-002 · The Hairless Ape Protocol (THA Protocol)
 
-**Directive (2026-08-01):** No bug is considered fully closed until it has been tested by The Hairless Ape (THA) — a real human, on real hardware, walking through the actual failure path — and all observed failure modes are handled gracefully.
+**THA = Russ. A human. The one who paid for this.**
+
+**Directive (2026-08-01):** No bug is considered fully closed until Russ has tested it on real hardware, walking through the actual failure path, and every observed failure mode is handled gracefully. Bob does not get to declare a bug closed. Only Russ does.
+
+**Why "Hairless Ape":** Russ is the end authority on whether the system survives contact with a real human who does unexpected things — misreads instructions, taps the wrong button, walks away mid-flow, uses two fingers, ignores prompts, sleeps the phone, or just doesn't do what the docs say. The code must survive all of it. Russ's job in the THA step is specifically to try to break the thing.
 
 **What "gracefully" means:**
 
@@ -386,35 +390,35 @@ export function trace<T>(moduleName: string, fnName: string, fn: () => T): T {
 | Pod restarts during a session | Session recovers or fails cleanly with a "reconnecting…" state |
 | Scanner not supported on device | Warning banner shown immediately; fallback path offered |
 | Empty / null data from API | Component renders an empty state, not a JS crash |
-| PackWizard / wizard steps out of order | Each step guards its preconditions; bad state shows an error card with a retry option |
+| Wizard steps out of order | Each step guards its preconditions; bad state shows an error card with a retry option |
 
 **The protocol:**
 
 1. **Bob closes the bug in code** — fix committed, deployed, verified in pod.
-2. **THA test step added to SESSION.md** — the exact steps a human needs to walk through are written down before the bug is marked done.
-3. **THA runs the test** — on real hardware (Samsung phone, laptop browser, or relevant device), following the written steps.
-4. **All failure modes exercised** — THA deliberately triggers every graceful-handling case listed above that is relevant to this bug.
-5. **Only then is the bug closed** — until THA signs off, the item stays open in SESSION.md "What's Next" with a `[THA needed]` tag.
+2. **Bob writes the THA test steps in SESSION.md** — exact steps Russ needs to walk through, including the "try to break it" moves, before the bug is marked done.
+3. **Russ runs the test** — on real hardware (Samsung phone, laptop browser, or whatever device is relevant), following the written steps.
+4. **Russ deliberately triggers failure modes** — every graceful-handling case in the table above that is relevant to this bug gets exercised intentionally.
+5. **Russ signs off** — only then does the bug move to closed. Until Russ confirms, the item stays open in SESSION.md with a `[THA needed]` tag.
 
 **How it changes the workflow:**
 
-- Bug fix commits get a companion line in SESSION.md:
-  `- [ ] [THA needed] Bug #N — <what to test and how to break it>`
-- When THA confirms, the line moves to done and a short note is appended:
-  `Confirmed by THA YYYY-MM-DD — [what was tested, any edge cases found]`
-- If THA finds a new failure mode, it becomes a new bug entry and the cycle restarts.
+- Every bug fix commit gets a companion line in SESSION.md:
+  `- [ ] [THA needed] Bug #N — <what to test, what to break, what "pass" looks like>`
+- When Russ confirms, the line moves to done:
+  `[x] Confirmed by Russ YYYY-MM-DD — [what was tested, any new failure modes found]`
+- If Russ finds a new failure mode → new bug entry, cycle restarts from step 1.
 
 **Retroactive application:**
-The 7 bugs fixed in session 8 are all marked `[THA needed]` in SESSION.md until walked through live on the Samsung.
+The 7 bugs fixed in session 8 are all marked `[THA needed]` in SESSION.md until Russ walks them on the Samsung.
 
 **Effort:** 0 (process change, not a code change)
 **Priority:** Effective immediately — applies to all future bug closures.
 
 ---
 
-### THA-000 · Live-ammo adversarial audit (2026-08-01) — what a confused stranger does
+### THA-000 · Live-ammo adversarial audit (2026-08-01) — what Russ does when he ignores everything
 
-This entry documents the full "what does a human who has never read the docs do to a live system" audit conducted session 8. Each scenario is rated: ✅ survives cleanly / ⚠️ survives with confusion / ❌ fails or corrupts state.
+This entry documents the full "what does Russ do to a live system when he doesn't follow the script" audit conducted session 8. Each scenario is rated: ✅ survives cleanly / ⚠️ survives with confusion / ❌ fails or corrupts state.
 
 ---
 
