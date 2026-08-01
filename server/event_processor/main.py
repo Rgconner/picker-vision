@@ -41,8 +41,12 @@ _COUNTERS: dict[str, int] = {
     "orders_completed_detected": 0,
 }
 
-# Scan event ledger — rolling store of the last 100 scan events
-_scan_ledger: collections.deque = collections.deque(maxlen=100)
+# Scan event ledger — rolling store of the last 100 scan events.
+# Persisted to Redis key "scan-ledger" so it survives pod restarts.
+_SCAN_LEDGER_KEY = "scan-ledger"
+_SCAN_LEDGER_MAXLEN = 100
+_SCAN_LEDGER_TTL = 3600  # 1 hour
+_scan_ledger: collections.deque = collections.deque(maxlen=_SCAN_LEDGER_MAXLEN)
 
 import httpx
 import redis as redis_lib
@@ -96,6 +100,22 @@ import log_ring as _log_ring
 _log_ring.attach()
 
 app = FastAPI(title="Event Processor", version=SERVICE_VERSION)
+
+
+@app.on_event("startup")
+def _restore_scan_ledger() -> None:
+    """Load persisted scan entries from Redis into the in-memory ledger."""
+    try:
+        raw_entries = _redis.lrange(_SCAN_LEDGER_KEY, 0, _SCAN_LEDGER_MAXLEN - 1)
+        # Redis list is newest-first (LPUSH); deque expects oldest-first
+        for raw in reversed(raw_entries):
+            try:
+                _scan_ledger.append(json.loads(raw))
+            except Exception:
+                pass
+        logger.info("scan-ledger: restored %d entries from Redis", len(_scan_ledger))
+    except Exception as exc:
+        logger.warning("scan-ledger: could not restore from Redis: %s", exc)
 
 
 # ---------------------------------------------------------------------------
@@ -396,6 +416,12 @@ async def receive_detection(body: dict):
     finally:
         ledger_entry["processing_ms"] = round((time.monotonic() - t0) * 1000)
         _scan_ledger.append(ledger_entry)
+        try:
+            _redis.lpush(_SCAN_LEDGER_KEY, json.dumps(ledger_entry))
+            _redis.ltrim(_SCAN_LEDGER_KEY, 0, _SCAN_LEDGER_MAXLEN - 1)
+            _redis.expire(_SCAN_LEDGER_KEY, _SCAN_LEDGER_TTL)
+        except Exception as exc:
+            logger.debug("scan-ledger: Redis write failed (non-fatal): %s", exc)
 
 
 # ---------------------------------------------------------------------------

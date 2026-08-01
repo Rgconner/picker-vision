@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - feature/mobile-web-client
       - feature/bobs-tiny-treasures
   pull_request:
     branches: [main]

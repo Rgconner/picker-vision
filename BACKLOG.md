@@ -137,8 +137,8 @@ Options ranked by effort and install friction:
 ### QOL-005 · Scan log lost on pod restart — in-memory only
 **Symptom:** `/api/scan-log` returns `[]` after any pod restart or rollout. Diagnosis requires a live session.
 **Manual workaround applied:** Re-run tests after every deploy to repopulate.
-**Proper fix:** Persist `_scan_ledger` to Redis with a TTL (e.g. 1 hour). Survives pod restarts.
-**Recurrence count:** Every deploy. **Open.**
+**Fix applied:** On each `_scan_ledger.append`, the entry is also `LPUSH`ed to Redis key `scan-ledger` (capped at 100, 1-hour TTL). On startup, `_restore_scan_ledger()` loads the Redis list back into the deque — newest-first order preserved. Redis failure is non-fatal (logged at DEBUG, in-memory ledger still works).
+**Recurrence count:** Every deploy. **Resolved.**
 **Effort:** S
 
 ### QOL-006 · No platform/UA logged on camera failure — blind diagnosis
@@ -161,8 +161,8 @@ Options ranked by effort and install friction:
 ### QOL-009 · Physical nav card for picker confirmation not yet built
 **Symptom:** Physical-demo scenario requires a laminated card with `NAV:CONFIRM` / `NAV:SKIP` / `NAV:BACK` / `NAV:HELP` QR codes in the corners. Picker scans a corner to confirm a pick instead of tapping a screen button. Currently not built.
 **Manual workaround:** Use web-demo scenario (on-screen button) for all demos including in-person.
-**Proper fix:** Add a "Nav Card" page to `tools/generate_test_barcodes.py` — A4 landscape, 4 corners each with a 1.5-inch QR (`NAV:CONFIRM` top-right, `NAV:SKIP` top-left, `NAV:BACK` bottom-left, `NAV:HELP` bottom-right), centred label. Scanner already handles `NAV:*` prefix as control events — card is purely a print artefact.
-**Recurrence count:** 0 (planned feature, not yet a blocker). **Open.**
+**Fix applied:** `build_nav_card()` added to `tools/generate_test_barcodes.py` — A4 landscape, 2×2 grid, `NAV:CONFIRM` top-right / `NAV:SKIP` top-left / `NAV:BACK` bottom-left / `NAV:HELP` bottom-right. Running the script now produces both `test_barcodes.pdf` and `nav_card.pdf`.
+**Recurrence count:** 0 (planned feature, not yet a blocker). **Resolved.**
 **Effort:** XS (tooling only — scanner support is already in the codebase)
 
 ---
@@ -182,14 +182,9 @@ Options ranked by effort and install friction:
 
 **Manual workaround applied:** `kubectl delete pod <old-pod> -n picker-vision-btt --force --grace-period=0` + scale old RS to 0. Required every deploy where scheduler places pods on different nodes.
 
-**Proper fix (two options):**
-1. **Add `nodeAffinity` or `nodeName` to order-service deployment** — pin it to a specific node so old and new pods always land on the same node; RWO volume never needs to migrate.
-2. **Switch PVC to `ReadWriteMany` (NFS/CephFS)** — allows simultaneous attach on multiple nodes; eliminates the constraint entirely but requires storage class change.
-3. **Set `strategy.rollingUpdate.maxUnavailable: 1, maxSurge: 0`** — ensures old pod terminates before new one starts (Recreate-style within rolling), guaranteeing volume is free before new pod requests it. Simplest fix.
+**Fix applied:** `strategy: type: Recreate` in `k8s/overlays/bobs-tiny-treasures/order-service-deployment-patch.yaml` — ensures old pod fully terminates before new pod starts; RWO PVC is always free when new pod requests it.
 
-Option 3 is the right immediate fix — one-line change to the deployment manifest.
-
-**Recurrence count:** Every deploy. **Open.**
+**Recurrence count:** Every deploy. **Resolved.**
 **Effort:** XS
 
 ---
@@ -228,9 +223,9 @@ Option 3 is the right immediate fix — one-line change to the deployment manife
 
 **Manual workaround applied:** None — just cosmetically broken; pick flow works.
 
-**Proper fix:** Replace all em-dashes in `seed_btt.py` product `description` fields with a plain ` - ` (space-hyphen-space). No encoding dependency, renders cleanly everywhere.
+**Fix applied:** Already resolved in commit `ddd7b38` — the deployed seed ConfigMap (`k8s/overlays/bobs-tiny-treasures/seed-script-configmap.yaml`) uses plain ` - ` (space-hyphen-space) throughout. The source `fixtures/seed_btt.py` uses middle-dot (`·`, U+00B7) which renders correctly in UTF-8 contexts. No em-dashes in any deployed data path.
 
-**Recurrence count:** 1 session observed. **Open.**
+**Recurrence count:** 1 session observed. **Resolved.**
 **Effort:** XS
 
 ---

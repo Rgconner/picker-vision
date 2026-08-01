@@ -12,8 +12,8 @@
 ## Current State (2026-07-29 — session 7)
 
 **Branch:** `feature/bobs-tiny-treasures`
-**Last commit:** `52385d5` — docs: trim BACKLOG STORY-001 to pointer + update SESSION.md for session 7
-**Local HEAD:** In sync with origin. CI running (docs-only, no build triggered).
+**Last commit:** see git log — housekeeping + QOL batch
+**Local HEAD:** Uncommitted changes pending commit.
 **CI status:** Last deployed `sha-e5d5c71`. Bundle: `index-zMWDuqki.js`. Pod confirmed on `sha-e5d5c71`.
 **singularity-paper repo:** Live at https://github.com/Rgconner/singularity-paper — commit `7769ee9` (init scaffold).
 **BACKLOG.md STORY-001:** Trimmed to pointer — full content now in singularity-paper.
@@ -25,6 +25,7 @@
 1. Hit **⟳ Restart Demo** on the supervisor page to clear any stale demo orders.
 2. Connect Samsung to `/mobile` and start pick flow on the first pending order.
 3. Confirm `ConfirmOverlay` appears, tap Confirm, verify `quantity_picked` increments.
+4. Run `python tools/generate_test_barcodes.py` to produce `nav_card.pdf` — print and laminate before next physical demo.
 
 ---
 
@@ -36,6 +37,13 @@
 - Pushed singularity-paper to https://github.com/Rgconner/singularity-paper — commit `7769ee9` (9 files, 889 insertions)
 - Trimmed BACKLOG.md STORY-001/001A/poem (~415 lines) to a 19-line pointer to the new repo
 
+### QOL Batch (pre-walkthrough housekeeping)
+- **CI pipeline hardened** — removed `feature/mobile-web-client` from build triggers in `build-server-images.yml` and `build-pi-image.yml`; old branches now produce no images
+- **QOL-012 confirmed resolved** — `strategy: type: Recreate` already in `k8s/overlays/bobs-tiny-treasures/order-service-deployment-patch.yaml`; BACKLOG updated
+- **QOL-005 fixed** — scan log now persisted to Redis key `scan-ledger` (LPUSH, capped 100, 1-hour TTL); restored on pod startup via `_restore_scan_ledger()`; Redis failure non-fatal
+- **QOL-013 confirmed resolved** — deployed seed ConfigMap already uses plain ` - ` separators; no em-dashes in any deployed data path; BACKLOG updated
+- **QOL-009 fixed** — `build_nav_card()` added to `tools/generate_test_barcodes.py`; running the script now produces `nav_card.pdf` (A4 landscape, 2×2 grid, NAV:CONFIRM/SKIP/BACK/HELP)
+
 ---
 
 ## What's Next (ordered)
@@ -44,6 +52,7 @@
 - [ ] **Test ⟳ Restart Demo** — hit it on supervisor, confirm mobile shows new order immediately
 - [ ] **Test scenario switching** — change to Physical Demo in supervisor, confirm overlay shows nav card instruction + 10s button fallback instead of amber Confirm button
 - [ ] **Verify PackWizard auto-surfaces** after order completes (unverified in live flow — `MobilePickerView` listens for `order_complete_pending` WS event)
+- [ ] **Print nav_card.pdf** — run `python tools/generate_test_barcodes.py`, print and laminate before next physical demo
 - [ ] **QR size test (deferred)** — see BACKLOG QOL-008
 - [ ] **Write singularity-paper prose draft** — when demo is stable and there's a real pause
 

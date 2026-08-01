@@ -6,7 +6,8 @@ Requirements (all MIT/BSD/Apache 2.0 — no LGPL/GPL):
 
 Usage:
     python generate_test_barcodes.py
-    Output: test_barcodes.pdf
+    Output: test_barcodes.pdf  (product / staging / BTT label sheets)
+            nav_card.pdf       (physical picker confirmation card — A4 landscape)
 """
 
 import io
@@ -66,7 +67,8 @@ STAGING_QR = [
     {"payload": "STAGING:EPSN", "code": "EPSN", "label": "Epsilon Tote 3 (Container)"},
 ]
 
-OUTPUT_FILE = os.path.join(os.path.dirname(__file__), "test_barcodes.pdf")
+OUTPUT_FILE     = os.path.join(os.path.dirname(__file__), "test_barcodes.pdf")
+NAV_CARD_FILE   = os.path.join(os.path.dirname(__file__), "nav_card.pdf")
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -295,7 +297,128 @@ def build_pdf(output_path: str) -> None:
     print(f"PDF written to: {output_path}")
 
 
+# ── Nav card builder ───────────────────────────────────────────────────────────
+
+# Four NAV:* commands the scanner already handles as control events.
+NAV_COMMANDS = [
+    {"payload": "NAV:CONFIRM", "label": "CONFIRM",  "corner": "top-right"},
+    {"payload": "NAV:SKIP",    "label": "SKIP",     "corner": "top-left"},
+    {"payload": "NAV:BACK",    "label": "BACK",     "corner": "bottom-left"},
+    {"payload": "NAV:HELP",    "label": "HELP",     "corner": "bottom-right"},
+]
+
+# Corner layout on A4 landscape (841.89 × 595.28 pt):
+#   top-left     top-right
+#   bottom-left  bottom-right
+_NAV_CORNER_POSITIONS = {
+    "top-left":     (0, 1),   # (col, row) in a 2×2 table
+    "top-right":    (1, 1),
+    "bottom-left":  (0, 0),
+    "bottom-right": (1, 0),
+}
+
+from reportlab.lib.pagesizes import A4
+
+def build_nav_card(output_path: str) -> None:
+    """Produce a single A4 landscape page with NAV QR codes in each corner.
+
+    The picker scans a corner to send a control event instead of tapping
+    the on-screen button. The scanner already handles NAV:* payloads —
+    this card is a purely physical print artefact.
+    """
+    from reportlab.platypus import Image as PlatypusImage
+
+    styles = getSampleStyleSheet()
+    label_style = ParagraphStyle(
+        "nav_label",
+        parent=styles["Normal"],
+        fontSize=18,
+        leading=22,
+        alignment=TA_CENTER,
+        fontName="Helvetica-Bold",
+    )
+    hint_style = ParagraphStyle(
+        "nav_hint",
+        parent=styles["Normal"],
+        fontSize=9,
+        leading=11,
+        alignment=TA_CENTER,
+        textColor=colors.grey,
+    )
+    title_style = ParagraphStyle(
+        "nav_title",
+        parent=styles["Heading1"],
+        fontSize=13,
+        leading=16,
+        alignment=TA_CENTER,
+        spaceAfter=4,
+    )
+
+    page_w, page_h = landscape(A4)   # 841.89 × 595.28 pt
+    nav_margin = 14 * mm
+    qr_size = 110 * mm   # 1.5-inch QR at print resolution — large enough for easy scan
+
+    doc = SimpleDocTemplate(
+        output_path,
+        pagesize=landscape(A4),
+        leftMargin=nav_margin,
+        rightMargin=nav_margin,
+        topMargin=nav_margin,
+        bottomMargin=nav_margin,
+    )
+
+    story = []
+    story.append(Paragraph("Bob's Tiny Treasures — Picker Nav Card", title_style))
+    story.append(Paragraph(
+        "Scan a corner to confirm, skip, go back, or call for help — no screen tap needed.",
+        hint_style,
+    ))
+    story.append(Spacer(1, 4 * mm))
+
+    # Build a 2×2 grid ordered: [top-left, top-right] / [bottom-left, bottom-right]
+    # Nav commands keyed by corner for lookup
+    by_corner = {cmd["corner"]: cmd for cmd in NAV_COMMANDS}
+    grid = [
+        ["top-left", "top-right"],
+        ["bottom-left", "bottom-right"],
+    ]
+
+    table_rows = []
+    for row_corners in grid:
+        row_cells = []
+        for corner in row_corners:
+            cmd = by_corner[corner]
+            qr_img = _make_qr_image(cmd["payload"], qr_size)
+            cell = [
+                qr_img,
+                Paragraph(cmd["label"], label_style),
+                Paragraph(cmd["payload"], hint_style),
+            ]
+            row_cells.append(cell)
+        table_rows.append(row_cells)
+
+    usable_w = page_w - 2 * nav_margin
+    col_w = usable_w / 2
+
+    nav_table = Table(table_rows, colWidths=[col_w, col_w])
+    nav_table.setStyle(TableStyle([
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
+        ("TOPPADDING",    (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 4),
+        ("BOX",           (0, 0), (-1, -1), 1, colors.black),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.5, colors.black),
+    ]))
+    story.append(nav_table)
+
+    doc.build(story)
+    print(f"Nav card written to: {output_path}")
+
+
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     build_pdf(OUTPUT_FILE)
+    build_nav_card(NAV_CARD_FILE)
