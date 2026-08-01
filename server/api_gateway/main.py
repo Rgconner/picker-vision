@@ -512,6 +512,22 @@ async def api_demo_advance(request: Request):
     return await _proxy("POST", f"{ORDER_SERVICE_URL}/demo/advance", await request.json())
 
 
+# ── Pack wizard proxies ───────────────────────────────────────────────────────
+
+@app.post("/api/orders/{order_id}/pack")
+async def api_orders_pack(order_id: str):
+    return await _proxy("POST", f"{ORDER_SERVICE_URL}/orders/{order_id}/pack", {})
+
+
+@app.patch("/api/orders/{order_id}/totes/{tote_id}/layers/{layer_id}")
+async def api_orders_layer(order_id: str, tote_id: str, layer_id: str, request: Request):
+    return await _proxy(
+        "PATCH",
+        f"{ORDER_SERVICE_URL}/orders/{order_id}/totes/{tote_id}/layers/{layer_id}",
+        await request.json(),
+    )
+
+
 @app.get("/api/scan-log")
 async def api_scan_log(limit: int = 50):
     return await _proxy("GET", f"{EVENT_PROCESSOR_URL}/scan-log?limit={limit}")

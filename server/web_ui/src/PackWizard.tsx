@@ -18,7 +18,7 @@ import { qrSvg } from './qrSvg';
 
 // ── API helpers ────────────────────────────────────────────────────────────────
 
-const ORDER_API = (path: string) => `/api/order${path}`;
+const ORDER_API = (path: string) => `/api${path}`;
 
 async function apiFetch<T>(path: string, opts?: RequestInit): Promise<T> {
   const r = await fetch(ORDER_API(path), {
