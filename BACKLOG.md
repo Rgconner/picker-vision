@@ -397,6 +397,17 @@ Options ranked by effort and install friction:
 
 ---
 
+### QOL-031 · Action instructions are hard to read — should be bold and prominent
+
+**Symptom:** Instructional text like "Move item away, then tap to continue scanning" and "Wait for the next demo session to begin" uses muted `#94a3b8` small text. During a live demo, the picker's eye goes to the big icon/heading and misses the instruction. They don't know what action is expected.
+**Observed:** Session 11 walkthrough — Russ noted "tap to continue" style instructions are not prominent enough.
+**Proper fix:** Any screen that requires a specific picker action (tap, move, wait) should state that action in bold, large, high-contrast text — not muted caption text. Specifically: the move-away gate, the demo-ended overlay, and the order-complete gate subtitle. The action should be the most visually dominant element after the status icon. Consider making the entire overlay tappable with a large visible "Tap anywhere to continue" label in `#e2e8f0` bold rather than a small muted hint.
+**Affects:** `MobilePickerView.tsx` — `showMoveAway` overlay, `demoEndedOverlay`, and `orderCompleteOverlay` subtitles.
+**Recurrence count:** 1 (session 11)
+**Effort:** S
+
+---
+
 ### ARCH-001 · Structured debug/trace harness for all modules
 
 **Directive (2026-08-01):** Every module going forward must have a full testing harness / debug functionality that can be set to discrete debug levels at runtime.
