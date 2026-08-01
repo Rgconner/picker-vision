@@ -9,12 +9,12 @@
 
 ---
 
-## Current State (2026-08-01 — session 11)
+## Current State (2026-08-01 — session 12)
 
 **Branch:** `feature/bobs-tiny-treasures`
-**Last commit:** `ce3ac5e` — fix(QOL-031): action instructions bold and prominent on all overlay screens
-**CI status:** `sha-ce3ac5e` deployed (web-ui 1.5.1, order-service 1.2.1, api-gateway 1.3.1).
-**System state:** All 4 services healthy. Full pick-to-pack flow confirmed. No pre-build needed next session.
+**Last commit:** `e6aaef0` — feat(QOL-032): supervisor QR panel shows remaining qty per line
+**CI status:** `sha-e6aaef0` deployed (web-ui 1.5.1, order-service 1.2.1, api-gateway 1.3.1).
+**System state:** All 4 services healthy. QOL-032 verified in pod bundle. Sign-off queue items all pre-built — awaiting Russ on hardware.
 
 ---
 
@@ -50,7 +50,17 @@ The core demo loop — scan, confirm, gate, advance — is stable. This is the f
 
 ## Immediate First Action Next Session
 
-**→ Read this file. Hit /health + /api/versions to confirm system state. Then check the sign-off queue below — most items are verification runs, not builds.**
+**→ Read this file. Hit /health + /api/versions to confirm system state. Then run sign-off queue (all verification runs — no builds needed). QOL-032 is already deployed.**
+
+---
+
+## What We Did This Session (session 12)
+
+QOL-032 built, committed `e6aaef0`, deployed and verified.
+
+| # | Item | What shipped |
+|---|---|---|
+| QOL-032 | XS | `DemoControls.tsx` — replaced single "N items remaining" count with per-line `×qty ProductName` breakdown; computed from `quantity - quantity_picked` per line |
 
 ---
 
@@ -120,7 +130,7 @@ These were never reached during session 9 due to the flow issues found:
 | Production URL | `https://bobstinytreasures.snwbd.com` |
 | K8s namespace | `picker-vision-btt` |
 | Active branch | `feature/bobs-tiny-treasures` |
-| Last known-good web-ui image | `sha-00d2e6a` |
+| Last known-good web-ui image | `sha-e6aaef0` |
 | LM Studio IP | `http://192.168.1.79:1234` |
 | API gateway (BTT) | `http://192.168.11.213` (key: `changeme`) |
 | Web UI (BTT) | `http://192.168.11.214` |
