@@ -12,24 +12,25 @@
 ## Current State (2026-08-01 — session 8)
 
 **Branch:** `feature/bobs-tiny-treasures`
-**Last commit:** `833cc53` — fix: refresh full orders list after demo/advance
-**CI status:** `sha-833cc53` deployed on all pods. Bundle: `index-BWrQB54f.js`.
-**System state:** All 4 services healthy. DB clean (no orphaned orders, no sessions).
+**Last commit:** `44acc09` — docs: THA = Russ, named throughout
+**CI status:** `sha-44acc09` deployed on all pods. Bundle: `index-BOLSjcmy.js`.
+**System state:** All 4 services healthy. DB clean. Ready for walkthrough.
 
 ---
 
 ## Immediate First Action Next Session
 
-1. Hit supervisor at `/app`, log in as Bob (Owner) / btt01.
-2. In DemoControls: click **⟳ Reset** (clears any orphaned orders from prior sessions).
-3. Select a picker (e.g. Sprinkle) in the picker dropdown, click **▶ Personal**.
-4. Scan the "Join Demo" QR code from the supervisor screen on the Samsung phone.
-5. Tap **▶ Scan Items** on the phone and scan product labels from the DemoControls "next item" QR.
-6. Verify ConfirmOverlay appears after each correct scan, tap Confirm.
-7. After last item: verify new order DEMO-...-002 appears in the mobile pick list immediately.
-8. After last order: verify PackWizard opens automatically (from order_complete_pending WS event).
-9. Step through PackWizard — verify product names show (not UUID fragments).
-10. Tap ✅ Layer Verified for each layer — verify wizard reaches "Order Packed!" screen.
+**→ Use the walkthrough prompt. System is clean and ready.**
+
+1. Open `https://bobstinytreasures.snwbd.com/app` on laptop — log in as Bob (Owner) / `btt01`.
+2. In DemoControls: click **⟳ Reset** (clears any orphaned orders from prior sessions/restarts).
+3. Select **Sprinkle** in the picker dropdown → click **▶ Personal**.
+4. On the Samsung: scan the "Join Demo" QR code shown on the supervisor screen, or navigate to `https://bobstinytreasures.snwbd.com/mobile?picker_id=picker-sprinkle`.
+5. Tap **▶ Scan Items**. Point camera at the "Next item to scan" QR on the supervisor screen.
+6. ConfirmOverlay appears → tap **✓ Confirm**. Repeat for each item.
+7. After last item: pick list immediately shows `DEMO-...-002` (new order).
+8. PackWizard auto-opens → product names visible → tap **✅ Layer Verified** per layer → **Order Packed!**
+9. **Then deliberately break it** — see Russ Sign-off Queue below.
 
 ---
 
