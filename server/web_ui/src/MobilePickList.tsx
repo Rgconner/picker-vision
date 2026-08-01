@@ -19,7 +19,7 @@
  *  - Confirm Packed CTA pulses green when all lines are picked
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { Detection, Order, PickerState } from './types';
 import { PackWizard } from './PackWizard';
 
@@ -93,33 +93,47 @@ function ProgressBar({ picked, total }: { picked: number; total: number }) {
 
 export function MobilePickList({ orders, detections, orderCompletePending, onConfirmPacked }: Props) {
   const detMap = useMemo(() => buildDetectionMap(detections), [detections]);
-  const [packingOrderId, setPackingOrderId] = useState<string | null>(null);
-  const packingOrder = packingOrderId ? orders.find((o) => o.id === packingOrderId) : null;
+  // {orderId, orderRef} for the order currently being packed (may be complete/absent from orders[])
+  const [packingTarget, setPackingTarget] = useState<{ orderId: string; orderRef: string } | null>(null);
+
+  // Auto-open PackWizard when WS signals order_complete_pending and the order
+  // has already been filtered out of orders[] (status=complete)
+  const prevCompleteRef = React.useRef<string | null>(null);
+  useEffect(() => {
+    const completePendingId = orderCompletePending?.order_id;
+    if (!completePendingId) return;
+    if (prevCompleteRef.current === completePendingId) return; // already handled
+    prevCompleteRef.current = completePendingId;
+    // Only auto-open if not already packing this order
+    setPackingTarget((prev) => {
+      if (prev?.orderId === completePendingId) return prev;
+      // Find ref from current orders list if present; fall back to 'Order'
+      const ref = orders.find((o) => o.id === completePendingId)?.reference ?? 'Order';
+      return { orderId: completePendingId, orderRef: ref };
+    });
+  }, [orderCompletePending]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sorted = useMemo(
     () => [...orders].sort((a, b) => orderWeight(a) - orderWeight(b)),
     [orders],
   );
 
-  if (sorted.length === 0) {
-    return (
-      <div className="flex items-center justify-center py-8 text-[#57606a] text-sm">
-        No active orders
-      </div>
-    );
-  }
-
   return (
     <>
-    {packingOrder && (
+    {packingTarget && (
       <PackWizard
-        orderId={packingOrder.id}
-        orderRef={packingOrder.reference}
-        onClose={() => setPackingOrderId(null)}
-        onPacked={() => setPackingOrderId(null)}
+        orderId={packingTarget.orderId}
+        orderRef={packingTarget.orderRef}
+        onClose={() => setPackingTarget(null)}
+        onPacked={() => setPackingTarget(null)}
       />
     )}
     <div className="flex flex-col gap-2 px-2 py-2">
+      {sorted.length === 0 && (
+        <div className="flex items-center justify-center py-8 text-[#57606a] text-sm">
+          No active orders
+        </div>
+      )}
       {sorted.map((order) => {
         const isPending    = orderCompletePending?.order_id === order.id;
         const pickedLines  = order.lines.filter((l) => l.status === 'picked');
@@ -222,7 +236,7 @@ export function MobilePickList({ orders, detections, orderCompletePending, onCon
             {/* ── Pack CTA — shown when order is complete (BTT flow) or pending confirm ── */}
             {(order.status === 'complete' || order.status === 'packing') && (
               <button
-                onClick={() => setPackingOrderId(order.id)}
+                onClick={() => setPackingTarget({ orderId: order.id, orderRef: order.reference })}
                 className="w-full py-3 px-3 bg-[#f59e0b] text-black font-bold text-sm flex items-center justify-center gap-2"
               >
                 📦 Pack Order

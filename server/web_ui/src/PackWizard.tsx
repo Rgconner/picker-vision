@@ -122,14 +122,28 @@ function ToteProgressDots({ totes, activeToteIdx }: { totes: OrderTote[]; active
 export function PackWizard({ orderId, orderRef, onClose, onPacked }: Props) {
   const [step, setStep] = useState<WizardStep>({ kind: 'loading' });
   const [verifying, setVerifying] = useState(false);
+  // line_id → product description (resolved from order lines on init)
+  const [lineNames, setLineNames] = useState<Map<string, string>>(new Map());
 
   // ── Load/create pack plan ────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     async function initPlan() {
       try {
-        const plan = await apiFetch<PackPlan>(`/orders/${orderId}/pack`, { method: 'POST' });
+        // Fetch order lines and pack plan in parallel
+        const [plan, order] = await Promise.all([
+          apiFetch<PackPlan>(`/orders/${orderId}/pack`, { method: 'POST' }),
+          fetch(`/api/orders/${orderId}`).then((r) => r.ok ? r.json() : null),
+        ]);
         if (cancelled) return;
+        // Build line_id → product description lookup
+        if (order?.lines) {
+          const names = new Map<string, string>();
+          for (const line of order.lines as { id: string; product_description?: string | null; product_barcode?: string }[]) {
+            names.set(line.id, line.product_description ?? line.product_barcode ?? line.id);
+          }
+          setLineNames(names);
+        }
         const allSealed = plan.totes.every((t) => t.status === 'sealed');
         if (allSealed) {
           setStep({ kind: 'done' });
@@ -381,7 +395,7 @@ export function PackWizard({ orderId, orderRef, onClose, onPacked }: Props) {
               {Array.from(grouped.entries()).map(([lineId, qty]) => (
                 <LayerItemRow
                   key={lineId}
-                  name={`Line item (${lineId.slice(0, 8)}…)`}
+                  name={lineNames.get(lineId) ?? `Item (${lineId.slice(0, 8)}…)`}
                   qty={qty}
                 />
               ))}
