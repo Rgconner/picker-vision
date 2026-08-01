@@ -298,6 +298,26 @@ Options ranked by effort and install friction:
 
 ---
 
+### QOL-021 · /app Mobile tab uses auth identity instead of demo picker ID — ConfirmOverlay never fires
+
+**Symptom:** Supervisor starts demo for `picker-sprinkle` on laptop. Picks up phone, navigates to `/app` naturally (already logged in as Bob). Mobile tab registers phone as `Bob (Owner)`. Scans reach server correctly and read as `correct`, but ConfirmOverlay never appears — WS enrichment is published on the `picker-sprinkle` channel, not `Bob (Owner)`.
+**Manual workaround applied:** Had to know to open `/mobile?picker_id=picker-sprinkle` directly in a fresh tab, or tap the Join Demo banner manually.
+**Fix applied:** Auto-join `useEffect` in `MobilePickerView` — when `defaultPickerId` is set (auth context) and a demo session starts for a different picker ID, the Mobile tab switches to the demo picker ID automatically. Commit `7278f80`. **Fixed.**
+**Recurrence count:** 1 (session 9)
+**Effort:** XS
+
+---
+
+### QOL-022 · Landing page / static pages out of sync with app state
+
+**Symptom:** The welcome/landing page (`/`) and static pages appear to show stale content or are not updated in sync with app changes (product names, demo flow, etc.).
+**Manual workaround applied:** Deferred — noted during session 9 walkthrough.
+**Proper fix:** Audit landing page content against current app state each release; consider generating static content from the same seed data the app uses.
+**Recurrence count:** 1 (session 9, noted by Russ)
+**Effort:** S
+
+---
+
 ### ARCH-001 · Structured debug/trace harness for all modules
 
 **Directive (2026-08-01):** Every module going forward must have a full testing harness / debug functionality that can be set to discrete debug levels at runtime.
