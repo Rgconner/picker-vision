@@ -34,6 +34,20 @@ The core demo loop — scan, confirm, gate, advance — is stable. This is the f
 
 ---
 
+## 🏁 MILESTONE — 2026-08-01 (session 11)
+
+**2 clean end-to-end pick-to-pack runs. Full flow from scan to Order Packed confirmed on real hardware.**
+
+- Pick all items → order-complete gate → Accept → PackWizard opens automatically
+- Tote overview → layer verification → Order Packed!
+- Second run identical — not a fluke
+
+**Note:** Layer verification done with single-layer packing only (one set of props). Multi-layer / multi-tote flow not yet tested — deferred until second prop set is available.
+
+**Signed off by:** Russ Conner, 2026-08-01
+
+---
+
 ## Immediate First Action Next Session
 
 **→ Read this file. Run the full pick-to-pack walkthrough with Russ. No pre-build needed.**
