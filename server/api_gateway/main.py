@@ -655,14 +655,24 @@ async def api_load_gen_assert(
 
     Returns a structured pass/fail report.  Always HTTP 200 (the result is
     data, not an error).  API-key protected by the existing middleware.
+
+    picker_count check strategy
+    ---------------------------
+    When called from the browser Load Gen tab, active WebSocket connections
+    are open so active_picker_sockets is the right signal.  When called
+    headlessly from the CI script (no browser WebSockets), sockets are 0 even
+    though pickers did register — so we use pickers_registered as the fallback.
+    Rule: use whichever counter is >= picker_count; if neither is, fail.
     """
     telem = await _collect_telemetry()
-    ep = telem.get("services", {}).get("event-processor", {})
+    ep  = telem.get("services", {}).get("event-processor", {})
     wsh = telem.get("services", {}).get("websocket-hub", {})
+    gw  = telem.get("services", {}).get("api-gateway", {})
 
-    events_received  = (ep.get("counters") or {}).get("events_received",  0)
-    events_processed = (ep.get("counters") or {}).get("events_processed", 0)
-    active_sockets   = (wsh.get("counters") or {}).get("active_picker_sockets", 0)
+    events_received    = (ep.get("counters") or {}).get("events_received",  0)
+    events_processed   = (ep.get("counters") or {}).get("events_processed", 0)
+    active_sockets     = (wsh.get("counters") or {}).get("active_picker_sockets", 0)
+    pickers_registered = (gw.get("counters") or {}).get("pickers_registered", 0)
 
     proc_rate_pct = round((events_processed / events_received * 100) if events_received > 0 else 100)
 
@@ -684,13 +694,23 @@ async def api_load_gen_assert(
         "pass":     proc_rate_pct >= 95,
     })
 
-    # 3. Optional: active socket count matches expected picker count
+    # 3. Optional: picker presence check.
+    # Browser run: active_picker_sockets is the live signal.
+    # Headless CI run: no WebSockets open, so fall back to pickers_registered.
+    # Pass if either counter satisfies the expected count.
     if picker_count > 0:
+        sockets_ok    = active_sockets    >= picker_count
+        registered_ok = pickers_registered >= picker_count
+        passes = sockets_ok or registered_ok
+        if sockets_ok:
+            actual_label = f"{active_sockets} sockets"
+        else:
+            actual_label = f"{pickers_registered} registered"
         checks.append({
-            "name":     "active_picker_sockets >= picker_count",
+            "name":     "pickers present (sockets or registered)",
             "expected": f">={picker_count}",
-            "actual":   active_sockets,
-            "pass":     active_sockets >= picker_count,
+            "actual":   actual_label,
+            "pass":     passes,
         })
 
     overall = all(c["pass"] for c in checks)

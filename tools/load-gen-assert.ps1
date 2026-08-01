@@ -26,8 +26,10 @@
     (default: 0).
 
 .PARAMETER PickerCount
-    Expected number of active picker WebSocket connections.
-    Set to 0 to skip the socket check (default: 0).
+    Expected number of pickers that registered during the run.
+    The server checks this against EITHER active WebSocket connections
+    (browser run) OR cumulative pickers_registered (headless CI run) —
+    whichever satisfies the count passes.  Set to 0 to skip (default: 0).
 
 .PARAMETER WaitSeconds
     Seconds to wait before calling the assertion endpoint, allowing
