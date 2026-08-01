@@ -249,7 +249,7 @@ export function DemoControls({ auth }: Props) {
           ))}
         </div>
 
-        {/* Start buttons */}
+        {/* Start buttons + Reset */}
         <div className="flex gap-2 flex-wrap items-center">
           {/* Picker selector */}
           <select
@@ -285,7 +285,7 @@ export function DemoControls({ auth }: Props) {
           >
             {starting ? 'Starting…' : '▶ Presentation'}
           </button>
-          {/* Reset — cancels any orphaned demo orders left from a prior session or pod restart */}
+          {/* QOL-027: Reset — same style as running-state ⟳ Restart Demo */}
           <button
             onClick={async () => {
               if (!canControl) return;
@@ -302,7 +302,7 @@ export function DemoControls({ auth }: Props) {
             }}
             disabled={!canControl || resetting || starting}
             title="Cancel all orphaned demo orders (run after a pod restart or stale session)"
-            className="px-3 py-1.5 rounded-md text-xs font-semibold border border-[#f1c21b]/40 text-[#f1c21b] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            className="ml-auto px-3 py-1.5 rounded-md text-xs font-semibold border border-[#f1c21b]/40 text-[#f1c21b] hover:bg-[#f1c21b]/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
           >
             {resetting ? 'Clearing…' : '⟳ Reset'}
           </button>

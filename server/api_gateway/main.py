@@ -446,7 +446,23 @@ async def api_demo_stop(request: Request):
         logger.debug("demo/stop: no JSON body")
     # Pass body dict always (even when empty) so FastAPI Pydantic on the
     # order-service receives a valid JSON object and doesn't return 422.
-    return await _proxy("POST", f"{ORDER_SERVICE_URL}/demo/stop", body)
+    result = await _proxy("POST", f"{ORDER_SERVICE_URL}/demo/stop", body)
+
+    # QOL-028: broadcast demo_reset to all connected picker WebSocket channels
+    # so mobile clients can stop their scan loop and show "Demo ended" screen.
+    try:
+        import json as _json
+        reset_msg = _json.dumps({"type": "demo_reset"})
+        for key in _redis.scan_iter("picker:*:state"):
+            parts = key.split(":")
+            if len(parts) >= 2:
+                pid = parts[1]
+                _redis.publish(f"picker:{pid}:updates", reset_msg)
+        logger.info("demo/stop: published demo_reset to all picker channels")
+    except Exception as e:
+        logger.warning("demo/stop: failed to publish demo_reset: %s", e)
+
+    return result
 
 
 # ── BTT warehouse / scenario / label / instance proxy routes ─────────────────

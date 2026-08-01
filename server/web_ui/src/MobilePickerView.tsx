@@ -133,7 +133,8 @@ interface MobilePickerViewProps {
 
 export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: MobilePickerViewProps) {
   const urlPickerId = pickerIdFromUrl();
-  const initialId = urlPickerId || defaultPickerId || savedPickerId();
+  // QOL-029: savedPickerId() beats defaultPickerId when a non-empty saved value exists
+  const initialId = urlPickerId || savedPickerId() || defaultPickerId || '';
   const [pickerId, setPickerId]   = useState<string>(initialId);
   const [editId, setEditId]       = useState<string>(initialId);
   const [editMode, setEditMode]   = useState<boolean>(!initialId && !lockedPickerId);
@@ -181,8 +182,18 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   }, []);
 
   // ── Confirm overlay state ────────────────────────────────────────────────
-  interface PendingConfirm { orderId: string; lineId: string; itemName: string; barcode: string; stagingCode: string | null; }
+  interface PendingConfirm { orderId: string; lineId: string; itemName: string; barcode: string; stagingCode: string | null; quantity: number; quantityPicked: number; }
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
+
+  // QOL-017: 'confirmed' state — shown after confirm tap, before picker moves item away
+  const [showMoveAway, setShowMoveAway] = useState(false);
+
+  // QOL-025: 'order_complete' gate — shown after last pick before demo/advance
+  interface OrderCompleteGate { orderId: string; reference: string; }
+  const [orderCompleteGate, setOrderCompleteGate] = useState<OrderCompleteGate | null>(null);
+
+  // QOL-028: 'demo ended' screen
+  const [demoEnded, setDemoEnded] = useState(false);
 
   // QOL-014: local bbox store — populated when a scan fires, used if server says unexpected
   const pendingBboxRef = useRef<Map<string, ScanResult['bbox']>>(new Map());
@@ -199,16 +210,9 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   // when the barcode stays in-frame after confirmation but before setOrders runs.
   const confirmedLinesRef = useRef<Set<string>>(new Set());
 
-  // QOL-017: per-barcode rescan blackout — after any confirm, that barcode value
-  // is blocked for 2 s so a label that stays in frame cannot re-trigger the overlay.
-  // This matches physical scanner behaviour (per-barcode lockout after decode).
-  const barcodeBlackoutRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  function blackoutBarcode(barcode: string) {
-    const existing = barcodeBlackoutRef.current.get(barcode);
-    if (existing) clearTimeout(existing);
-    const t = setTimeout(() => barcodeBlackoutRef.current.delete(barcode), 2000);
-    barcodeBlackoutRef.current.set(barcode, t);
-  }
+  // QOL-017: track the barcode currently in the 'move away' gate so the scan
+  // loop gate can block re-fires on that same value while the overlay is shown.
+  const moveAwayBarcodeRef = useRef<string | null>(null);
 
   const videoRef    = useRef<HTMLVideoElement>(null);
   const canvasRef   = useRef<HTMLCanvasElement>(null);
@@ -230,12 +234,22 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   const camera = useMobileCamera();
 
   // ── Server session ──────────────────────────────────────────────────────────
-  const { connected, pickerState, validationResult, lastScan, publish, sendAction, confirmPick } =
+  const { connected, pickerState, validationResult, lastScan, demoResetSeq, publish, sendAction, confirmPick } =
     useMobilePickerSession(pickerId || null);
 
   useEffect(() => {
     if (validationResult) setLocalValidation(validationResult);
   }, [validationResult]);
+
+  // QOL-028: when demo_reset arrives, stop scan loop and show "Demo ended" screen
+  useEffect(() => {
+    if (demoResetSeq === 0) return; // ignore initial value
+    setScanning(false);
+    setShowMoveAway(false);
+    setPendingConfirm(null);
+    setOrderCompleteGate(null);
+    setDemoEnded(true);
+  }, [demoResetSeq]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Barcode scanning ────────────────────────────────────────────────────────
   const handleDetect = useCallback((result: ScanResult) => {
@@ -305,8 +319,8 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     if (!pickerState || pendingConfirm) return;
     const fired = lastFiredBarcodeRef.current;
     if (!fired) return;
-    // QOL-017: block re-fire if this barcode is in the 2-second blackout window
-    if (barcodeBlackoutRef.current.has(fired)) return;
+    // QOL-017: block re-fire if the move-away overlay is showing for this barcode
+    if (moveAwayBarcodeRef.current === fired) return;
     const activeOrder = orders.find((o) => o.status === 'picking');
     if (!activeOrder) return;
     // Must see the fired barcode confirmed as 'correct' in this WS push
@@ -322,11 +336,13 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     if (confirmedLinesRef.current.has(line.id)) return;
     lastFiredBarcodeRef.current = null;
     setPendingConfirm({
-      orderId:     activeOrder.id,
-      lineId:      line.id,
-      itemName:    line.product_description ?? fired,
-      barcode:     fired,
-      stagingCode: line.staging_code ?? null,
+      orderId:        activeOrder.id,
+      lineId:         line.id,
+      itemName:       line.product_description ?? fired,
+      barcode:        fired,
+      stagingCode:    line.staging_code ?? null,
+      quantity:       line.quantity,
+      quantityPicked: line.quantity_picked,
     });
   }, [pickerState, orders]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -359,14 +375,20 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     // Mark confirmed immediately so the overlay gate blocks re-fires while
     // confirmPick and the orders re-fetch are still in flight.
     confirmedLinesRef.current.add(lineId);
-    // QOL-017: start 2-second per-barcode blackout so a label still in frame
-    // cannot immediately re-trigger the overlay.
-    blackoutBarcode(barcode);
+
+    // QOL-030: clear yellow bbox + lastScan immediately on confirm
+    setWrongItems([]);
+
+    // QOL-017: stop scan loop and show "move item away" overlay instead of
+    // the 2-second blackout band-aid. Picker taps to resume scanning.
     setPendingConfirm(null);
+    setScanning(false);
+    moveAwayBarcodeRef.current = barcode;
+    setShowMoveAway(true);
 
     await confirmPick(orderId, lineId);
 
-    // Check if all lines are now picked — if so, advance the demo session
+    // Check if all lines are now picked — if so, show order-complete gate (QOL-025)
     try {
       const res = await fetch(`/api/orders/${orderId}`);
       if (res.ok) {
@@ -376,22 +398,38 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
         order.lines.forEach((l) => confirmedLinesRef.current.delete(l.id));
         const allPicked = order.lines.every((l) => l.status === 'picked' || l.quantity_picked >= l.quantity);
         if (allPicked) {
-          await fetch('/api/demo/advance', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ order_id: orderId, picker_id: pickerId }),
-          });
-          // Fetch all orders so the new demo order appears immediately on mobile
-          const allRes = await fetch('/api/orders');
-          if (allRes.ok) {
-            setOrders(await allRes.json());
-            return; // orders state fully refreshed — no need to do partial update below
-          }
+          // QOL-025: do NOT auto-advance — show gate first
+          setOrderCompleteGate({ orderId, reference: order.reference });
         }
         setOrders((prev) => prev.map((o) => o.id === orderId ? order : o));
       }
     } catch { /* ignore */ }
   }, [pendingConfirm, confirmPick, pickerId]);
+
+  // QOL-025: Accept tap → advance demo and clear gate
+  const handleOrderCompleteAccept = useCallback(async () => {
+    if (!orderCompleteGate) return;
+    const { orderId } = orderCompleteGate;
+    setOrderCompleteGate(null);
+    setShowMoveAway(false);
+    try {
+      await fetch('/api/demo/advance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, picker_id: pickerId }),
+      });
+      const allRes = await fetch('/api/orders');
+      if (allRes.ok) setOrders(await allRes.json());
+    } catch { /* ignore */ }
+    setScanning(true);
+  }, [orderCompleteGate, pickerId]);
+
+  // QOL-025: "Not yet" tap → back to idle, no new order
+  const handleOrderCompleteNotYet = useCallback(() => {
+    setOrderCompleteGate(null);
+    setShowMoveAway(false);
+    setScanning(false);
+  }, []);
 
   // ── Confirm packed ──────────────────────────────────────────────────────────
   const handleConfirmPacked = useCallback(async (orderId: string) => {
@@ -548,6 +586,55 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     </div>
   );
 
+  // ── QOL-025: order-complete gate overlay ─────────────────────────────────
+  const orderCompleteOverlay = orderCompleteGate ? (
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 px-6"
+      style={{ background: 'rgba(10,12,20,0.97)' }}
+    >
+      <span className="text-[#22c55e] text-5xl">✓</span>
+      <span className="text-[#e2e8f0] text-2xl font-bold text-center">
+        Order {orderCompleteGate.reference} complete
+      </span>
+      <span className="text-[#94a3b8] text-sm text-center">Ready for the next order?</span>
+      <div className="flex gap-4 mt-2">
+        <button
+          onClick={handleOrderCompleteAccept}
+          className="px-8 py-4 rounded-2xl text-lg font-bold text-[#161616] transition-all active:scale-95"
+          style={{ background: '#22c55e' }}
+        >
+          ✓ Accept
+        </button>
+        <button
+          onClick={handleOrderCompleteNotYet}
+          className="px-8 py-4 rounded-2xl text-lg font-bold text-[#e2e8f0] border border-[#2d3142] transition-all active:scale-95"
+          style={{ background: 'rgba(45,49,66,0.8)' }}
+        >
+          ✗ Not yet
+        </button>
+      </div>
+    </div>
+  ) : null;
+
+  // ── QOL-028: demo ended overlay ───────────────────────────────────────────
+  const demoEndedOverlay = demoEnded ? (
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 px-6"
+      style={{ background: 'rgba(10,12,20,0.97)' }}
+    >
+      <span className="text-[#f1c21b] text-5xl">■</span>
+      <span className="text-[#e2e8f0] text-xl font-bold text-center">Demo ended by supervisor</span>
+      <span className="text-[#94a3b8] text-sm text-center">Wait for the next demo session to begin</span>
+      <button
+        onClick={() => setDemoEnded(false)}
+        className="mt-4 px-6 py-3 rounded-xl text-sm font-bold text-[#e2e8f0] border border-[#2d3142] active:brightness-90 transition-all"
+        style={{ background: 'rgba(45,49,66,0.8)' }}
+      >
+        Dismiss
+      </button>
+    </div>
+  ) : null;
+
   // ── LANDSCAPE layout ───────────────────────────────────────────────────────
   if (isLandscape) {
     return (
@@ -558,10 +645,26 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
             itemName={pendingConfirm.itemName}
             barcode={pendingConfirm.barcode}
             stagingCode={pendingConfirm.stagingCode}
+            quantity={pendingConfirm.quantity}
+            quantityPicked={pendingConfirm.quantityPicked}
             onConfirm={handleConfirm}
             onSkip={() => setPendingConfirm(null)}
           />
         )}
+        {/* QOL-017: move-away gate — shown after confirm, before resuming scan */}
+        {showMoveAway && !orderCompleteGate && (
+          <div
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 px-6"
+            style={{ background: 'rgba(10,12,20,0.97)' }}
+            onClick={() => { setShowMoveAway(false); moveAwayBarcodeRef.current = null; setScanning(true); }}
+          >
+            <span className="text-[#22c55e] text-5xl">✓</span>
+            <span className="text-[#e2e8f0] text-xl font-bold text-center">Picked!</span>
+            <span className="text-[#94a3b8] text-sm text-center">Move item away, then tap to continue scanning</span>
+          </div>
+        )}
+        {orderCompleteOverlay}
+        {demoEndedOverlay}
 
         {/* Left column — camera + controls (55 %) */}
         <div className="flex flex-col overflow-hidden border-r border-[#2d3142]" style={{ width: '55%' }}>
@@ -601,10 +704,26 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
           itemName={pendingConfirm.itemName}
           barcode={pendingConfirm.barcode}
           stagingCode={pendingConfirm.stagingCode}
+          quantity={pendingConfirm.quantity}
+          quantityPicked={pendingConfirm.quantityPicked}
           onConfirm={handleConfirm}
           onSkip={() => setPendingConfirm(null)}
         />
       )}
+      {/* QOL-017: move-away gate — shown after confirm, before resuming scan */}
+      {showMoveAway && !orderCompleteGate && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 px-6"
+          style={{ background: 'rgba(10,12,20,0.97)' }}
+          onClick={() => { setShowMoveAway(false); moveAwayBarcodeRef.current = null; setScanning(true); }}
+        >
+          <span className="text-[#22c55e] text-5xl">✓</span>
+          <span className="text-[#e2e8f0] text-xl font-bold text-center">Picked!</span>
+          <span className="text-[#94a3b8] text-sm text-center">Move item away, then tap to continue scanning</span>
+        </div>
+      )}
+      {orderCompleteOverlay}
+      {demoEndedOverlay}
       {header}
       {scannerWarning}
       {joinBanner}

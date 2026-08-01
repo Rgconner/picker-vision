@@ -129,7 +129,11 @@ export default function App() {
         {currentMode === 'supervisor'  && <SupervisorView auth={auth} />}
         {currentMode === 'mobile'      && (
           <MobilePickerView
-            defaultPickerId={auth.user.picker_id ?? auth.user.name}
+            defaultPickerId={
+              auth.user.picker_id ??
+              // QOL-023: generate picker-{firstname} from auth name when no picker_id set
+              `picker-${auth.user.name.toLowerCase().split(/\s+/)[0]}`
+            }
             lockedPickerId={auth.user.role === 'picker'}
           />
         )}

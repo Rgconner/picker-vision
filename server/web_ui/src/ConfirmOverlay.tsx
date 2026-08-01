@@ -10,15 +10,19 @@
 import React, { useEffect, useState } from 'react';
 
 interface Props {
-  scenario:    'web-demo' | 'physical-demo';
-  itemName:    string;
-  barcode:     string;
-  stagingCode: string | null;
-  onConfirm:   () => void;
-  onSkip:      () => void;
+  scenario:       'web-demo' | 'physical-demo';
+  itemName:       string;
+  barcode:        string;
+  stagingCode:    string | null;
+  onConfirm:      () => void;
+  onSkip:         () => void;
+  /** QOL-024: how many of this item have been picked so far (0-based) */
+  quantityPicked?: number;
+  /** QOL-024: total quantity required for this line */
+  quantity?:       number;
 }
 
-export function ConfirmOverlay({ scenario, itemName, barcode, stagingCode, onConfirm, onSkip }: Props) {
+export function ConfirmOverlay({ scenario, itemName, barcode, stagingCode, onConfirm, onSkip, quantityPicked = 0, quantity = 1 }: Props) {
   // physical-demo fallback: show button after 10 s if no nav card scanned
   const [showFallback, setShowFallback] = useState(false);
 
@@ -45,6 +49,17 @@ export function ConfirmOverlay({ scenario, itemName, barcode, stagingCode, onCon
         {stagingCode && (
           <span className="mt-1 px-3 py-1 rounded-full text-xs font-bold bg-[#0a1e2d] text-[#06b6d4] border border-[#06b6d4]/30">
             → {stagingCode}
+          </span>
+        )}
+        {/* QOL-024: multi-qty subtitle */}
+        {quantity > 1 && quantityPicked + 1 < quantity && (
+          <span className="mt-1 px-3 py-1 rounded-full text-xs font-semibold bg-[#1a1d27] text-[#f1c21b] border border-[#f1c21b]/30">
+            {quantityPicked + 1} of {quantity} — scan again after confirming
+          </span>
+        )}
+        {quantity > 1 && quantityPicked + 1 >= quantity && (
+          <span className="mt-1 px-3 py-1 rounded-full text-xs font-semibold bg-[#0a2d14] text-[#22c55e] border border-[#22c55e]/30">
+            {quantity} of {quantity} — last one!
           </span>
         )}
       </div>

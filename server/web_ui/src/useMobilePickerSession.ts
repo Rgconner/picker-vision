@@ -18,6 +18,8 @@ export interface MobilePickerSessionState {
   pickerState: PickerState | null;
   validationResult: ValidationResult | null;
   lastScan: ScanResult | null;
+  /** QOL-028: increments each time the server sends a demo_reset message */
+  demoResetSeq: number;
   publish: (scan: ScanResult) => void;
   sendAction: (action: 'start' | 'stop' | 'validate') => void;
   confirmPick: (orderId: string, lineId: string) => Promise<boolean>;
@@ -28,6 +30,7 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
   const [pickerState, setPickerState]         = useState<PickerState | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [lastScan, setLastScan]               = useState<ScanResult | null>(null);
+  const [demoResetSeq, setDemoResetSeq]       = useState(0);
 
   const wsRef             = useRef<WebSocket | null>(null);
   const reconnectTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -121,7 +124,14 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
           const msg = JSON.parse(ev.data as string) as Record<string, unknown>;
           if (msg['type'] === 'validation_result') {
             setValidationResult(msg as unknown as ValidationResult);
-          } else {
+          } else if (msg['type'] === 'demo_reset') {
+            // QOL-028: supervisor stopped the demo — increment seq so
+            // MobilePickerView can react and show "Demo ended" screen.
+            setPickerState(null);
+            setLastScan(null);
+            if (lastScanTimer.current) clearTimeout(lastScanTimer.current);
+            setDemoResetSeq((n) => n + 1);
+          } else if (msg['type'] !== 'ping') {
             setPickerState(msg as unknown as PickerState);
             // Server has the enriched data — drop the local purple ghost overlay
             setLastScan(null);
@@ -290,5 +300,5 @@ export function useMobilePickerSession(pickerId: string | null): MobilePickerSes
     }
   }, [pickerState]);
 
-  return { connected, pickerState, validationResult, lastScan, publish, sendAction, confirmPick };
+  return { connected, pickerState, validationResult, lastScan, demoResetSeq, publish, sendAction, confirmPick };
 }
