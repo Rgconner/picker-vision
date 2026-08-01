@@ -51,14 +51,14 @@ export function ConfirmOverlay({ scenario, itemName, barcode, stagingCode, onCon
             → {stagingCode}
           </span>
         )}
-        {/* QOL-024: multi-qty subtitle */}
+        {/* QOL-024 / QOL-031: multi-qty — bold, prominent, not a pill */}
         {quantity > 1 && quantityPicked + 1 < quantity && (
-          <span className="mt-1 px-3 py-1 rounded-full text-xs font-semibold bg-[#1a1d27] text-[#f1c21b] border border-[#f1c21b]/30">
+          <span className="mt-2 text-[#f1c21b] text-lg font-bold text-center">
             {quantityPicked + 1} of {quantity} — scan again after confirming
           </span>
         )}
         {quantity > 1 && quantityPicked + 1 >= quantity && (
-          <span className="mt-1 px-3 py-1 rounded-full text-xs font-semibold bg-[#0a2d14] text-[#22c55e] border border-[#22c55e]/30">
+          <span className="mt-2 text-[#22c55e] text-lg font-bold text-center">
             {quantity} of {quantity} — last one!
           </span>
         )}

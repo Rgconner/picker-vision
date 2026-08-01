@@ -599,17 +599,19 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     </div>
   );
 
-  // ── QOL-025: order-complete gate overlay ─────────────────────────────────
+  // ── QOL-025 / QOL-031: order-complete gate overlay ───────────────────────
   const orderCompleteOverlay = orderCompleteGate ? (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 px-6"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 px-8"
       style={{ background: 'rgba(10,12,20,0.97)' }}
     >
-      <span className="text-[#22c55e] text-5xl">✓</span>
+      <span className="text-[#22c55e] text-6xl">✓</span>
       <span className="text-[#e2e8f0] text-2xl font-bold text-center">
         Order {orderCompleteGate.reference} complete
       </span>
-      <span className="text-[#94a3b8] text-sm text-center">Ready for the next order?</span>
+      <span className="text-[#e2e8f0] text-lg font-bold text-center">
+        Ready for the next order?
+      </span>
       <div className="flex gap-4 mt-2">
         <button
           onClick={handleOrderCompleteAccept}
@@ -629,22 +631,37 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     </div>
   ) : null;
 
-  // ── QOL-028: demo ended overlay ───────────────────────────────────────────
+  // ── QOL-028 / QOL-031: demo ended overlay ────────────────────────────────
   const demoEndedOverlay = demoEnded ? (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 px-6"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 px-8"
       style={{ background: 'rgba(10,12,20,0.97)' }}
+      onClick={() => setDemoEnded(false)}
     >
-      <span className="text-[#f1c21b] text-5xl">■</span>
+      <span className="text-[#f1c21b] text-6xl">■</span>
       <span className="text-[#e2e8f0] text-xl font-bold text-center">Demo ended by supervisor</span>
-      <span className="text-[#94a3b8] text-sm text-center">Wait for the next demo session to begin</span>
-      <button
-        onClick={() => setDemoEnded(false)}
-        className="mt-4 px-6 py-3 rounded-xl text-sm font-bold text-[#e2e8f0] border border-[#2d3142] active:brightness-90 transition-all"
-        style={{ background: 'rgba(45,49,66,0.8)' }}
-      >
-        Dismiss
-      </button>
+      <span className="text-[#e2e8f0] text-lg font-bold text-center">
+        Tap anywhere to dismiss
+      </span>
+      <span className="text-[#57606a] text-sm text-center mt-1">
+        Wait for the next demo session to begin
+      </span>
+    </div>
+  ) : null;
+
+  // ── QOL-017 / QOL-031: move-away gate ────────────────────────────────────
+  const moveAwayOverlay = showMoveAway && !orderCompleteGate ? (
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 px-8"
+      style={{ background: 'rgba(10,12,20,0.97)' }}
+      onClick={() => { setShowMoveAway(false); moveAwayBarcodeRef.current = null; setScanning(true); }}
+    >
+      <span className="text-[#22c55e] text-6xl">✓</span>
+      <span className="text-[#e2e8f0] text-2xl font-bold text-center">Picked!</span>
+      <span className="text-[#e2e8f0] text-lg font-bold text-center">
+        Move item away, then tap to continue
+      </span>
+      <span className="text-[#57606a] text-sm text-center mt-1">Tap anywhere</span>
     </div>
   ) : null;
 
@@ -675,18 +692,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
             onSkip={() => setPendingConfirm(null)}
           />
         )}
-        {/* QOL-017: move-away gate — shown after confirm, before resuming scan */}
-        {showMoveAway && !orderCompleteGate && (
-          <div
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 px-6"
-            style={{ background: 'rgba(10,12,20,0.97)' }}
-            onClick={() => { setShowMoveAway(false); moveAwayBarcodeRef.current = null; setScanning(true); }}
-          >
-            <span className="text-[#22c55e] text-5xl">✓</span>
-            <span className="text-[#e2e8f0] text-xl font-bold text-center">Picked!</span>
-            <span className="text-[#94a3b8] text-sm text-center">Move item away, then tap to continue scanning</span>
-          </div>
-        )}
+        {moveAwayOverlay}
         {orderCompleteOverlay}
         {demoEndedOverlay}
 
@@ -735,18 +741,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
           onSkip={() => setPendingConfirm(null)}
         />
       )}
-      {/* QOL-017: move-away gate — shown after confirm, before resuming scan */}
-      {showMoveAway && !orderCompleteGate && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 px-6"
-          style={{ background: 'rgba(10,12,20,0.97)' }}
-          onClick={() => { setShowMoveAway(false); moveAwayBarcodeRef.current = null; setScanning(true); }}
-        >
-          <span className="text-[#22c55e] text-5xl">✓</span>
-          <span className="text-[#e2e8f0] text-xl font-bold text-center">Picked!</span>
-          <span className="text-[#94a3b8] text-sm text-center">Move item away, then tap to continue scanning</span>
-        </div>
-      )}
+      {moveAwayOverlay}
       {orderCompleteOverlay}
       {demoEndedOverlay}
       {header}
