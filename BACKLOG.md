@@ -412,6 +412,33 @@ The 7 bugs fixed in session 8 are all marked `[THA needed]` in SESSION.md until 
 
 ---
 
+### THA-001 · Stale demo session lingers after 2-hour idle — Resume button misleads
+
+**How THA triggers it:** Start a demo, walk away for 2+ hours. Come back. The 2-hour orphan filter hides the order from the pick list, but the in-memory session still exists. The mobile Resume button shows — tapping it starts scanning against an order that no longer appears in the list.
+**Current behaviour:** No crash, but THA is confused and scanning does nothing visible.
+**Proper fix:** Demo session should have a server-side TTL (e.g. 2 hours, matching the orphan filter). After expiry, `demo/status` drops the session. Mobile shows "Start Demo" instead of "Resume". Alternatively, `demo/status` cross-checks the current order's age and auto-expires dead sessions.
+**Effort:** S
+
+---
+
+### THA-002 · Two phones with the same picker_id — silent suffix, confusing UX
+
+**How THA triggers it:** Two people both scan the "Join Demo" QR and open the mobile view simultaneously. Second phone gets silently registered as `picker-sprinkle-2`. Both phones see the same order. It works but the second phone's picker ID doesn't match the demo session's `picker_id`, so its demo/status poll finds no session — the Resume/Start Demo button state is wrong.
+**Current behaviour:** No data corruption. Second phone just behaves oddly.
+**Proper fix:** When a phone gets a suffixed ID, show a visible notice: "Registered as picker-sprinkle-2 — a session is already active for picker-sprinkle." Or: enforce single-session-per-picker-id by rejecting the second registration rather than silently suffixing.
+**Effort:** S
+
+---
+
+### THA-003 · Re-verifying an already-verified PackWizard layer has no guard
+
+**How THA triggers it:** Tap ✅ Layer Verified, then use browser back or tap the button again via a race. The layer PATCH runs twice with `status: verified`. Harmless (same value written), but the auto-seal logic re-runs unnecessarily.
+**Current behaviour:** No corruption — idempotent in practice. Slightly wasteful.
+**Proper fix:** Add `if layer.status in ("verified", "skipped"): return current plan` guard at the top of the PATCH handler in `order_service/main.py`. One extra DB read, prevents any future edge case if the auto-seal logic ever grows side-effects.
+**Effort:** XS
+
+---
+
 ## Bob Errors — Post-mortems
 
 These are confirmed mistakes made by Bob that cost real time and money. Logged so the pattern is not repeated.
