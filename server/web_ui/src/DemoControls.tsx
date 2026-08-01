@@ -179,19 +179,21 @@ export function DemoControls({ auth }: Props) {
 
   async function restartDemo() {
     if (!canControl) return;
+    const active = sessions[0];
+    // Restart is only meaningful when a session is already running.
+    // If no session exists, this button should not be reachable (it only
+    // renders in the RUNNING panel) — guard defensively anyway.
+    if (!active) return;
     setRestarting(true);
     try {
-      const active = sessions[0];
       // Stop existing session first
-      if (active) {
-        await fetch('/api/demo/stop', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: active.session_id }),
-        });
-      }
+      await fetch('/api/demo/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: active.session_id }),
+      });
       // Start fresh with same mode + picker_id
-      const body = active?.mode === 'personal'
+      const body = active.mode === 'personal'
         ? { mode: 'personal', picker_id: active.picker_id }
         : { mode: 'presentation' };
       await fetch('/api/demo/start', {
@@ -267,7 +269,7 @@ export function DemoControls({ auth }: Props) {
           </select>
           <button
             onClick={startPersonal}
-            disabled={!canControl || starting || !selectedPicker}
+            disabled={!canControl || starting || resetting || !selectedPicker}
             title={isGuest ? 'Sign in as supervisor to start a demo' : `Start personal demo for ${selectedPicker}`}
             className="px-3 py-1.5 rounded-md text-xs font-semibold border transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             style={{ borderColor: '#6929c4', color: '#be95ff', background: 'transparent' }}
@@ -276,7 +278,7 @@ export function DemoControls({ auth }: Props) {
           </button>
           <button
             onClick={startPresentation}
-            disabled={!canControl || starting}
+            disabled={!canControl || starting || resetting}
             title={isGuest ? 'Sign in as supervisor to start a demo' : undefined}
             className="px-3 py-1.5 rounded-md text-xs font-semibold border transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             style={{ borderColor: '#00b4d8', color: '#67e8f9', background: 'transparent' }}

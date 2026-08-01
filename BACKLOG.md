@@ -412,6 +412,88 @@ The 7 bugs fixed in session 8 are all marked `[THA needed]` in SESSION.md until 
 
 ---
 
+### THA-000 · Live-ammo adversarial audit (2026-08-01) — what a confused stranger does
+
+This entry documents the full "what does a human who has never read the docs do to a live system" audit conducted session 8. Each scenario is rated: ✅ survives cleanly / ⚠️ survives with confusion / ❌ fails or corrupts state.
+
+---
+
+#### Entry point chaos
+
+| What THA does | What happens | Verdict |
+|---|---|---|
+| Opens `/` and clicks "See the App →" 5 times rapidly | Each click sets `window.location.href = '/demo'` — browser navigation, not a fetch. Only navigates once. | ✅ |
+| Opens `/app` directly without logging in | `useAuth` returns `user: null` → full-screen LoginScreen renders. No data exposed. | ✅ |
+| Opens `/mobile` without setting a picker ID | `editMode = true` (no saved ID), shows text input. Scanning disabled until ID is set. | ✅ |
+| Pastes a random URL like `/mobile/foo/bar` | `path.startsWith('/mobile')` matches — MobilePickerView renders. Functions normally. | ✅ |
+| Opens `/demo` and hits "Try scanning →" on a desktop browser with no camera | `getUserMedia` fails → `useMobileCamera` sets `camera.error`. `MobileCameraView` shows error message. | ✅ |
+
+---
+
+#### Login screen chaos
+
+| What THA does | What happens | Verdict |
+|---|---|---|
+| Enters wrong PIN 10 times rapidly | Each tap calls `auth.login()` which `await`s a SHA-256 hash + user list fetch. No rate limiting. 10 login attempts create 10 concurrent `/api/users` fetches. No lockout. | ⚠️ **No brute-force protection** |
+| Enters correct PIN then immediately taps Sign in 3 times | `submitting = true` on first tap → button disabled. Second and third taps are no-ops. | ✅ |
+| Logs in as Sprinkle, navigates to `/app` in the URL bar | Role is `picker` → `currentMode` is forced to `mobile`. Gets the embedded MobilePickerView inside the full app shell. | ✅ |
+
+---
+
+#### Supervisor demo controls chaos
+
+| What THA does | What happens | Verdict |
+|---|---|---|
+| Clicks ▶ Personal 3 times fast | `starting = true` on first click → button disabled. Only one `POST /api/demo/start` fires. | ✅ |
+| Clicks ▶ Personal while a demo is already running for Sprinkle | `demo/start` receives `picker_id=picker-sprinkle`. Old session deleted from `_demo_sessions`, old order cancelled in DB, fresh order created. **Safe.** | ✅ |
+| Clicks ▶ Personal and ▶ Presentation simultaneously (two fingers) | Both fire as separate fetches. Both call `demo/start`. Server processes them sequentially (Python GIL + single-threaded FastAPI). Second call wins. Both sessions created in `_demo_sessions`. Two orders in DB. | ⚠️ **Two concurrent sessions, supervisor sees only the last one** |
+| Clicks ⟳ Restart Demo while no session is active | `active = sessions[0]` is undefined. `if (active)` block skipped. Calls `demo/start` with `active?.mode === 'personal'` → `undefined === 'personal'` → false → calls presentation mode. **Creates a presentation session by accident.** | ❌ **Restart with no session starts presentation mode silently** |
+| Clicks ■ Stop Demo then immediately ▶ Personal | `stopping = true` → Stop button disabled. Personal button is not disabled during stop. Race: if Personal fires before Stop completes, Stop will delete the new session. | ⚠️ **Stop/start race — new session may be immediately killed** |
+
+---
+
+#### Mobile scanning chaos
+
+| What THA does | What happens | Verdict |
+|---|---|---|
+| Points phone at a QR code that isn't a BTT barcode (e.g. a URL, a phone number) | Scanner fires. `publish()` sends it to event-processor. EP finds no matching product — returns `status: undefined` or `on_active_order: false`. ConfirmOverlay gate requires `status === 'correct'` — never fires. Nothing written. | ✅ |
+| Points phone at ALL 9 product labels simultaneously (holds phone far back) | All 9 barcodes detected in one frame burst. Coalesce buffer (300ms) sends them all as one event. EP enriches all 9. Multiple `status: correct` detections arrive. But `lastFiredBarcodeRef` only holds the *last* barcode that fired via `handleDetect`. ConfirmOverlay gate matches only that one. **Other 8 correct detections silently ignored.** | ⚠️ **Multi-item scan only confirms one item** |
+| Scans every item correctly then taps Skip on each ConfirmOverlay | All skips. No picks written. Order stays at 0/N picked indefinitely. Mobile shows all lines pending. No crash, no corrupt state. | ✅ (but demo stalls — by design) |
+| Taps ▶ Scan Items, immediately taps ■ Stop Scanning, repeats 10 times | Each `handleStartStop` call toggles `scanning` state and calls `sendAction`. For stop: `setPickerState(null)`, `setLastScan(null)`. No server writes on start/stop. Camera stream stays open. | ✅ |
+| Scans a barcode while the `demo/advance` fetch is in-flight (between orders) | `handleConfirm` is not in flight (it's already resolved). `orders` state briefly empty → `activeOrder = orders.find(o => o.status === 'picking')` returns undefined → ConfirmOverlay gate never fires. Scan published to server but EP finds no active order → returns no `correct` detection. Nothing written. | ✅ |
+| Rotates phone during ConfirmOverlay | `isLandscape` hook fires, layout switches. `ConfirmOverlay` is `fixed inset-0 z-50` — survives layout reflow. Confirm button still tappable. | ✅ |
+| Puts phone to sleep mid-pick then wakes it | WebSocket closes → `ws.onclose` fires → `setConnected(false)` → reconnect timer starts (2s). When phone wakes, WS reconnects. `scanning` state is in React — persists across sleep. Camera stream may need re-permission on some devices. | ⚠️ **Camera may go black on wake; user must tap Stop then Scan Items again** |
+
+---
+
+#### PackWizard chaos
+
+| What THA does | What happens | Verdict |
+|---|---|---|
+| Taps 📦 Pack Order before all items are picked | Button only renders when `order.status === 'complete'` (MobilePickList line 232). Status is only `complete` when all lines are `picked`. Cannot be tapped early. | ✅ |
+| Taps ✅ Layer Verified while WiFi is disconnected | `apiFetch` throws. `catch(e)` block fires → `setStep({ kind: 'error', message: String(e) })`. Error card shown with Close button. No partial write. | ✅ |
+| Taps ✅ Layer Verified on an already-sealed layer | PATCH runs. `layer.status = 'verified'` written again (same value). Auto-seal re-runs on tote. If tote already sealed, `tote.status = 'sealed'` written again. Harmless. | ⚠️ **No guard — re-runs unnecessarily (THA-003)** |
+| Closes PackWizard, phone goes to a different tab, returns 30 min later, reopens wizard | `POST /orders/{id}/pack` returns existing totes (idempotent). Wizard resumes at first pending layer. | ✅ |
+
+---
+
+#### Things the system has no defence against
+
+| Scenario | What happens | Risk |
+|---|---|---|
+| **Brute-force PIN guessing** | No rate limit, no lockout. 4-digit numeric PIN = 10,000 combinations. Client-side SHA-256 check means the API endpoint is `/api/users` (read-only). Attacker can download user list + hashes, crack offline. | Low for internal demo; unacceptable for production |
+| **Supervisor clicks ⟳ Restart with no session** | Silently starts a Presentation session (wrong mode). | ❌ Active bug |
+| **Stop/Start rapid tap race** | New session may be killed by in-flight Stop request. | ⚠️ Race condition |
+| **Two-finger simultaneous Personal + Presentation start** | Both sessions created. Supervisor UI shows only latest. | ⚠️ State desync |
+| **Phone sleeps mid-pick** | Camera may go black; requires manual restart of scan loop. | ⚠️ UX friction |
+| **Pointing camera at 9 labels simultaneously** | Only one confirmed per scan event — the last one to cross dwell threshold. | ⚠️ By design but unintuitive |
+
+---
+
+**Net verdict:** The system survives most unexpected human behaviour without corrupting data. Three active failures exist: the Restart-with-no-session bug creates a wrong-mode session silently, the Stop/Start race can kill a freshly started session, and there is no PIN brute-force protection. All three need fixing before a public-facing demo.
+
+---
+
 ### THA-001 · Stale demo session lingers after 2-hour idle — Resume button misleads
 
 **How THA triggers it:** Start a demo, walk away for 2+ hours. Come back. The 2-hour orphan filter hides the order from the pick list, but the in-memory session still exists. The mobile Resume button shows — tapping it starts scanning against an order that no longer appears in the list.
