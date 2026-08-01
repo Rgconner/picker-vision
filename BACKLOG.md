@@ -63,6 +63,28 @@ Evidence first. Claim second. Never reversed.
 
 ---
 
+### BS-003 · Passively waited for CI without checking runner health (2026-08-01)
+
+**What happened:** A commit was pushed. Bob said "waiting 3 minutes for CI" and started a timer. The self-hosted GitHub Actions runner had a Worker process from a July 28th job still hung — no new job would ever be dispatched. Bob waited through multiple 3-minute timers and checked pod digests (which stayed unchanged) without once checking whether the runner was alive. The user had to point out that the last GitHub Actions run was 30 minutes ago.
+
+**Time wasted:** ~15 minutes of passive waiting across multiple timer cycles.
+
+**Root cause:** Bob treated "push succeeded" as equivalent to "CI is running." It isn't. The runner can be in any state — hung, disconnected, or healthy — and `git push` gives no indication.
+
+**What correct behaviour looks like:**
+Immediately after every push, before starting any timer:
+
+```powershell
+Get-Process -Name "Runner.Listener","Runner.Worker" -ErrorAction SilentlyContinue |
+  Select-Object Name, Id, StartTime | Format-Table -AutoSize
+```
+
+If a Worker process has a StartTime more than 2 hours old, it is stale. Kill it, push an empty commit, wait for a fresh Worker to spawn. Only then start a build timer.
+
+**Rule going forward:** Never wait passively for CI. Step 2 of the deploy-verify skill is now a mandatory runner health check run immediately after every push, before any wait. See `.bob/skills/picker-vision-deploy-verify/SKILL.md`.
+
+---
+
 ## Bob Errors — User-Blaming Incidents
 
 These are confirmed instances where Bob told the user to take a manual action instead of first verifying through code or the debug API. Logged separately because this is a trust and reliability failure, not just a technical one.
@@ -107,6 +129,23 @@ Options ranked by effort and install friction:
 
 **Recurrence count:** Every phone demo session. **Open — deferred.**
 **Effort:** M (option 1) → L (option 2)
+
+---
+
+### QOL-033 · Self-hosted GitHub Actions runner Worker process goes stale — blocks all CI silently
+
+**Symptom:** A commit is pushed but no CI job ever starts. The GitHub Actions UI shows the last run as 30+ minutes ago. The runner appears healthy in the UI (it shows as "Idle") but a Worker process from a previous job is still running with a days-old StartTime and is consuming the job slot.
+
+**Manual workaround applied (2026-08-01):** Identify the stale Worker PID via `Get-Process Runner.Worker`, kill it with `Stop-Process -Force`, push an empty commit to requeue the job, then wait for a fresh Worker to spawn.
+
+**Recurrence count:** At least 2 separate sessions (2026-07-28 and 2026-08-01). Likely more — this may have been the cause of other unexplained CI delays.
+
+**Proper fix:** Add a scheduled task or Windows Service watchdog that:
+1. Checks `Runner.Worker` StartTime every 30 minutes
+2. If any Worker is older than 2 hours, kills it and writes an event log entry
+3. Optionally posts a Slack/Teams alert so the condition is visible without Bob having to check
+
+**Effort:** S (30-minute PowerShell scheduled task)
 
 ---
 
