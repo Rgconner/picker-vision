@@ -11,6 +11,7 @@ GET  /products/{barcode}
 GET  /staging/{code}
 """
 
+import json as _json
 import os
 import random
 import sys
@@ -89,6 +90,7 @@ def startup_event() -> None:
     _init_db()
     _adapter = get_adapter()
     _log_ring.attach()
+    _sessions_rehydrate()
 
 
 def _get_adapter():
@@ -1140,6 +1142,59 @@ _BTT_STAGING = ["TINY", "WOND", "CHRM"]
 _DEMO_MAX_ORDERS = 20
 _PRESENTATION_PICKER_ID = "demo-presenter"
 
+# ── Demo session Redis persistence (QOL-026) ─────────────────────────────────
+# Sessions survive pod restarts by writing to Redis alongside the in-memory dict.
+# Falls back gracefully if Redis is unavailable (in-memory only).
+
+import redis as _redis_lib  # already in Dockerfile
+
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+_SESSION_KEY_PREFIX = "demo_session:"
+_SESSION_TTL = 4 * 3600  # 4 hours — well beyond any realistic demo window
+
+try:
+    _redis = _redis_lib.from_url(REDIS_URL, decode_responses=True)
+    _redis.ping()
+except Exception:
+    _redis = None  # type: ignore[assignment]
+
+def _session_save(sid: str, data: dict) -> None:
+    """Persist a session dict to Redis (best-effort)."""
+    if _redis is None:
+        return
+    try:
+        _redis.setex(f"{_SESSION_KEY_PREFIX}{sid}", _SESSION_TTL, _json.dumps(data))
+    except Exception:
+        pass
+
+def _session_delete(sid: str) -> None:
+    """Remove a session from Redis (best-effort)."""
+    if _redis is None:
+        return
+    try:
+        _redis.delete(f"{_SESSION_KEY_PREFIX}{sid}")
+    except Exception:
+        pass
+
+def _sessions_rehydrate() -> None:
+    """On startup: load any live sessions from Redis into _demo_sessions."""
+    if _redis is None:
+        return
+    try:
+        for key in _redis.scan_iter(f"{_SESSION_KEY_PREFIX}*"):
+            raw = _redis.get(key)
+            if not raw:
+                continue
+            try:
+                data = _json.loads(raw)
+                sid = data.get("session_id")
+                if sid:
+                    _demo_sessions[sid] = data
+            except Exception:
+                pass
+    except Exception:
+        pass
+
 # session_id → session dict
 _demo_sessions: dict[str, dict] = {}
 
@@ -1244,6 +1299,7 @@ def demo_start(req: _DemoStartRequest):
             for sid, s in list(_demo_sessions.items()):
                 if s["picker_id"] == _PRESENTATION_PICKER_ID:
                     del _demo_sessions[sid]
+                    _session_delete(sid)
         elif req.mode == "personal":
             if not req.picker_id:
                 raise HTTPException(status_code=400, detail="picker_id required for personal mode")
@@ -1252,6 +1308,7 @@ def demo_start(req: _DemoStartRequest):
             for sid, s in list(_demo_sessions.items()):
                 if s["picker_id"] == picker_id and s["mode"] == "personal":
                     del _demo_sessions[sid]
+                    _session_delete(sid)
         else:
             raise HTTPException(status_code=400, detail="mode must be 'personal' or 'presentation'")
 
@@ -1286,6 +1343,7 @@ def demo_start(req: _DemoStartRequest):
         order_id = _create_demo_order(session_data, db)
         session_data["current_order_id"] = order_id
         _demo_sessions[session_id] = session_data
+        _session_save(session_id, session_data)
 
         return {
             "session_id":          session_id,
@@ -1317,6 +1375,7 @@ def demo_stop(req: _DemoStopRequest):
                 if o and o.status == "picking":
                     o.status = "cancelled"
             del _demo_sessions[sid]
+            _session_delete(sid)
 
         if req.session_id:
             s = _demo_sessions.get(req.session_id)
@@ -1371,9 +1430,11 @@ def demo_advance(body: dict):
             s["orders_completed"] += 1
             if s["orders_completed"] >= _DEMO_MAX_ORDERS:
                 del _demo_sessions[sid]
+                _session_delete(sid)
                 return {"done": True, "orders_completed": s["orders_completed"]}
             new_order_id = _create_demo_order(s, db)
             s["current_order_id"] = new_order_id
+            _session_save(sid, s)
             return {"current_order_id": new_order_id, "orders_completed": s["orders_completed"]}
         # No session currently owns this order_id — already advanced or no session.
         return {}

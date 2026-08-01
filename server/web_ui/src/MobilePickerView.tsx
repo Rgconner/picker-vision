@@ -42,6 +42,7 @@ import { MobilePickList } from './MobilePickList';
 import { MobileControls } from './MobileControls';
 import { useDebugSnapshot } from './useDebugSnapshot';
 import { ConfirmOverlay } from './ConfirmOverlay';
+import { PackWizard } from './PackWizard';
 
 // ── Next-item banner — shown above camera in the new scan-from-screen workflow ─
 function NextItemBanner({ orders }: { orders: Order[] }) {
@@ -191,6 +192,10 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   // QOL-025: 'order_complete' gate — shown after last pick before demo/advance
   interface OrderCompleteGate { orderId: string; reference: string; }
   const [orderCompleteGate, setOrderCompleteGate] = useState<OrderCompleteGate | null>(null);
+
+  // PWZ-001: PackWizard target — set when Accept is tapped on order-complete gate
+  interface PackTarget { orderId: string; reference: string; }
+  const [packTarget, setPackTarget] = useState<PackTarget | null>(null);
 
   // QOL-028: 'demo ended' screen
   const [demoEnded, setDemoEnded] = useState(false);
@@ -406,11 +411,9 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     } catch { /* ignore */ }
   }, [pendingConfirm, confirmPick, pickerId]);
 
-  // QOL-025: Accept tap → advance demo and clear gate
-  const handleOrderCompleteAccept = useCallback(async () => {
-    if (!orderCompleteGate) return;
-    const { orderId } = orderCompleteGate;
-    setOrderCompleteGate(null);
+  // PWZ-001: called when PackWizard closes (packed or dismissed)
+  const handlePackedAndAdvance = useCallback(async (orderId: string) => {
+    setPackTarget(null);
     setShowMoveAway(false);
     try {
       await fetch('/api/demo/advance', {
@@ -422,7 +425,17 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
       if (allRes.ok) setOrders(await allRes.json());
     } catch { /* ignore */ }
     setScanning(true);
-  }, [orderCompleteGate, pickerId]);
+  }, [pickerId]);
+
+  // QOL-025: Accept tap → open PackWizard; advance happens after packing
+  const handleOrderCompleteAccept = useCallback(() => {
+    if (!orderCompleteGate) return;
+    const { orderId, reference } = orderCompleteGate;
+    setOrderCompleteGate(null);
+    setShowMoveAway(false);
+    // PWZ-001: open wizard first; demo/advance fires in handlePackedAndAdvance
+    setPackTarget({ orderId, reference });
+  }, [orderCompleteGate]);
 
   // QOL-025: "Not yet" tap → back to idle, no new order
   const handleOrderCompleteNotYet = useCallback(() => {
@@ -635,10 +648,21 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     </div>
   ) : null;
 
+  // ── PWZ-001: PackWizard — rendered once (fixed overlay, layout-agnostic) ──
+  const packWizardOverlay = packTarget ? (
+    <PackWizard
+      orderId={packTarget.orderId}
+      orderRef={packTarget.reference}
+      onClose={() => handlePackedAndAdvance(packTarget.orderId)}
+      onPacked={() => handlePackedAndAdvance(packTarget.orderId)}
+    />
+  ) : null;
+
   // ── LANDSCAPE layout ───────────────────────────────────────────────────────
   if (isLandscape) {
     return (
       <div className="flex overflow-hidden bg-[#0f1117] text-[#e2e8f0]" style={{ height: '100dvh' }}>
+        {packWizardOverlay}
         {pendingConfirm && (
           <ConfirmOverlay
             scenario={demoScenario}
@@ -698,6 +722,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
       className="flex flex-col overflow-hidden bg-[#0f1117] text-[#e2e8f0]"
       style={{ height: '100dvh', paddingBottom: 'env(safe-area-inset-bottom, 0px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
+      {packWizardOverlay}
       {pendingConfirm && (
         <ConfirmOverlay
           scenario={demoScenario}
