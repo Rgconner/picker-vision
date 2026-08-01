@@ -9,12 +9,12 @@
 
 ---
 
-## Current State (2026-08-01 — session 10)
+## Current State (2026-08-01 — session 11)
 
 **Branch:** `feature/bobs-tiny-treasures`
-**Last commit:** `875b81e` — fix: PWZ-001 + QOL-026 — PackWizard wired; demo sessions persist to Redis
-**CI status:** `sha-875b81e` deployed (web-ui 1.5.0, order-service 1.2.1, api-gateway 1.3.1).
-**System state:** All 4 services healthy. Demo sessions now survive pod restarts.
+**Last commit:** `ce3ac5e` — fix(QOL-031): action instructions bold and prominent on all overlay screens
+**CI status:** `sha-ce3ac5e` deployed (web-ui 1.5.1, order-service 1.2.1, api-gateway 1.3.1).
+**System state:** All 4 services healthy. Full pick-to-pack flow confirmed. No pre-build needed next session.
 
 ---
 
@@ -50,7 +50,7 @@ The core demo loop — scan, confirm, gate, advance — is stable. This is the f
 
 ## Immediate First Action Next Session
 
-**→ Read this file. Run the full pick-to-pack walkthrough with Russ. No pre-build needed.**
+**→ Read this file. Hit /health + /api/versions to confirm system state. Then check the sign-off queue below — most items are verification runs, not builds.**
 
 ---
 
