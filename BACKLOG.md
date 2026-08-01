@@ -298,6 +298,79 @@ Options ranked by effort and install friction:
 
 ---
 
+### ARCH-001 · Structured debug/trace harness for all modules
+
+**Directive (2026-08-01):** Every module going forward must have a full testing harness / debug functionality that can be set to discrete debug levels at runtime.
+
+**Proposed debug levels (in ascending verbosity):**
+
+| Level | Name | What it records |
+|-------|------|-----------------|
+| 0 | `OFF` | Nothing — production default |
+| 1 | `ERROR` | Unhandled exceptions and explicit error paths only |
+| 2 | `WARN` | Recoverable errors, degraded-mode fallbacks, unexpected-but-handled conditions |
+| 3 | `INFO` | Key lifecycle events (session start/stop, order created/completed, scan received) |
+| 4 | `DEBUG` | All API calls in/out, state transitions, branch decisions, timing |
+| 5 | `TRACE` | **Full function-boundary tracing** — logs module, function name, arguments, and return value every time execution moves from one function to another |
+
+Level 5 `TRACE` is the critical one: every function entry and exit is recorded with a snapshot of the relevant state so it is possible to replay exactly how the system got into a given condition.
+
+**Scope — applies to all new and refactored modules in:**
+- `server/api_gateway/main.py` — per-request trace ID already exists; extend to function-level
+- `server/order_service/main.py` + adapter layer
+- `server/event_processor/main.py`
+- `server/websocket_hub/main.py`
+- `server/web_ui/src/` — React hooks and session logic (via a `useDebugTrace` hook or `window.__PV_DEBUG` flag)
+- Pi node (`pi-node/`) when revived
+
+**Implementation pattern (Python services):**
+
+```python
+import os, functools, logging, json
+
+_LOG_LEVEL = int(os.getenv("PV_LOG_LEVEL", "3"))   # INFO by default
+
+def trace(fn):
+    """Decorator: logs function entry/exit at TRACE level (5)."""
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        if _LOG_LEVEL >= 5:
+            logging.debug("TRACE ENTER %s.%s args=%s", fn.__module__, fn.__qualname__,
+                          _safe_repr(args, kwargs))
+        result = fn(*args, **kwargs)
+        if _LOG_LEVEL >= 5:
+            logging.debug("TRACE EXIT  %s.%s → %s", fn.__module__, fn.__qualname__,
+                          _safe_repr_val(result))
+        return result
+    return wrapper
+```
+
+**Implementation pattern (TypeScript/React):**
+
+```typescript
+// Set window.__PV_LOG_LEVEL = 5 in DevTools console for live TRACE
+const LOG_LEVEL = typeof window !== 'undefined'
+  ? (window as any).__PV_LOG_LEVEL ?? 3
+  : 3;
+
+export function trace<T>(moduleName: string, fnName: string, fn: () => T): T {
+  if (LOG_LEVEL >= 5) console.debug(`TRACE ENTER ${moduleName}.${fnName}`);
+  const result = fn();
+  if (LOG_LEVEL >= 5) console.debug(`TRACE EXIT  ${moduleName}.${fnName}`, result);
+  return result;
+}
+```
+
+**Activation at runtime:**
+- Python services: `PV_LOG_LEVEL=5` env var (set in pod configmap, no rebuild needed)
+- React bundle: `window.__PV_LOG_LEVEL = 5` in browser DevTools console
+- Future: expose a `PUT /api/log-level` endpoint so the supervisor UI can toggle it live without kubectl
+
+**Effort:** L (new modules: S each; retrofitting existing modules: M each)
+**Priority:** Apply to all new modules from this point forward. Retrofit existing modules opportunistically during refactors.
+
+---
+
 ## Bob Errors — Post-mortems
 
 These are confirmed mistakes made by Bob that cost real time and money. Logged so the pattern is not repeated.
