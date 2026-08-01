@@ -395,8 +395,8 @@ export function DemoControls({ auth }: Props) {
           {/* Join Demo QR — phone scans this to open the mobile view pre-joined */}
           <div className="flex flex-col items-center gap-2 ml-auto">
             {(() => {
-              const joinUrl = `/mobile?picker_id=${encodeURIComponent(activeSession.picker_id)}`;
-              const fits = joinUrl.length <= 62;
+              const joinUrl = `${window.location.origin}/mobile?picker_id=${encodeURIComponent(activeSession.picker_id)}`;
+              const fits = joinUrl.length <= 78;
               return fits ? (
                 <>
                   <div

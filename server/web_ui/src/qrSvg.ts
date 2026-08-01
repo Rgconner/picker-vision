@@ -48,11 +48,14 @@ function rsEnc(d: number[], n: number): number[] {
   return m.slice(d.length);
 }
 
-// ── QR tables (versions 1–4, EC level M) ─────────────────────────────────────
+// ── QR tables (versions 1–4, EC level L) ─────────────────────────────────────
+// EC-L gives more data capacity (v4=78 bytes) vs EC-M (v4=62 bytes).
+// The Join Demo URL is ~68 bytes — EC-L is required to encode a full https URL.
 const DCAP  = [[17,14,11,7],[32,26,20,14],[53,42,32,24],[78,62,46,34]];
-const ECWDS = [[7,10,13,17],[10,16,22,28],[15,26,18,22],[20,18,26,16]];
+const ECWDS = [[10,7,13,17],[10,10,22,28],[15,15,18,22],[20,20,26,16]];
 const ALIGN = [[] as number[],[],[6,18],[6,22]];
-const FMT_M = [0x5412,0x5125,0x5E7C,0x5B4B,0x45F9,0x40CE,0x4F97,0x4AA0];
+// Format string for EC level L, mask pattern 2 (same mask as before)
+const FMT_M = [0x77C4,0x72F3,0x7DAA,0x789D,0x662F,0x6318,0x6C41,0x6976];
 
 function makeQR(text: string): { mat: number[][]; size: number } {
   const bytes: number[] = [];
@@ -61,14 +64,15 @@ function makeQR(text: string): { mat: number[][]; size: number } {
     bytes.push(c > 127 ? 63 : c);
   }
 
+  // Use EC-L column (index 0) for maximum data capacity
   let ver = 1;
   for (let v = 1; v <= 4; v++) {
-    if (bytes.length <= DCAP[v - 1][1]) { ver = v; break; }
+    if (bytes.length <= DCAP[v - 1][0]) { ver = v; break; }
   }
 
   const sz      = ver * 4 + 17;
-  const totalDC = DCAP[ver - 1][1];
-  const ecCnt   = ECWDS[ver - 1][1];
+  const totalDC = DCAP[ver - 1][0];
+  const ecCnt   = ECWDS[ver - 1][0];
 
   // Encode bits
   const bits: number[] = [];

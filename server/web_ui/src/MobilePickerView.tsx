@@ -199,6 +199,17 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   // when the barcode stays in-frame after confirmation but before setOrders runs.
   const confirmedLinesRef = useRef<Set<string>>(new Set());
 
+  // QOL-017: per-barcode rescan blackout — after any confirm, that barcode value
+  // is blocked for 2 s so a label that stays in frame cannot re-trigger the overlay.
+  // This matches physical scanner behaviour (per-barcode lockout after decode).
+  const barcodeBlackoutRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  function blackoutBarcode(barcode: string) {
+    const existing = barcodeBlackoutRef.current.get(barcode);
+    if (existing) clearTimeout(existing);
+    const t = setTimeout(() => barcodeBlackoutRef.current.delete(barcode), 2000);
+    barcodeBlackoutRef.current.set(barcode, t);
+  }
+
   const videoRef    = useRef<HTMLVideoElement>(null);
   const canvasRef   = useRef<HTMLCanvasElement>(null);
   const isLandscape = useIsLandscape();
@@ -294,6 +305,8 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     if (!pickerState || pendingConfirm) return;
     const fired = lastFiredBarcodeRef.current;
     if (!fired) return;
+    // QOL-017: block re-fire if this barcode is in the 2-second blackout window
+    if (barcodeBlackoutRef.current.has(fired)) return;
     const activeOrder = orders.find((o) => o.status === 'picking');
     if (!activeOrder) return;
     // Must see the fired barcode confirmed as 'correct' in this WS push
@@ -341,11 +354,14 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
 
   const handleConfirm = useCallback(async () => {
     if (!pendingConfirm) return;
-    const { orderId, lineId } = pendingConfirm;
+    const { orderId, lineId, barcode } = pendingConfirm;
 
     // Mark confirmed immediately so the overlay gate blocks re-fires while
     // confirmPick and the orders re-fetch are still in flight.
     confirmedLinesRef.current.add(lineId);
+    // QOL-017: start 2-second per-barcode blackout so a label still in frame
+    // cannot immediately re-trigger the overlay.
+    blackoutBarcode(barcode);
     setPendingConfirm(null);
 
     await confirmPick(orderId, lineId);

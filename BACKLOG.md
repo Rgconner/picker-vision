@@ -263,11 +263,14 @@ Options ranked by effort and install friction:
 
 ### QOL-017 · Confirm overlay re-fires when barcode stays in-frame after pick
 
-**Symptom:** After tapping Confirm on the pick overlay, the same item immediately re-raises the overlay as if it's a new pick. The picker has to dismiss it repeatedly while the label is still visible on screen.  
-**Root cause:** `setPendingConfirm(null)` resumes the scan loop before `confirmPick` and the orders re-fetch complete. The barcode re-dwells, the server enriches it as `correct` against stale React order state (line still shows `pending` locally), and the overlay fires a second time.  
-**Fix shipped:** `327478e` — `confirmedLinesRef` Set gates the overlay effect immediately on confirm; cleared once the orders re-fetch completes.  
-**Recurrence count:** 1 (observed live walkthrough 2026-07-29). **Fixed.**  
-**Effort:** S
+**Symptom:** After tapping Confirm on the pick overlay, the same item immediately re-raises the overlay as if it's a new pick. The picker has to dismiss it repeatedly while the label is still visible on screen.
+**Root cause:** `setPendingConfirm(null)` resumes the scan loop before `confirmPick` and the orders re-fetch complete. The barcode re-dwells, the server enriches it as `correct` against stale React order state (line still shows `pending` locally), and the overlay fires a second time.
+**Fix shipped:** `327478e` — `confirmedLinesRef` Set gates the overlay effect immediately on confirm; cleared once the orders re-fetch completes. **Partially effective.**
+**Patch shipped (session 9):** 2-second per-barcode blackout added to `handleConfirm`. **Not robust — band-aid only.**
+**Recurrence (session 9):** "Hairless Ape error" — picker confirmed an item, label stayed in frame, dwell reset, overlay re-fired.
+**Proper fix (not yet built):** After ✓ Confirm, **stop the scan loop entirely** and show a clear "Move item away — tap to continue" prompt. Do not restart the scan loop automatically. The picker must perform a deliberate action (tap, swipe, or move frame clear) before scanning resumes. A passive timeout is not sufficient — the picker controls when scanning restarts, not a timer. This is how all physical warehouse scanners work.
+**Recurrence count:** 2 (session 7 + session 9). **Not fully fixed.**
+**Effort:** M
 
 ---
 
@@ -294,6 +297,36 @@ Options ranked by effort and install friction:
 **Symptom:** When any picker started a new demo session via `POST /api/demo/start`, the QOL-010 stale-order cleanup cancelled *every* `Demo (...)` order in `picking` status — including active orders belonging to other pickers running concurrently. In a 5-person demo, one picker pressing "Start Demo" would silently wipe the in-progress orders of the other four.  
 **Manual workaround applied:** None practical — required avoiding concurrent sessions.  
 **Fix applied:** Scoped the cleanup to only `Demo ({picker_id})` customer name (exact match) and additionally skipped any order already tracked by an active in-memory session. Commit `d1fa69f` (2026-07-29). **Fixed.**  
+**Effort:** S
+
+---
+
+### QOL-025 · Next order assigned immediately after last pick — no "ready for next order?" gate
+
+**Symptom:** Picker confirms the last item on an order. The demo immediately advances and assigns a new order without asking if the picker is ready. A worker finishing before a break, or needing to stage the completed order first, gets a new order assigned that they cannot immediately start — it has to be put back in the queue.
+**Manual workaround applied:** None — order was silently assigned (session 9).
+**Proper fix:** After the last pick on an order, show a clear end-of-order screen: "Order DEMO-XXX complete — Ready for next order?" with a ✓ Accept and a ✗ Not yet button. Only call `POST /api/demo/advance` (which creates the next order) when the picker taps Accept. The Not yet path should leave the picker in an idle/available state without a pending order. This gate also naturally solves the PackWizard timing — the picker packs the completed order, then accepts the next one.
+**Recurrence count:** 1 (session 9, design catch by Russ)
+**Effort:** M
+
+---
+
+### QOL-024 · Confirming one of multiple identical items looks like a failure — no progress feedback
+
+**Symptom:** Order has BTT-00303 ×2. Picker confirms the first one. Supervisor QR doesn't change and ConfirmOverlay fires again for the same item. Looks like the confirm didn't register — picker has no way to know they need to scan it again.
+**Manual workaround applied:** Russ deduced what was happening — not obvious to a new picker (session 9).
+**Proper fix:** (1) ConfirmOverlay should show "1 of 2 picked — scan again" when `quantity > 1` and `quantity_picked < quantity - 1`. (2) Supervisor QR label should update remaining count as picks land (e.g. "×2 remaining → ×1 remaining").
+**Recurrence count:** 1 (session 9)
+**Effort:** S
+
+---
+
+### QOL-023 · Mobile tab defaults to auth identity (e.g. "Bob (Owner)") — should default to a picker-style ID
+
+**Symptom:** When a supervisor or guest opens the Mobile tab on `/app`, the picker ID defaults to their auth name (`Bob (Owner)`). This doesn't match any demo session picker ID, looks wrong in the picker dropdown, and requires a manual edit to get a usable picker ID.
+**Manual workaround applied:** Tap the picker ID field and manually type `picker-sprinkle` (session 9).
+**Proper fix:** When a user with no `picker_id` set opens the Mobile tab, generate a friendly default in the `picker-{word}` format (e.g. `picker-bob`) or pull from an unused picker-style ID from `/pickers`. Supervisor picker IDs should be pre-configured in the user record (`picker_id` field) so `auth.user.picker_id` is never null for anyone who will use the Mobile tab.
+**Recurrence count:** 1 (session 9)
 **Effort:** S
 
 ---
