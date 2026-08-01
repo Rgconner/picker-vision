@@ -1317,6 +1317,17 @@ def demo_stop(req: _DemoStopRequest):
             for sid, s in list(_demo_sessions.items()):
                 _cancel_session(sid, s)
 
+            # Also cancel any orphaned demo picking orders whose session was
+            # lost on a pod restart (in-memory _demo_sessions cleared but
+            # SQLite row still has status='picking').
+            orphans = (
+                db.query(Order)
+                .filter(Order.status == "picking", Order.customer.like("Demo (%"))
+                .all()
+            )
+            for o in orphans:
+                o.status = "cancelled"
+
         db.commit()
     finally:
         db.close()

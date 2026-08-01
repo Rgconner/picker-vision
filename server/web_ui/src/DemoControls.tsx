@@ -56,6 +56,7 @@ export function DemoControls({ auth }: Props) {
   const [starting, setStarting]       = useState(false);
   const [stopping, setStopping]       = useState(false);
   const [restarting, setRestarting]   = useState(false);
+  const [resetting, setResetting]     = useState(false);
   const [scenario, setScenario]       = useState<'web-demo' | 'physical-demo'>('web-demo');
   const [pickers, setPickers]         = useState<Picker[]>([]);
   const [selectedPicker, setSelectedPicker] = useState<string>('');
@@ -281,6 +282,27 @@ export function DemoControls({ auth }: Props) {
             style={{ borderColor: '#00b4d8', color: '#67e8f9', background: 'transparent' }}
           >
             {starting ? 'Starting…' : '▶ Presentation'}
+          </button>
+          {/* Reset — cancels any orphaned demo orders left from a prior session or pod restart */}
+          <button
+            onClick={async () => {
+              if (!canControl) return;
+              setResetting(true);
+              try {
+                await fetch('/api/demo/stop', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: '{}',
+                });
+              } finally {
+                setResetting(false);
+              }
+            }}
+            disabled={!canControl || resetting || starting}
+            title="Cancel all orphaned demo orders (run after a pod restart or stale session)"
+            className="px-3 py-1.5 rounded-md text-xs font-semibold border border-[#f1c21b]/40 text-[#f1c21b] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            {resetting ? 'Clearing…' : '⟳ Reset'}
           </button>
         </div>
       </div>
