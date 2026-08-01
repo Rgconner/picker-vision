@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Automated regression script for the Picker Vision load generator.
 
