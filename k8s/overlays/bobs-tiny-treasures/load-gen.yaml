@@ -28,6 +28,8 @@ spec:
               value: "http://api-gateway:8000"
             - name: API_KEY
               value: ""
+            - name: LOAD_GEN_DATABASE_URL
+              value: "postgresql://picker:picker@order-service-db-svc:5432/picker"
           resources:
             requests:
               cpu: "50m"

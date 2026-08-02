@@ -5,23 +5,25 @@ import { SystemView } from './SystemView';
 import { MobilePickerView } from './MobilePickerView';
 import { ManagementView } from './ManagementView';
 import { LoadGenView } from './LoadGenView';
+import { RegionalSimView } from './RegionalSimView';
 import { LoginScreen } from './LoginScreen';
 import { HealthStrip } from './HealthStrip';
 import { useSystemHealth } from './useSystemHealth';
 import { useAuth } from './useAuth';
 
 // Supervisor sees all tabs; picker sees only Mobile
-type SupervisorMode = 'operator' | 'supervisor' | 'mobile' | 'system' | 'management' | 'load-gen';
+type SupervisorMode = 'operator' | 'supervisor' | 'mobile' | 'system' | 'management' | 'load-gen' | 'regional-sim';
 type PickerMode     = 'mobile';
 type Mode = SupervisorMode | PickerMode;
 
 const SUPERVISOR_TABS: { id: SupervisorMode; label: string }[] = [
-  { id: 'operator',   label: 'Operator' },
-  { id: 'supervisor', label: 'Supervisor' },
-  { id: 'mobile',     label: '📱 Mobile' },
-  { id: 'system',     label: 'System' },
-  { id: 'management', label: '⚙ Manage' },
-  { id: 'load-gen',   label: '⚡ Load Gen' },
+  { id: 'operator',     label: 'Operator' },
+  { id: 'supervisor',   label: 'Supervisor' },
+  { id: 'mobile',       label: '📱 Mobile' },
+  { id: 'system',       label: 'System' },
+  { id: 'management',   label: '⚙ Manage' },
+  { id: 'load-gen',     label: '⚡ Load Gen' },
+  { id: 'regional-sim', label: '📊 Stores' },
 ];
 
 export default function App() {
@@ -65,7 +67,7 @@ export default function App() {
         {(isSupervisor || isGuest) && (
           <nav className="flex gap-1 ml-4">
             {SUPERVISOR_TABS
-              .filter((t) => !(isGuest && (t.id === 'management' || t.id === 'load-gen')))
+              .filter((t) => !(isGuest && (t.id === 'management' || t.id === 'load-gen' || t.id === 'regional-sim')))
               .map((t) => (
                 <button
                   key={t.id}
@@ -147,6 +149,9 @@ export default function App() {
         )}
         {currentMode === 'load-gen'    && isSupervisor && !isGuest && (
           <LoadGenView auth={auth} />
+        )}
+        {currentMode === 'regional-sim' && isSupervisor && !isGuest && (
+          <RegionalSimView auth={auth} />
         )}
       </main>
 

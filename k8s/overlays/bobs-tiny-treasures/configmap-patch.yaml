@@ -24,5 +24,8 @@ data:
   # Bob's Tiny Treasures instance profile — activates BTT-specific UI
   INSTANCE_PROFILE: "bobs-tiny-treasures"
 
+  # Load generator — Postgres for Regional Simulation data
+  LOAD_GEN_DATABASE_URL: "postgresql://picker:picker@order-service-db-svc:5432/picker"
+
   # API gateway
   REQUIRE_API_KEY: "false"

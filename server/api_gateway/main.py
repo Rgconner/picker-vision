@@ -888,3 +888,70 @@ async def debug_logs_get(picker_id: str, limit: int = 50):
         raw = _redis.lrange(key, 0, limit - 1)
         lines = [json.loads(r) for r in raw]
     return {"picker_id": picker_id, "lines": lines}
+
+
+# ---------------------------------------------------------------------------
+# Regional Simulation proxy routes — forward to load-gen service
+# ---------------------------------------------------------------------------
+
+@app.post("/api/simulations/start")
+async def api_simulations_start(request: Request):
+    return await _proxy("POST", f"{LOAD_GEN_URL}/simulations/start", await request.json())
+
+
+@app.get("/api/simulations")
+async def api_simulations_list():
+    return await _proxy("GET", f"{LOAD_GEN_URL}/simulations")
+
+
+@app.get("/api/simulations/{rs_id}/capacity/{store_id}")
+async def api_simulations_capacity_store(rs_id: str, store_id: str):
+    return await _proxy("GET", f"{LOAD_GEN_URL}/simulations/{rs_id}/capacity/{store_id}")
+
+
+@app.get("/api/simulations/{rs_id}/capacity")
+async def api_simulations_capacity_all(rs_id: str):
+    return await _proxy("GET", f"{LOAD_GEN_URL}/simulations/{rs_id}/capacity")
+
+
+@app.get("/api/simulations/{rs_id}/gantt")
+async def api_simulations_gantt(rs_id: str, request: Request):
+    qs = str(request.url.query)
+    url = f"{LOAD_GEN_URL}/simulations/{rs_id}/gantt"
+    if qs:
+        url = f"{url}?{qs}"
+    return await _proxy("GET", url)
+
+
+@app.get("/api/simulations/{rs_id}")
+async def api_simulations_get(rs_id: str):
+    return await _proxy("GET", f"{LOAD_GEN_URL}/simulations/{rs_id}")
+
+
+@app.delete("/api/simulations/{rs_id}")
+async def api_simulations_delete(rs_id: str):
+    return await _proxy("DELETE", f"{LOAD_GEN_URL}/simulations/{rs_id}")
+
+
+# ARCH-003 Sterling endpoint — routes to the most recent RS automatically
+@app.get("/api/capacity/store/{store_id}")
+async def api_capacity_store(store_id: str):
+    """ARCH-003 Sterling OMS capacity endpoint.
+
+    Returns the capacity signal for the given store from the most recently
+    generated Regional Simulation.  No RS ID required — Sterling calls this
+    endpoint without knowing which RS is active.
+    """
+    # Ask load-gen for the latest RS, then fetch that store's capacity signal
+    try:
+        sims = await _proxy("GET", f"{LOAD_GEN_URL}/simulations")
+        if not sims:
+            raise HTTPException(status_code=404, detail="No Regional Simulations exist yet")
+        # list_simulations returns newest first
+        latest_rs_id = sims[0]["rs_id"]
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"load-gen unreachable: {exc}")
+
+    return await _proxy("GET", f"{LOAD_GEN_URL}/simulations/{latest_rs_id}/capacity/{store_id}")

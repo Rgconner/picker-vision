@@ -6,6 +6,16 @@ POST /start    Start N virtual pickers
 POST /stop     Stop all or a single runner_id
 GET  /status   Live counters per picker
 GET  /health   Liveness
+
+Regional Simulation endpoints
+------------------------------
+POST /simulations/start           { preset, months } → generate RS, return record
+GET  /simulations                 → list all RS records
+GET  /simulations/{rs_id}         → full RS record + picker profiles
+DELETE /simulations/{rs_id}       → delete RS and all its pick events
+GET  /simulations/{rs_id}/capacity/{store_id}  → ARCH-003 signal for one store
+GET  /simulations/{rs_id}/capacity             → signals for all stores
+GET  /simulations/{rs_id}/gantt                → Gantt grid data
 """
 
 from __future__ import annotations
@@ -15,7 +25,7 @@ import logging
 import os
 import pathlib
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException
@@ -23,6 +33,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from agent import PickerStats, VirtualPicker, fetch_wrong_barcodes
+import capacity as cap_module
+import simulator as sim_module
 
 # ---------------------------------------------------------------------------
 # Config
@@ -38,8 +50,9 @@ SERVICE_VERSION = (
 _STARTED_AT = datetime.now(timezone.utc).isoformat()
 _START_MONO = time.monotonic()
 
-API_GATEWAY_URL = os.getenv("API_GATEWAY_URL", "http://api-gateway:8000")
-API_KEY         = os.getenv("API_KEY", "")
+API_GATEWAY_URL       = os.getenv("API_GATEWAY_URL", "http://api-gateway:8000")
+API_KEY               = os.getenv("API_KEY", "")
+LOAD_GEN_DATABASE_URL = os.getenv("LOAD_GEN_DATABASE_URL", "")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("load_gen")
@@ -203,3 +216,96 @@ async def _stop_all() -> None:
     _tasks.clear()
     _stats.clear()
     _stop_event = None
+
+
+# ---------------------------------------------------------------------------
+# Regional Simulation endpoints
+# ---------------------------------------------------------------------------
+
+class SimStartRequest(BaseModel):
+    preset: str = "simple"
+    months: int = 3
+
+
+def _require_db() -> str:
+    if not LOAD_GEN_DATABASE_URL:
+        raise HTTPException(
+            status_code=503,
+            detail="LOAD_GEN_DATABASE_URL not configured — Postgres not available",
+        )
+    return LOAD_GEN_DATABASE_URL
+
+
+@app.post("/simulations/start")
+def simulations_start(body: SimStartRequest) -> dict[str, Any]:
+    db_url = _require_db()
+    if body.months < 1 or body.months > 24:
+        raise HTTPException(status_code=422, detail="months must be between 1 and 24")
+    try:
+        result = sim_module.generate_simulation(
+            preset=body.preset,
+            months=body.months,
+            db_url=db_url,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return result.to_dict()
+
+
+@app.get("/simulations")
+def simulations_list() -> list[dict[str, Any]]:
+    db_url = _require_db()
+    return sim_module.list_simulations(db_url)
+
+
+@app.get("/simulations/{rs_id}/capacity/{store_id}")
+def simulations_capacity_store(rs_id: str, store_id: str) -> dict[str, Any]:
+    db_url = _require_db()
+    signal = cap_module.store_capacity_signal(db_url, rs_id, store_id)
+    if signal is None:
+        raise HTTPException(status_code=404, detail=f"RS {rs_id!r} or store {store_id!r} not found")
+    return signal
+
+
+@app.get("/simulations/{rs_id}/capacity")
+def simulations_capacity_all(rs_id: str) -> list[dict[str, Any]]:
+    db_url = _require_db()
+    result = cap_module.all_store_capacity_signals(db_url, rs_id)
+    if not result:
+        raise HTTPException(status_code=404, detail=f"RS {rs_id!r} not found or has no events")
+    return result
+
+
+@app.get("/simulations/{rs_id}/gantt")
+def simulations_gantt(
+    rs_id: str,
+    granularity: str = "day",
+    start: str | None = None,
+    end: str | None = None,
+) -> dict[str, Any]:
+    db_url = _require_db()
+    # Default: last 30 days
+    end_date   = date.fromisoformat(end)   if end   else date.today()
+    start_date = date.fromisoformat(start) if start else (end_date.replace(day=1))
+    result = cap_module.gantt_data(db_url, rs_id, granularity, start_date, end_date)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"RS {rs_id!r} not found")
+    return result
+
+
+@app.get("/simulations/{rs_id}")
+def simulations_get(rs_id: str) -> dict[str, Any]:
+    db_url = _require_db()
+    result = sim_module.get_simulation(rs_id, db_url)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"RS {rs_id!r} not found")
+    return result
+
+
+@app.delete("/simulations/{rs_id}")
+def simulations_delete(rs_id: str) -> dict[str, Any]:
+    db_url = _require_db()
+    deleted = sim_module.delete_simulation(rs_id, db_url)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"RS {rs_id!r} not found")
+    return {"deleted": rs_id}

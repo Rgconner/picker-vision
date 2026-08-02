@@ -16,6 +16,8 @@ resources:
   - seed-job.yaml
   # Load generator — headless virtual pickers for demo + stress testing
   - load-gen.yaml
+  # Postgres — Regional Simulation persistent storage
+  - postgres.yaml
 
 patches:
   # Override configmap: adds INSTANCE_PROFILE + BTT service URLs

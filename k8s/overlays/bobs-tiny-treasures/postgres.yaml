@@ -1,0 +1,84 @@
+---
+# Postgres — Regional Simulation data store for BTT overlay
+# Used by: load-gen (simulator writes), load-gen (capacity reads)
+# Connection string: postgresql://picker:picker@order-service-db-svc:5432/picker
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: picker-vision-btt
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service-db
+  namespace: picker-vision-btt
+  labels:
+    app: order-service-db
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: order-service-db
+  template:
+    metadata:
+      labels:
+        app: order-service-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          env:
+            - name: POSTGRES_DB
+              value: picker
+            - name: POSTGRES_USER
+              value: picker
+            - name: POSTGRES_PASSWORD
+              value: picker
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "picker", "-d", "picker"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "picker", "-d", "picker"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service-db-svc
+  namespace: picker-vision-btt
+spec:
+  type: ClusterIP
+  selector:
+    app: order-service-db
+  ports:
+    - port: 5432
+      targetPort: 5432
