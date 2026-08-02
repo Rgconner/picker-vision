@@ -9,12 +9,12 @@
 
 ---
 
-## Current State (2026-08-01 — session 12)
+## Current State (2026-08-01 — session 13)
 
 **Branch:** `feature/bobs-tiny-treasures`
-**Last commit:** `e6aaef0` — feat(QOL-032): supervisor QR panel shows remaining qty per line
-**CI status:** `sha-e6aaef0` deployed (web-ui 1.5.1, order-service 1.2.1, api-gateway 1.3.1).
-**System state:** All 4 services healthy. QOL-032 verified in pod bundle. Sign-off queue items all pre-built — awaiting Russ on hardware.
+**Last commit:** `1a5fa76` — chore: add GitHub Project setup script (includes all session 13 work in a single commit)
+**CI status:** All 5 services in CI build matrix — web-ui + load-gen added to BTT deploy arrays. Awaiting CI run on push.
+**System state:** All 4 core services healthy. Load-gen service built and manifest in `k8s/overlays/bobs-tiny-treasures/load-gen.yaml`. Sign-off queue carried from session 12 — awaiting Russ on hardware.
 
 ---
 
@@ -50,9 +50,32 @@ The core demo loop — scan, confirm, gate, advance — is stable. This is the f
 
 ## Immediate First Action Next Session
 
-**→ Read this file. Hit /health + /api/versions to confirm system state. Then run sign-off queue (all verification runs — no builds needed). QOL-032 is already deployed.**
+**→ Read this file. Hit /health + /api/versions to confirm system state.**
+
+- If doing load-gen testing: navigate to **⚡ Load Gen** tab in supervisor UI, configure swarm, click **▶ Start Swarm**.
+- If doing sign-off queue: run hardware verification checklist below — all code is already deployed.
 
 ---
+
+## What We Did This Session (session 13)
+
+All session 13 work landed in commit `1a5fa76` (squash-commit containing prior sessions + new work).
+
+| # | Item | What shipped |
+|---|---|---|
+| load-gen Python service | L | `server/load_gen/agent.py` + `main.py` + `Dockerfile` + `VERSION` — FastAPI control service, POST /start /stop GET /status /health |
+| load-gen k8s | S | `k8s/overlays/bobs-tiny-treasures/load-gen.yaml` — Deployment (1 replica) + ClusterIP :8004 |
+| api-gateway proxy | S | `server/api_gateway/main.py` — +3 proxy routes: `/api/load-gen/start\|stop\|status`, `LOAD_GEN_URL` env var |
+| api-gateway assert | M | `GET /api/load-gen/assert` — server-side regression assertion endpoint (Redis scan-ledger + picker count checks) |
+| useSimulatedPicker | L | `server/web_ui/src/useSimulatedPicker.ts` — full noise model: miscan, multi-scan, duplicate, staging, jitter, WS ack |
+| LoadGenView | L | `server/web_ui/src/LoadGenView.tsx` — swarm config panel, per-agent table, server telemetry strip, assertion panel |
+| App.tsx wiring | XS | `'load-gen'` tab added to `SupervisorMode`, hidden from guests |
+| CI matrix | S | `.github/workflows/build-server-images.yml` — load-gen in build matrix + BTT deploy |
+| tools/load-gen-assert.ps1 | S | CI/local regression script — start → wait → assert → exit |
+| log_ring.py bug fix | XS | `self.formatTime()` → crash fixed across all 4 services (was swallowed silently since day one) |
+| event_processor timeout fix | S | `_fetch_product`: try/except + timeout 10 s + don't cache `None` on timeout (TOCTOU) |
+| BACKLOG.md | XS | QOL-034 logged and closed within demo scope assumption |
+| GitHub issues/labels | L | 45 issues, 14 labels, 5 milestones created on `Rgconner/picker-vision` via `tools/setup_github_project.mjs` |
 
 ## What We Did This Session (session 12)
 
@@ -130,7 +153,7 @@ These were never reached during session 9 due to the flow issues found:
 | Production URL | `https://bobstinytreasures.snwbd.com` |
 | K8s namespace | `picker-vision-btt` |
 | Active branch | `feature/bobs-tiny-treasures` |
-| Last known-good web-ui image | `sha-e6aaef0` |
+| Last known-good web-ui image | `sha-1a5fa76` |
 | LM Studio IP | `http://192.168.1.79:1234` |
 | API gateway (BTT) | `http://192.168.11.213` (key: `changeme`) |
 | Web UI (BTT) | `http://192.168.11.214` |
