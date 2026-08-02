@@ -237,8 +237,11 @@ def generate_simulation(preset: str, months: int, db_url: str) -> RegionalSimula
         # Approximate months → days
         start_date = end_date - timedelta(days=months * 30)
 
+        _BATCH = 2000  # flush events every N rows — keeps peak memory flat
+
         profile_rows: list[dict] = []
-        event_rows:   list[dict] = []
+        total_events = 0
+        event_batch:  list[dict] = []
 
         for store in config["stores"]:
             store_id = store["store_id"]
@@ -303,7 +306,7 @@ def generate_simulation(preset: str, months: int, db_url: str) -> RegionalSimula
 
                         simulated_at = shift_dt + timedelta(seconds=shift_elapsed)
 
-                        event_rows.append({
+                        event_batch.append({
                             "id":                    str(uuid.uuid4()),
                             "simulation_id":         sim_id,
                             "picker_id":             picker_id,
@@ -315,13 +318,21 @@ def generate_simulation(preset: str, months: int, db_url: str) -> RegionalSimula
                             "multi_scan": rng.random() < multi_rate,
                         })
 
+                        if len(event_batch) >= _BATCH:
+                            session.bulk_insert_mappings(RSPickEvent, event_batch)  # type: ignore[arg-type]
+                            session.flush()
+                            total_events += len(event_batch)
+                            event_batch.clear()
+
                     current += timedelta(days=1)
 
-        # Bulk insert profiles and events
+        # Insert profiles and flush any remaining events
         if profile_rows:
             session.bulk_insert_mappings(RSPickerProfile, profile_rows)  # type: ignore[arg-type]
-        if event_rows:
-            session.bulk_insert_mappings(RSPickEvent, event_rows)         # type: ignore[arg-type]
+        if event_batch:
+            session.bulk_insert_mappings(RSPickEvent, event_batch)        # type: ignore[arg-type]
+            total_events += len(event_batch)
+            event_batch.clear()
 
         session.commit()
 
@@ -329,7 +340,7 @@ def generate_simulation(preset: str, months: int, db_url: str) -> RegionalSimula
     logger.info(
         "generate_simulation: rs_id=%s preset=%s months=%d stores=%d events=%d elapsed=%.2fs",
         rs_id, preset, months,
-        len(config["stores"]), len(event_rows), elapsed,
+        len(config["stores"]), total_events, elapsed,
     )
 
     # Return a lightweight dict-like record so caller doesn't need a live session
@@ -340,7 +351,7 @@ def generate_simulation(preset: str, months: int, db_url: str) -> RegionalSimula
         months=months,
         generated_at=datetime.utcnow().isoformat(),
         salt=salt_raw,
-        pick_count=len(event_rows),
+        pick_count=total_events,
         elapsed_sec=round(elapsed, 3),
     )
 
