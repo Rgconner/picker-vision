@@ -132,6 +132,22 @@ Options ranked by effort and install friction:
 
 ---
 
+### QOL-034 · Event-processor product cache TOCTOU — resolved within demo scope assumption
+
+**Symptom:** The event-processor caches product lookups (description, weight, staging) for 1 second to reduce order-service load under concurrent picker traffic. If product data changes in the database during a live session, detections will use the stale cached values for up to 1 second. Additionally, a DB write lock (e.g. SQLite table lock during an UPDATE) combined with a product fetch timeout could have caused a `None` to be cached, treating a valid product as unknown for the TTL window.
+
+**Root cause identified (2026-08-01):** Load-gen run of 20 pickers exposed `httpx.ReadTimeout` in `_fetch_product`. The original fix cached `None` on timeout — creating a TOCTOU where a transient timeout poisoned the product entry for 1s. Fixed in `003ef9e`: only cache real HTTP responses; timeouts fall through so the next request retries the live DB.
+
+**Residual scope:** The 1s TTL means stale *positive* hits (product exists, data changed) persist briefly. Under concurrent load a DB write lock + TTL expiry window could theoretically cause a lookup to miss, but this requires real-time product editing during a live picking session.
+
+**Resolution:** Resolved within stated assumption — **no real-time product editing during demo**. Product catalog is populated once by `seed_btt.py` and not edited during a session. If real-time product editing is ever added, this cache will need cache-invalidation on write (e.g. event-processor subscribes to a Redis pub/sub channel that order-service publishes to on any product UPDATE).
+
+**Status:** ✅ Out of scope for demo. No action required until real-time product editing is a feature.
+
+**Effort when in scope:** M (Redis pub/sub invalidation channel between order-service and event-processor)
+
+---
+
 ### QOL-033 · Self-hosted GitHub Actions runner Worker process goes stale — blocks all CI silently
 
 **Symptom:** A commit is pushed but no CI job ever starts. The GitHub Actions UI shows the last run as 30+ minutes ago. The runner appears healthy in the UI (it shows as "Idle") but a Worker process from a previous job is still running with a days-old StartTime and is consuming the job slot.
