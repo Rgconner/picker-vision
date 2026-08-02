@@ -214,10 +214,12 @@ async def receive_detection(body: dict):
             try:
                 resp = await client.get(f"{ORDER_SERVICE_URL}/products/{barcode}")
                 data = resp.json() if resp.status_code == 200 else None
+                _cache_set(f"product:{barcode}", data)  # only cache a real response
             except Exception:
-                # ReadTimeout / ConnectError under load — treat as unknown product
+                # ReadTimeout / ConnectError under load — return None but do NOT
+                # cache it: next detection will retry the live DB so a transient
+                # timeout never permanently poisons product lookups.
                 data = None
-            _cache_set(f"product:{barcode}", data)
             return barcode, data
 
         product_results = await asyncio.gather(*[_fetch_product(bc) for bc in unique_barcodes])
