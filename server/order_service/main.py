@@ -42,7 +42,29 @@ from adapters import get_adapter
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./picker.db")
 
-_engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+_engine = create_engine(
+    DATABASE_URL,
+    connect_args={
+        "check_same_thread": False,
+        "timeout": 15,                 # busy_timeout: wait up to 15 s on a locked DB
+    },
+    pool_size=10,                      # default 5 was exhausted under 20-picker load
+    max_overflow=20,
+    pool_pre_ping=True,
+)
+
+# Enable WAL mode once at startup — allows concurrent readers alongside one writer,
+# eliminates "database is locked" 500s under multi-picker load.
+from sqlalchemy import event as _sa_event, text as _sa_text
+
+@_sa_event.listens_for(_engine, "connect")
+def _set_sqlite_pragma(dbapi_conn, _rec):
+    cur = dbapi_conn.cursor()
+    cur.execute("PRAGMA journal_mode=WAL")
+    cur.execute("PRAGMA synchronous=NORMAL")   # safe with WAL; much faster than FULL
+    cur.execute("PRAGMA busy_timeout=15000")   # belt-and-suspenders alongside timeout=
+    cur.close()
+
 _SessionLocal = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
 
 

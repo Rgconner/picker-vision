@@ -70,7 +70,8 @@ _redis = redis_lib.from_url(REDIS_URL, decode_responses=True)
 # Order data cache  {cache_key: (timestamp, data)}
 # ---------------------------------------------------------------------------
 
-_ORDER_CACHE_TTL = 1.0  # seconds — reduced from 5 s to limit stale-read window under multi-picker load
+_ORDER_CACHE_TTL = 5.0  # seconds — 1 s was shorter than a single round-trip under 20-picker load;
+                        # raised back to 5 s so cache outlives the burst window
 _cache: dict[str, tuple[float, Any]] = {}
 
 
