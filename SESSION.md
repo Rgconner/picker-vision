@@ -9,12 +9,12 @@
 
 ---
 
-## Current State (2026-08-01 — session 13)
+## Current State (2026-08-02 — session 14)
 
 **Branch:** `feature/bobs-tiny-treasures`
-**Last commit:** `1a5fa76` — chore: add GitHub Project setup script (includes all session 13 work in a single commit)
-**CI status:** All 5 services in CI build matrix — web-ui + load-gen added to BTT deploy arrays. Awaiting CI run on push.
-**System state:** All 4 core services healthy. Load-gen service built and manifest in `k8s/overlays/bobs-tiny-treasures/load-gen.yaml`. Sign-off queue carried from session 12 — awaiting Russ on hardware.
+**Last commit:** `4632c89` — feat: Regional Simulation engine (ST-1 through ST-5)
+**CI status:** Awaiting CI run on push — 15 files changed, load-gen rebuilt with new deps.
+**System state:** All 5 services running healthy when session started. Regional Simulation code committed but not yet deployed to cluster.
 
 ---
 
@@ -50,10 +50,33 @@ The core demo loop — scan, confirm, gate, advance — is stable. This is the f
 
 ## Immediate First Action Next Session
 
-**→ Read this file. Hit /health + /api/versions to confirm system state.**
+**→ Read this file. Then read `regional-simulation-plan.md`. Hit /health + /api/telemetry to confirm system state.**
 
-- If doing load-gen testing: navigate to **⚡ Load Gen** tab in supervisor UI, configure swarm, click **▶ Start Swarm**.
+- CI should be green on `4632c89` — confirm before deploying.
+- Postgres pod needs to be running in `picker-vision-btt` before `/api/simulations/start` will work.
+- `GET /api/simulations` returns `[]` on a fresh cluster — that's correct.
 - If doing sign-off queue: run hardware verification checklist below — all code is already deployed.
+
+---
+
+## What We Did This Session (session 14)
+
+All session 14 work landed in commit `4632c89`.
+
+| # | Item | What shipped |
+|---|---|---|
+| ST-5 | S | `k8s/base/redis.yaml` — Redis AOF (`--appendonly yes`, `--appendfsync everysec`), 512Mi PVC |
+| ST-4 | M | `k8s/overlays/bobs-tiny-treasures/postgres.yaml` — postgres:15-alpine + 1Gi PVC + ClusterIP svc |
+| ST-4 | XS | kustomization.yaml, configmap-patch.yaml, load-gen.yaml — LOAD_GEN_DATABASE_URL wired |
+| ST-4b | XS | `server/load_gen/requirements.txt` + Dockerfile update (sqlalchemy, psycopg2-binary) |
+| ST-1 | M | `server/load_gen/rs_models.py` — RSBase + RegionalSimulation + RSPickerProfile + RSPickEvent |
+| ST-1b | L | `server/load_gen/simulator.py` — generate_simulation(), PRESETS (simple/busy/edge), bulk insert |
+| ST-1c | S | `server/load_gen/main.py` — POST/GET/DELETE /simulations/* endpoints |
+| ST-2 | M | `server/load_gen/capacity.py` — store_capacity_signal() ARCH-003, gantt_data() σ deviation |
+| ST-2b | S | `server/api_gateway/main.py` — /api/simulations/*, GET /api/capacity/store/{id} (ARCH-003) |
+| ST-3 | M | `server/web_ui/src/useRegionalSim.ts` — fetch hook |
+| ST-3 | L | `server/web_ui/src/RegionalSimView.tsx` — RS panel, capacity panels, Gantt grid + σ thresholds |
+| ST-3b | XS | `server/web_ui/src/App.tsx` — regional-sim SupervisorMode + 📊 Stores tab |
 
 ---
 
