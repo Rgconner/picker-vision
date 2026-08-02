@@ -8,3 +8,14 @@ spec:
   # nodes causes a Multi-Attach error that blocks the rolling deploy indefinitely.
   strategy:
     type: Recreate
+  template:
+    spec:
+      containers:
+        - name: order-service
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "128Mi"
+            limits:
+              cpu: "2000m"
+              memory: "256Mi"
