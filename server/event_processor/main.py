@@ -172,7 +172,7 @@ async def receive_detection(body: dict):
                 trace_id, picker_id, ledger_entry["barcodes"])
 
     try:
-      async with httpx.AsyncClient(timeout=5.0) as client:
+      async with httpx.AsyncClient(timeout=10.0) as client:
         # ------------------------------------------------------------------
         # 1. Fetch order data concurrently (with cache)
         # ------------------------------------------------------------------
@@ -211,8 +211,12 @@ async def receive_detection(body: dict):
             cached = _cache_get(f"product:{barcode}")
             if cached is not None:
                 return barcode, cached
-            resp = await client.get(f"{ORDER_SERVICE_URL}/products/{barcode}")
-            data = resp.json() if resp.status_code == 200 else None
+            try:
+                resp = await client.get(f"{ORDER_SERVICE_URL}/products/{barcode}")
+                data = resp.json() if resp.status_code == 200 else None
+            except Exception:
+                # ReadTimeout / ConnectError under load — treat as unknown product
+                data = None
             _cache_set(f"product:{barcode}", data)
             return barcode, data
 
