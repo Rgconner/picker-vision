@@ -950,7 +950,95 @@ _Add future items here with a one-line description and rough priority._
 
 ---
 
-## Enterprise Architecture
+## Enterprise Architecture — TechZone
+
+### ARCH-005 · `k8s/overlays/techzone/` — OpenShift overlay for TechZone Collection
+
+**Priority:** High
+**Urgency:** High — blocks everything below
+**Effort:** M (~3–4 days)
+**Branch target:** `feature/bobs-tiny-treasures`
+**Plan:** `techzone-plan.md` ST-1 through ST-4
+
+**What it is:**
+A kustomize overlay that makes the existing base stack run on OpenShift
+without application code changes. Replaces MetalLB with OpenShift Routes,
+`local-path` storage with dynamic PVC, SQLite with in-cluster Postgres,
+and strips BTT-specific nginx TLS config.  The `USE_SAP_ADAPTER` env var
+is wired but defaults to `false` — seed data runs until Sterling is available.
+
+**Deliverables:**
+- `k8s/overlays/techzone/kustomization.yaml`
+- `k8s/overlays/techzone/namespace.yaml`
+- `k8s/overlays/techzone/configmap-patch.yaml`
+- `k8s/overlays/techzone/postgres.yaml`
+- `k8s/overlays/techzone/order-service-patch.yaml`
+- `k8s/overlays/techzone/routes.yaml`
+- `k8s/overlays/techzone/web-ui-deployment-patch.yaml`
+- `k8s/overlays/techzone/nginx-configmap-patch.yaml`
+- `README.md` TechZone Quickstart section
+
+**Validation:** `kubectl kustomize k8s/overlays/techzone/` renders without error.
+Live validation requires a TechZone OpenShift cluster.
+
+---
+
+### ARCH-006 · `SapAdapter` real implementation — Sterling OMS API integration
+
+**Priority:** High
+**Urgency:** Low — blocks on Sterling TechZone instance + API credentials
+**Effort:** L (~5–8 days)
+**Branch target:** `feature/sterling-adapter` (branch off bobs-tiny-treasures when ready)
+**Plan:** see `techzone-plan.md` "When Sterling Is Provisioned" section
+**Depends on:** ARCH-005 (TechZone overlay), Sterling TechZone instance provisioned
+
+**What it is:**
+Real implementation of [`server/order_service/adapters/sap_adapter.py`](server/order_service/adapters/sap_adapter.py)
+against the IBM Sterling OMS REST API.  The stub already exists and implements
+`BaseAdapter` — this work fills in the actual HTTP calls.
+
+**Work items:**
+1. IBM IAM OAuth 2.0 — `client_id`/`client_secret` → bearer token + auto-refresh
+2. Order ingestion — `GET /ibm/sterling-oms/...` → map to picker-vision `Order` schema
+3. Product/barcode lookup — Sterling `ItemID` + barcode cross-reference
+4. Staging/location mapping — Sterling `ShipNode`/`Slot` → 4-letter staging code
+5. Pick write-back — `PATCH /lines/{id}` confirmation → Sterling order update
+6. Error handling — Sterling API errors surfaced as 502 (not 500) with clear messages
+
+**Blocked by:** Sterling TechZone instance URL + credentials.
+**Unblocked by:** Russ provisioning Sterling in TechZone alongside picker-vision.
+
+---
+
+### ARCH-007 · TechZone Activation Kit — module packaging + seller enablement
+
+**Priority:** Medium
+**Urgency:** Low — post-hook, once Sterling team has seen the demo
+**Effort:** L (~7–10 days)
+**Branch target:** `feature/techzone-activation-kit`
+**Depends on:** ARCH-005, ARCH-006
+
+**What it is:**
+Elevate the TechZone Collection (ARCH-005) into a full Activation Kit:
+guided demo script, branded landing page, pre-loaded retail scenario data,
+one-click provisioner so IBM sellers can spin it up for client meetings.
+
+**Work items:**
+1. `module.yaml` — TechZone Automation metadata (name, description, inputs, outputs)
+2. Ansible playbook or Terraform — automated provisioning alongside Sterling OMS
+3. Pre-loaded retail scenario — 50 realistic products, 3 stores, shift schedules
+4. Demo script document — 20-minute guided walkthrough for IBM sellers
+5. Branded landing page (`/demo` route) — client-facing entry point
+6. Seller enablement README — how to provision, how to reset, what to show
+
+**Why post-hook:**
+A seller can't use a kit for a system they've never seen run. ARCH-005 gets the
+system in front of Sterling dev. ARCH-006 closes the loop with real data.
+ARCH-007 packages it for the field. That's the right order.
+
+---
+
+## Enterprise Architecture — Capacity Signal
 
 ### ARCH-003 · Real-time store capacity signal — Sterling sourcing feedback loop
 
