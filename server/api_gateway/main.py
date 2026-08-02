@@ -238,11 +238,6 @@ class PickerRegisterBody(BaseModel):
     user_agent: str | None = None     # navigator.userAgent — identifies device model
 
 
-class ControlBody(BaseModel):
-    action: str
-    staging_code: str | None = None
-
-
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -310,18 +305,6 @@ async def heartbeat_picker(body: PickerRegisterBody):
 async def list_pickers():
     return _redis_list_pickers()
 
-
-@app.get("/stream/{picker_id}")
-async def stream(picker_id: str):
-    raise HTTPException(status_code=404, detail="Direct picker streaming is not available in Kubernetes mode")
-
-
-@app.post("/control/{picker_id}")
-async def control(picker_id: str, body: ControlBody):
-    info = _redis_get_picker(picker_id)
-    if not info:
-        raise HTTPException(status_code=404, detail="Picker not found")
-    raise HTTPException(status_code=501, detail="Direct picker control is not available in Kubernetes mode")
 
 
 @app.post("/events/detection")

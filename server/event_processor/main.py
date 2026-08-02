@@ -195,10 +195,14 @@ async def receive_detection(body: dict):
                 orders_data = []
             _cache_set("orders", orders_data)
 
-        # Build a flat lookup: barcode → list of matching open order lines
-        # (lines where status is "pending" or "picked")
+        # Build a flat lookup: barcode → list of matching open order lines.
+        # Scope to orders with status "picking" only — excludes completed orders
+        # from previous demo runs and prevents cross-picker contamination where
+        # picker A's completed order would still match picker B's barcodes.
         barcode_to_lines: dict[str, list[dict]] = {}
         for order in orders_data:
+            if order.get("status") != "picking":
+                continue
             for line in order.get("lines", []):
                 bc = line["product_barcode"]
                 barcode_to_lines.setdefault(bc, []).append({**line, "_order": order})
@@ -437,7 +441,7 @@ async def receive_detection(body: dict):
 
 @app.post("/orders/{order_id}/confirm-packed")
 async def confirm_packed(order_id: str):
-    """Mark order as packed, lock staging targets in Redis, push lock_staging to Pi."""
+    """Mark order as packed and lock staging targets in Redis for 1 hour."""
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         # Call the Order Service
@@ -449,20 +453,12 @@ async def confirm_packed(order_id: str):
 
         order_data = resp.json()
 
-        # Lock staging targets in Redis and push control messages
-        staging_codes = list({ln["staging_code"] for ln in order_data.get("lines", [])})
+        # Lock staging targets in Redis.
+        # TTL = 1 hour — prevents a rehearsal run poisoning the live demo.
+        # (Was 86400 = 24 hours. Pi hardware retired; /control/broadcast removed.)
+        staging_codes = list({ln["staging_code"] for ln in order_data.get("lines", []) if ln.get("staging_code")})
         for code in staging_codes:
-            _redis.setex(f"staging:{code}:locked", 86400, "1")
-
-            # Forward lock_staging control message to Pi nodes via API Gateway
-            try:
-                await client.post(
-                    f"{API_GATEWAY_URL}/control/broadcast",
-                    json={"action": "lock_staging", "staging_code": code},
-                    timeout=3.0,
-                )
-            except Exception as e:
-                logger.debug("lock_staging broadcast failed (best-effort): %s", e)
+            _redis.setex(f"staging:{code}:locked", 3600, "1")
 
         # Publish a staging_locked message to all picker channels
         locked_msg = json.dumps({"type": "staging_locked", "order_id": order_id, "staging_codes": staging_codes})
