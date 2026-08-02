@@ -950,6 +950,138 @@ _Add future items here with a one-line description and rough priority._
 
 ---
 
+## Enterprise Architecture
+
+### ARCH-003 · Real-time store capacity signal — Sterling sourcing feedback loop
+
+**Priority:** High
+**Urgency:** Low
+**Effort:** M (~5–7 days)
+**Branch target:** `feature/capacity-signal`
+**Depends on:** Sterling OMS integration (see Integrations → IBM Sterling OMS)
+
+**The problem:**
+IBM Sterling OMS routing rules assign online orders to stores based on ATP (Available to Promise) inventory and shipping distance. Sterling is blind to pick queue depth — a store with 3 items on hand but 80 open orders in the pick queue is a worse fulfilment choice than one with 5 items and 2 open orders, but Sterling's sourcing engine cannot tell the difference.
+
+**The fix:**
+Expose a real-time capacity endpoint from picker-vision that Sterling can query as a custom sourcing attribute:
+
+```
+GET /api/capacity/store/{store_id}
+→ {
+    "store_id": "STR-042",
+    "open_orders": 12,
+    "avg_pick_time_min": 4.2,
+    "next_carrier_cutoff": "17:00",
+    "estimated_clear_time": "16:23",
+    "accept_new": true,
+    "capacity_score": 0.74          ← 0.0 (overwhelmed) to 1.0 (wide open)
+  }
+```
+
+Sterling calls this endpoint during sourcing evaluation and weights it against distance + ATP. A store with `accept_new: false` or `capacity_score < 0.3` is excluded from consideration regardless of inventory.
+
+**Work items:**
+1. `capacity_score` formula — open orders × avg_pick_time vs. time-to-carrier-cutoff, normalised 0–1
+2. `avg_pick_time_min` — rolling 30-order average from confirmed pick timestamps in order-service
+3. `next_carrier_cutoff` — configurable per store (configmap or management UI), time-zone aware
+4. `estimated_clear_time` — `now + (open_orders × avg_pick_time_min)`
+5. `GET /api/capacity/store/{id}` endpoint — no auth required (Sterling calls it, not a browser)
+6. Sterling sourcing rule configuration — custom attribute hook to consume the score
+7. Management UI — supervisor can view and manually override `accept_new` flag per store
+
+**Why this matters:**
+At 1,000 stores and $700M online revenue (~38,000 items/day), a 10% improvement in sourcing quality — fewer split shipments, fewer late carrier misses — is directly measurable in shipping cost and SLA compliance. This is the feature that turns picker-vision from a scan terminal into a first-class citizen in the fulfilment network.
+
+**Architectural note:**
+This endpoint is purely derived from data already in the order-service DB and Redis. No new dependencies. The only new integration surface is the Sterling sourcing rule configuration, which is a Sterling admin task.
+
+---
+
+### ARCH-004 · Predictive store capacity — AI picker performance model with HR shift integration
+
+**Priority:** High
+**Urgency:** Low
+**Effort:** L (~14–21 days)
+**Branch target:** `feature/predictive-capacity`
+**Depends on:** ARCH-003 (real-time capacity signal), Lite Mode Phase 2 (SessionMetrics)
+
+**The concept:**
+ARCH-003 tells Sterling what a store *can do right now*. ARCH-004 tells it what a store *will be able to do in the next 2–4 hours*. That's the difference between reactive routing and predictive routing.
+
+**The model:**
+
+```
+Inputs                          Model                    Output
+──────                          ─────                    ──────
+HR shift schedule ──────────→
+  (picker IDs, start/end)       Predicted               Capacity forecast
+                                pick throughput    →     per store
+Historical pick velocity ──→    for store X              per 30-min window
+  per picker (from             at time T                 (next 4 hours)
+  SessionMetrics)
+                             
+Current open order queue ──→
+  (from order-service)
+```
+
+**How it works:**
+
+1. **Per-picker velocity baseline** — SessionMetrics (Lite Mode Phase 2) already tracks picks/hour, error rate, and scan time per session. Over time this becomes a reliable per-picker performance profile. A picker with 18 months of data has a known velocity curve: fast on Tuesdays, slower after 6 hours on shift.
+
+2. **Shift schedule integration** — HR system exposes scheduled shifts via API or file drop (picker IDs → store → start/end times). Picker-vision ingests this and knows who is scheduled at each store for the next 24 hours.
+
+3. **Predicted throughput formula:**
+```
+store_capacity(T) = Σ velocity(picker_i) × availability(picker_i, T) × fatigue_factor(shift_elapsed)
+```
+Where `fatigue_factor` is a simple empirical curve derived from historical per-picker data (picks/hour tends to drop ~15% after hour 5 of a shift — measurable from SessionMetrics).
+
+4. **Order demand forecast** — Sterling can optionally push the order release schedule ahead of time ("we expect to release 40 orders to this region between 14:00–16:00"). Combined with store capacity forecasts, optimal store assignment becomes a scheduling problem, not a reactive one.
+
+**Sterling integration surface (extension of ARCH-003):**
+```
+GET /api/capacity/store/{id}/forecast?window_hours=4
+→ {
+    "store_id": "STR-042",
+    "forecast": [
+      { "window_start": "14:00", "window_end": "14:30", "predicted_picks": 24, "confidence": 0.91 },
+      { "window_start": "14:30", "window_end": "15:00", "predicted_picks": 19, "confidence": 0.85 },
+      ...
+    ],
+    "scheduled_pickers": ["P-001", "P-004", "P-017"],
+    "shift_coverage_hours": 3.5
+  }
+```
+
+**HR system integration options (in order of complexity):**
+| Option | Effort | Notes |
+|---|---|---|
+| File drop (CSV/JSON) — nightly shift schedule | S | Works for any HR system; picker-vision polls or ingests on upload |
+| REST API polling — HR system exposes `/shifts?store={id}&date={d}` | S–M | Most modern HR platforms (Workday, UKG, ADP) have this |
+| Webhook push — HR system fires event on schedule change | M | Real-time; needed if schedules change day-of |
+| IBM Sterling WFM integration | M | If client uses Sterling Workforce Management — native |
+
+**Why this is genuinely valuable:**
+Most retail fulfilment routing optimises for *current* inventory and *current* distance. Nobody optimises for *future* capacity. A store with 6 pickers starting their shift in 45 minutes is a better routing target for a 2-hour SLA order than a store with 2 pickers who are 4 hours into a 6-hour shift — even if the ATP and distance are identical. This is an algorithmic advantage that is invisible to competitors using off-the-shelf Sterling configuration.
+
+**Data flywheel:**
+The more orders flow through picker-vision, the better the per-picker velocity profiles become, the more accurate the forecast, the better the routing decisions, the more orders flow through picker-vision. This is a genuine compounding moat.
+
+**Privacy / HR note:**
+Per-picker performance data requires careful handling — union agreements, local labour law, and HR policy may restrict how individual velocity data is used. Design from the start with: aggregate-only external reporting, individual data visible only to the picker themselves and their direct manager, no automated HR actions triggered directly from picker metrics without human review.
+
+**Effort breakdown:**
+- SessionMetrics persistence layer (Postgres, not in-memory): M
+- Per-picker velocity profile API: S
+- HR shift schedule ingestor (file drop first, API second): M
+- Capacity forecast model + endpoint: M
+- Sterling forecast attribute hook: S
+- Supervisor forecast dashboard: M
+- Privacy/access control layer on picker metrics: S
+
+---
+
 ## Story / Reflection
 
 > **Full content moved to [`singularity-paper`](https://github.com/Rgconner/singularity-paper)** — committed `7769ee9`, 2026-07-29.
