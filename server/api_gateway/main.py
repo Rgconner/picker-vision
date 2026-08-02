@@ -181,8 +181,8 @@ async def api_key_middleware(request: Request, call_next):
 # Helpers
 # ---------------------------------------------------------------------------
 
-async def _proxy(method: str, url: str, body: dict | None = None) -> dict:
-    async with httpx.AsyncClient(timeout=10.0) as client:
+async def _proxy(method: str, url: str, body: dict | None = None, timeout: float = 10.0) -> dict:
+    async with httpx.AsyncClient(timeout=timeout) as client:
         # Use `is not None` so an empty dict {} is still serialised as a JSON
         # object body — `if body` treats {} as falsy and omits the body,
         # causing FastAPI Pydantic 422 errors on endpoints that require a body.
@@ -896,7 +896,8 @@ async def debug_logs_get(picker_id: str, limit: int = 50):
 
 @app.post("/api/simulations/start")
 async def api_simulations_start(request: Request):
-    return await _proxy("POST", f"{LOAD_GEN_URL}/simulations/start", await request.json())
+    # Generation is synchronous and scales with months — allow up to 120s
+    return await _proxy("POST", f"{LOAD_GEN_URL}/simulations/start", await request.json(), timeout=120.0)
 
 
 @app.get("/api/simulations")
