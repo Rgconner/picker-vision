@@ -181,7 +181,7 @@ async def api_key_middleware(request: Request, call_next):
 # Helpers
 # ---------------------------------------------------------------------------
 
-async def _proxy(method: str, url: str, body: dict | None = None, timeout: float = 10.0) -> dict:
+async def _proxy(method: str, url: str, body: dict | None = None, timeout: float = 10.0):
     async with httpx.AsyncClient(timeout=timeout) as client:
         # Use `is not None` so an empty dict {} is still serialised as a JSON
         # object body — `if body` treats {} as falsy and omits the body,
@@ -194,7 +194,12 @@ async def _proxy(method: str, url: str, body: dict | None = None, timeout: float
         # 204 No Content has no body — return empty dict rather than crashing on .json()
         if resp.status_code == 204 or not resp.content:
             return {}
-        return resp.json()
+        data = resp.json()
+        # FastAPI cannot auto-serialise a bare list — wrap it so the route
+        # handler can return it directly regardless of response shape.
+        if isinstance(data, list):
+            return JSONResponse(content=data)
+        return data
 
 
 async def _ws_proxy(client_ws: WebSocket, upstream_url: str, picker_id: str = "unknown"):
