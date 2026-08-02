@@ -387,12 +387,19 @@ export function RegionalSimView({ auth: _auth }: Props) {
                   <th style={{ textAlign: 'left', padding: '4px 8px' }}>ID</th>
                   <th style={{ textAlign: 'left', padding: '4px 8px' }}>Preset</th>
                   <th style={{ textAlign: 'left', padding: '4px 8px' }}>Months</th>
+                  <th style={{ textAlign: 'left', padding: '4px 8px' }}>Date range (historical ←)</th>
                   <th style={{ textAlign: 'left', padding: '4px 8px' }}>Generated</th>
                   <th style={{ padding: '4px 8px' }}></th>
                 </tr>
               </thead>
               <tbody>
-                {simList.map((s: RSSummary) => (
+                {simList.map((s: RSSummary) => {
+                  // Range is months×30 days back from generated_at date
+                  const genD = new Date(s.generated_at);
+                  const startD = new Date(genD);
+                  startD.setDate(startD.getDate() - s.months * 30);
+                  const rangeFmt = `${startD.toLocaleDateString()} → ${genD.toLocaleDateString()}`;
+                  return (
                   <tr
                     key={s.rs_id}
                     style={{
@@ -403,6 +410,7 @@ export function RegionalSimView({ auth: _auth }: Props) {
                     <td style={{ padding: '5px 8px', fontWeight: 700, color: '#e2e8f0' }}>{s.rs_id}</td>
                     <td style={{ padding: '5px 8px', color: '#94a3b8' }}>{s.preset}</td>
                     <td style={{ padding: '5px 8px', color: '#94a3b8' }}>{s.months}</td>
+                    <td style={{ padding: '5px 8px', color: '#3b82d4', fontVariantNumeric: 'tabular-nums' }}>{rangeFmt}</td>
                     <td style={{ padding: '5px 8px', color: '#57606a' }}>{fmtDate(s.generated_at)}</td>
                     <td style={{ padding: '5px 8px', textAlign: 'right' }}>
                       <button style={{ ...btnSecondary, marginRight: 6 }} onClick={() => handleView(s.rs_id)}>
@@ -413,7 +421,8 @@ export function RegionalSimView({ auth: _auth }: Props) {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </>
