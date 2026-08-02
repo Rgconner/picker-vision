@@ -9,12 +9,12 @@
 
 ---
 
-## Current State (2026-08-02 — session 14)
+## Current State (2026-08-02 — session 15)
 
 **Branch:** `feature/bobs-tiny-treasures`
-**Last commit:** `4632c89` — feat: Regional Simulation engine (ST-1 through ST-5)
-**CI status:** Awaiting CI run on push — 15 files changed, load-gen rebuilt with new deps.
-**System state:** All 5 services running healthy when session started. Regional Simulation code committed but not yet deployed to cluster.
+**Last commit:** `8afcf1d` — fix: _proxy returns JSONResponse for list payloads
+**CI status:** Green — all pods on `sha-8afcf1d`
+**System state:** All services healthy. `/api/simulations` returns list correctly. Load-gen at 1536Mi — OOMKill risk eliminated.
 
 ---
 
@@ -50,12 +50,12 @@ The core demo loop — scan, confirm, gate, advance — is stable. This is the f
 
 ## Immediate First Action Next Session
 
-**→ Read this file. Then read `regional-simulation-plan.md`. Hit /health + /api/telemetry to confirm system state.**
+**→ Read this file. Hit /health + /api/telemetry. Then test the simulation UI at `https://bobstinytreasures.snwbd.com`.**
 
-- CI should be green on `4632c89` — confirm before deploying.
-- Postgres pod needs to be running in `picker-vision-btt` before `/api/simulations/start` will work.
-- `GET /api/simulations` returns `[]` on a fresh cluster — that's correct.
-- If doing sign-off queue: run hardware verification checklist below — all code is already deployed.
+- Everything is deployed on `sha-8afcf1d` — no pending CI work.
+- `GET /api/simulations` now returns the list correctly (was 500 before session 15 fix).
+- Load-gen is at 1536Mi — run a 12-month busy simulation to confirm no OOMKill.
+- Login requires HTTPS (`https://bobstinytreasures.snwbd.com`) — `crypto.subtle` doesn't work on plain HTTP.
 
 ---
 
