@@ -13,18 +13,17 @@ GET  /staging/{code}
 
 import json as _json
 import os
+import pathlib as _pathlib
 import random
 import sys
-import pathlib
 import uuid
 
 # Ensure the service root is on sys.path so that models.py and seed_data.py
 # are importable regardless of how uvicorn is invoked.
-_SERVICE_ROOT = pathlib.Path(__file__).resolve().parent
+_SERVICE_ROOT = _pathlib.Path(__file__).resolve().parent
 if str(_SERVICE_ROOT) not in sys.path:
     sys.path.insert(0, str(_SERVICE_ROOT))
 
-import pathlib as _pathlib
 import time as _time
 from datetime import datetime as _dt, timezone as _tz
 from fastapi import FastAPI, HTTPException, Request

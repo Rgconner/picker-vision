@@ -1,8 +1,8 @@
 """Event Processor — FastAPI application.
 
-Receives detection events from Pi nodes, enriches them by calling the Order
-Service, detects order completion, stores live state in Redis, and publishes
-state updates to the WebSocket Hub via Redis Pub/Sub.
+Receives detection events from mobile pickers, enriches them by calling the
+Order Service, detects order completion, stores live state in Redis, and
+publishes state updates to the WebSocket Hub via Redis Pub/Sub.
 
 Endpoints
 ---------
@@ -146,7 +146,7 @@ def get_logs():
 
 @app.post("/events/detection")
 async def receive_detection(body: dict):
-    """Receive a detection event from a Pi node, enrich it, and broadcast state."""
+    """Receive a detection event from a mobile picker, enrich it, and publish state."""
     _COUNTERS["events_received"] += 1
 
     picker_id: str = body.get("picker_id", "unknown")
@@ -258,9 +258,8 @@ async def receive_detection(body: dict):
                 d["order_id"] = active_line["_order"]["id"]
                 d["line_id"] = active_line["id"]
                 d["status"] = "correct"
-                # Pi auto-pick removed. Picks are written by the mobile confirm
-                # action only (PATCH /orders/{id}/lines/{line_id} from the client).
-                # Pi node files are kept but no longer in the active flow.
+                # Picks are written by the mobile confirm action only
+                # (PATCH /orders/{id}/lines/{line_id} called from the client).
 
             enriched_detections.append(d)
             if d.get("type") == "product":
