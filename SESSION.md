@@ -12,9 +12,9 @@
 ## Current State (2026-08-02 — session 15)
 
 **Branch:** `feature/bobs-tiny-treasures`
-**Last commit:** `8afcf1d` — fix: _proxy returns JSONResponse for list payloads
-**CI status:** Green — all pods on `sha-8afcf1d`
-**System state:** All services healthy. `/api/simulations` returns list correctly. Load-gen at 1536Mi — OOMKill risk eliminated.
+**Last commit:** `4239997` — fix: stream event inserts in 2000-row batches to eliminate OOMKill
+**CI status:** Green — load-gen on `sha-4239997`, 0 restarts
+**System state:** All services healthy. Simulation OOMKill root cause fixed (was holding all events in memory before first DB write). Peak memory now bounded at ~1MB regardless of preset/months. Ready to test 12-month busy/edge.
 
 ---
 
