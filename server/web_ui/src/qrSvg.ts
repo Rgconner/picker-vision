@@ -49,13 +49,15 @@ function rsEnc(d: number[], n: number): number[] {
 }
 
 // ── QR tables (versions 1–4, EC level L) ─────────────────────────────────────
-// EC-L gives more data capacity (v4=78 bytes) vs EC-M (v4=62 bytes).
-// The Join Demo URL is ~68 bytes — EC-L is required to encode a full https URL.
-const DCAP  = [[17,14,11,7],[32,26,20,14],[53,42,32,24],[78,62,46,34]];
+// Columns: [M, L, Q, H] — EC-L is index 1 (counter-intuitive but matches the
+// original table layout this code was ported from).
+// EC-L data codewords:  v1=19, v2=34, v3=55, v4=80
+// EC-L error codewords: v1=7,  v2=10, v3=15, v4=20
+const DCAP  = [[17,19,11,7],[32,34,20,14],[53,55,32,24],[78,80,46,34]];
 const ECWDS = [[10,7,13,17],[10,10,22,28],[15,15,18,22],[20,20,26,16]];
 const ALIGN = [[] as number[],[],[6,18],[6,22]];
-// Format string for EC level L, mask pattern 2 (same mask as before)
-const FMT_M = [0x77C4,0x72F3,0x7DAA,0x789D,0x662F,0x6318,0x6C41,0x6976];
+// Format info words for EC level L (confirmed correct), all 8 mask patterns.
+const FMT_L = [0x77C4,0x72F3,0x7DAA,0x789D,0x662F,0x6318,0x6C41,0x6976];
 
 function makeQR(text: string): { mat: number[][]; size: number } {
   const bytes: number[] = [];
@@ -64,15 +66,15 @@ function makeQR(text: string): { mat: number[][]; size: number } {
     bytes.push(c > 127 ? 63 : c);
   }
 
-  // Use EC-L column (index 0) for maximum data capacity
+  // Use EC-L column (index 1)
   let ver = 1;
   for (let v = 1; v <= 4; v++) {
-    if (bytes.length <= DCAP[v - 1][0]) { ver = v; break; }
+    if (bytes.length <= DCAP[v - 1][1]) { ver = v; break; }
   }
 
   const sz      = ver * 4 + 17;
-  const totalDC = DCAP[ver - 1][0];
-  const ecCnt   = ECWDS[ver - 1][0];
+  const totalDC = DCAP[ver - 1][1];
+  const ecCnt   = ECWDS[ver - 1][1];
 
   // Encode bits
   const bits: number[] = [];
@@ -168,7 +170,7 @@ function makeQR(text: string): { mat: number[][]; size: number } {
       if (!res[r][c] && mat[r][c] !== -1 && (c % 3 === 0))
         mat[r][c] ^= 1;
 
-  const fi = FMT_M[2];
+  const fi = FMT_L[2];
   const fb: number[] = [];
   for (let i = 14; i >= 0; i--) fb.push((fi >> i) & 1);
   const fp = [[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,7],[8,8],[7,8],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8]];
