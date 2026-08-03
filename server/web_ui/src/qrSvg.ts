@@ -160,9 +160,12 @@ function makeQR(text: string): { mat: number[][]; size: number } {
     up = !up; col -= 2;
   }
 
+  // Mask pattern 2: c % 3 === 0  (QR spec table, mask id 2)
+  // Previous expression Math.floor(r/2 + c/3) is NOT equivalent to Math.floor(r/2) + Math.floor(c/3)
+  // and matches none of the 8 standard patterns — corrupted data modules, decoders cannot invert.
   for (let r = 0; r < sz; r++)
     for (let c = 0; c < sz; c++)
-      if (!res[r][c] && mat[r][c] !== -1 && (Math.floor(r / 2 + c / 3) % 2 === 0))
+      if (!res[r][c] && mat[r][c] !== -1 && (c % 3 === 0))
         mat[r][c] ^= 1;
 
   const fi = FMT_M[2];
