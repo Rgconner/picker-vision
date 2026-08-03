@@ -9,6 +9,24 @@
 
 ---
 
+## Current State (2026-08-02 — session 16)
+
+**Branch:** `feature/bobs-tiny-treasures`
+**Last commit:** `6adf975` — docs(qol): log QOL-037 + QOL-036 + QOL-035
+**CI status:** Green
+**System state:** All services healthy. Postgres PVC expanded to 5Gi after hitting 100% quota. 12-month busy simulation confirmed: 1,852,889 picks in 119s, no OOMKill. Cloudflared tunnel flapped twice — rolled restart both times (QOL-036 logged). RS tables empty (PVC recreated fresh) — generate a new simulation before demoing.
+
+## Immediate First Action Next Session
+
+**→ Read this file. Hit /health + /api/telemetry. Generate a simulation before demoing.**
+
+- Postgres PVC is fresh (5Gi, 1% used after RS-01 12-month busy). RS tables empty.
+- Run: `POST /api/simulations/start {"preset":"busy","months":6}` to seed demo data.
+- If 504 on bobstinytreasures.snwbd.com: `kubectl rollout restart deployment/cloudflared-deployment -n default`
+- QOL-037 (vision_service.py redundant global): XS fix pending, not urgent.
+
+---
+
 ## Current State (2026-08-02 — session 15)
 
 **Branch:** `feature/bobs-tiny-treasures`
