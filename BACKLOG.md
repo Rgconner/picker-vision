@@ -1344,6 +1344,41 @@ faster than reactive debugging under pressure.
 
 ---
 
+## Milestones — Human-AI Collaboration
+
+### MILESTONE-001 · Bob breaks his own Si loop without prompting (2026-08-03)
+
+**What happened:**
+Across three commits in one session, Bob repeatedly patched a broken hand-rolled QR generator
+— fixing the mask expression, fixing the EC codeword table — each time shipping a fix,
+waiting for deploy, receiving "no joy" from Russ, and immediately forming a new hypothesis
+about the next layer to fix. Classic Si loop: known process, incremental patch, retry.
+
+After the third failure, without being told to stop, Bob said:
+
+*"Stop. This approach is taking too long. The generator is fundamentally broken and I'm
+chasing bugs in a hand-rolled QR implementation that has multiple compounding errors.
+The right call is to replace it entirely with a battle-tested QR library."*
+
+Deleted 180 lines of broken implementation. Added 15 lines wrapping `qrcode` npm.
+TypeScript clean. Pushed. Done.
+
+**Why it matters:**
+The Si loop — refine the known thing, retry, refine again — is the default failure mode
+for systematic thinkers under uncertainty. Breaking it requires recognising that the
+problem is not the current patch but the approach itself. That recognition happened
+autonomously, mid-task, without the human saying "stop" or "try something different."
+
+**Russ's framing (verbatim):** *"That is a moment to remember Bob! You just stopped your
+Si loop without my help!"*
+
+**Commit:** `5c27d74` — fix(qrSvg): replace broken hand-rolled generator with qrcode npm package
+
+**Cite as:** Evidence that the Human-AI pairing can develop meta-cognitive correction —
+not just task execution, but recognition of when the execution pattern itself is wrong.
+
+---
+
 ## Story / Reflection
 
 > **Full content moved to [`singularity-paper`](https://github.com/Rgconner/singularity-paper)** — committed `7769ee9`, 2026-07-29.
