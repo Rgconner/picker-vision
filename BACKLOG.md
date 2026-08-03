@@ -113,6 +113,31 @@ That shows exactly which bundle the phone will load. Compare to what's in the po
 > Any problem that required manual intervention OR has occurred more than once.
 > These get properly fixed — not worked around again.
 
+### QOL-040 · Debounce not holding — same barcode fires 6x in 300ms (2026-08-03)
+
+**Symptom:** Scan log shows BTT-00303 fired 6 times in ~300ms at 23:38:15, all with
+`result: correct`. The debounce is set to 1200ms — same value should not re-fire within
+that window. The trace IDs are recycling (same IDs seen in earlier error entries), which
+suggests the debounce map is being cleared and re-initialized between fires, likely from
+a scan loop restart or a component re-render resetting the `debounceMap` ref.
+
+**Impact:** Low in this session (all fired as correct, no wrong picks). Potentially
+higher in a physical demo if a picker holds a barcode in frame — could advance the
+order unexpectedly.
+
+**Likely cause:** The scan loop clears `debounceMap` on restart (`dwellMap.current.clear();
+debounceMap.current.clear()`). If something triggers a loop restart while the barcode is
+still in frame (re-render, state change), the debounce resets and the code fires again
+immediately.
+
+**Proper fix:** Investigate what triggers loop restarts during active scanning. Consider
+persisting debounce state across loop restarts for values that fired within the last 1200ms.
+
+**Effort:** S
+**Recurrence:** First observed. Watch for it in physical label testing.
+
+---
+
 ### DATA-002 · Non-orthogonal fixes obscure root cause — the Vibe Code Wall (2026-08-03)
 
 **Observation:**
