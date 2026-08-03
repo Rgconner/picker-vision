@@ -126,9 +126,10 @@ function zxingToScanResult(text: string, formatNum: number): ScanResult {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const SCAN_INTERVAL_MS  = 250;  // ZXing canvas poll — ~4fps
-const DEBOUNCE_MS       = 1200; // same value must wait this long before re-firing after a confirmed detect
-export const DWELL_FRAMES = 6;  // consecutive frames required; exported so UI can scale progress arcs
+const SCAN_INTERVAL_MS = 250;   // ZXing canvas poll — ~4fps
+const DEBOUNCE_MS      = 1200;  // same value must wait this long before re-firing after a confirmed detect
+/** Consecutive frames required before a barcode fires. 3 works for both physical labels and LCD screens. */
+export const DWELL_FRAMES = 3;
 
 // ── Candidate — a barcode building toward the dwell threshold ────────────────
 

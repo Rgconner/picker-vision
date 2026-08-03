@@ -113,6 +113,25 @@ That shows exactly which bundle the phone will load. Compare to what's in the po
 > Any problem that required manual intervention OR has occurred more than once.
 > These get properly fixed — not worked around again.
 
+### QOL-038 · Dwell threshold tuning for physical labels — open question (non-blocking)
+
+**Status:** Open · Non-blocking
+**Logged:** 2026-08-03 (session 17)
+
+**Context:** `DWELL_FRAMES` reduced from 6 → 3 to fix QR scanning from LCD screens.
+3 is sufficient for both LCD/screen demos and physical label scans in controlled conditions.
+
+**Open question:** Is 3 too low for physical labels in a real warehouse environment —
+e.g. slight camera shake, varying lighting, or picker moving too fast? If false-fires
+appear during physical label testing (scanner fires on a barcode the picker wasn't
+deliberately holding), revisit and consider separate physical/screen dwell values
+(the hook signature already accepts this as a trivial future change).
+
+**Next step:** Physical label walkthrough. If false-fires observed, raise to 4 or 5
+for physical mode while keeping screen mode at 2–3.
+
+---
+
 ### QOL-015 · Phone UI needs a purpose-built minimal layout
 
 **Symptom:** The mobile web UI (`/mobile`) was designed for a tablet. On a phone (≤430px) the pick list, scan strip, controls bar, and camera all compete for 6 inches of screen. One-handed use while walking is impractical.
