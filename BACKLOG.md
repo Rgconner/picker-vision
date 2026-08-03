@@ -113,6 +113,42 @@ That shows exactly which bundle the phone will load. Compare to what's in the po
 > Any problem that required manual intervention OR has occurred more than once.
 > These get properly fixed — not worked around again.
 
+### DATA-002 · Non-orthogonal fixes obscure root cause — the Vibe Code Wall (2026-08-03)
+
+**Observation:**
+The QR generator (`qrSvg.ts`) had two structural bugs — wrong mask expression and wrong EC
+codeword table — that made every generated QR code undecodable. These bugs were present from
+day one. The scanner went through at least 6 significant changes across multiple sessions
+(BarcodeDetector removed, ZXing added, BarcodeDetector restored, format lists narrowed,
+dwell tuning, fallback logic) attempting to fix what was diagnosed as a scanner problem.
+
+**Why it took so long to find:**
+Each scanner fix was real — it changed genuine behaviour and produced real signals. But none
+of them could fix a broken generator. The accumulation of non-orthogonal changes (fixes that
+touched adjacent but not causal layers) made cause and effect increasingly inseparable. By
+session 10+ the diagnostic space was so noisy that systematic root cause analysis couldn't
+get traction. This is the Vibe Code Wall — not a single bad decision, but a sequence of
+reasonable decisions that collectively destroy the orthogonality of the system.
+
+**What broke the pattern:**
+A stable system + one clean smoke test + a known-good oracle (native camera, no app logic).
+Single clean signal. One iteration to root cause.
+
+**The mechanism (Russ's framing):**
+*"Because we tried several different fixes for the scanner when the problem was the real
+problem, the detail got lost in the churn. Things go non-orthogonal."*
+
+**Relationship to DATA-001:**
+DATA-001 is about *when* bugs get found (synergy vs crisis).
+DATA-002 is about *why* they don't get found sooner — compounding non-orthogonal fixes
+destroy the signal-to-noise ratio until a clean oracle can reset it.
+
+**Cite as:** Evidence that the Vibe Code Wall is not caused by any single bad decision —
+it is caused by the loss of orthogonality across a sequence of reasonable ones. Recovery
+requires a stable system and a clean external oracle, not more fixes.
+
+---
+
 ### QOL-039 · Self-hosted Actions runner requires a PC to be on — must be a cluster pod
 
 **Symptom:** The GitHub Actions deploy job (`runs-on: [self-hosted, picker-vision]`) runs on
