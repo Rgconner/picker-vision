@@ -113,6 +113,36 @@ That shows exactly which bundle the phone will load. Compare to what's in the po
 > Any problem that required manual intervention OR has occurred more than once.
 > These get properly fixed — not worked around again.
 
+### QOL-039 · Self-hosted Actions runner requires a PC to be on — must be a cluster pod
+
+**Symptom:** The GitHub Actions deploy job (`runs-on: [self-hosted, picker-vision]`) runs on
+`pv-deploy-runner`, a process launched manually via `run.cmd` on the user's Windows machine.
+If the machine is off, sleeping, or the user hasn't run `run.cmd`, every push silently queues
+forever — no deploy happens and no error is surfaced.
+
+**Manual workaround applied:** User manually runs `run.cmd` before any session that involves
+a push. Runner also goes stale (Worker hangs for days) requiring a manual kill.
+
+**Proper fix:** Run the self-hosted runner as a Deployment in the cluster (`actions-runner`
+namespace). Pod is always on, auto-restarts on crash, no PC required.
+
+**Implementation notes:**
+- Build jobs already run on `ubuntu-latest` (GitHub-hosted) — no change needed there.
+- Only the `deploy` job needs the self-hosted runner.
+- Pod needs: `kubectl` + `kustomize`, bash shell, kubeconfig via mounted Secret.
+- Workflow deploy steps must be ported from `shell: powershell` → `shell: bash` and
+  `kubectl.exe` → `kubectl`.
+- Runner registration token is a one-time bootstrap Secret (runner re-registers on pod start
+  using a PAT or a pre-generated token stored as a k8s Secret).
+- Recommend `myoung34/github-runner` image or the official `ghcr.io/actions/runner` image.
+- Remove the Windows runner (`pv-deploy-runner`) once pod runner is verified live.
+
+**Recurrence count:** Every session. Runner has been manually started and killed multiple times.
+**Effort:** M
+**Blocking:** Non-blocking (workaround is start `run.cmd`), but quality of life is poor.
+
+---
+
 ### QOL-038 · Dwell threshold tuning for physical labels — open question (non-blocking)
 
 **Status:** Open · Non-blocking
