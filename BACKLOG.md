@@ -165,6 +165,40 @@ Options ranked by effort and install friction:
 
 ---
 
+### QOL-036 · cloudflared tunnel QUIC connections go stale after ~9 hours — silent 504
+
+**Symptom:** `https://bobstinytreasures.snwbd.com` returns Cloudflare 504. All pods healthy. cloudflared pods show `Running` with no recent log output. Tunnel connected cleanly at last restart but QUIC connections silently died hours later.
+
+**Manual workaround applied (2026-08-02, twice):** `kubectl rollout restart deployment/cloudflared-deployment -n default`. Site recovers within 60s.
+
+**Root cause:** cloudflared QUIC keepalives appear to lapse after ~9 hours without triggering a pod restart or log entry. 13–16 accumulated restarts on the pods confirms this is a recurring pattern.
+
+**Proper fix:** Add a liveness probe to the cloudflared deployment that checks the tunnel metrics endpoint (`GET :2000/metrics`) and verifies at least one active connection. If the probe fails, Kubernetes restarts the pod automatically.
+
+**Recurrence count:** 2 in one session (2026-08-02). Likely recurring across all prior sessions unnoticed.
+**Effort:** XS (add livenessProbe to cloudflared deployment YAML)
+
+---
+
+### QOL-035 · Postgres PVC fills to 100% — pod crashes, cannot self-recover
+
+**Symptom:** Postgres pod enters `CrashLoopBackOff` with `FATAL: could not write lock file "postmaster.pid": Quota exceeded`. Cannot restart. Even `VACUUM FULL` and `TRUNCATE` fail because the disk is full. Entire simulation workstream is unavailable until manually resolved.
+
+**Manual workaround applied (2026-08-02):** Scale deployment to 0, delete PVC, recreate at 5Gi, scale back to 1. All RS data lost (acceptable for synthetic data). load-gen pod also bounced to clear stale connection pool.
+
+**Root cause:** Initial PVC sized at 1Gi. A 12-month busy simulation generates ~1.85M pick events (~900MB). Prior 6 simulations consumed the full 1Gi before VACUUM could reclaim space. CephFS CSI resizer failed (`provided secret is empty`) so online expansion was not possible.
+
+**Proper fix:**
+1. PVC already bumped to 5Gi in `k8s/overlays/bobs-tiny-treasures/postgres.yaml` ✅
+2. Add Postgres disk usage alert: if `df /var/lib/postgresql/data` exceeds 70%, log a warning event
+3. Add auto-VACUUM schedule: `VACUUM ANALYZE` on RS tables after every DELETE
+4. Consider capping stored simulations at N (e.g. 10) and auto-deleting oldest on generate
+
+**Recurrence count:** 1 (2026-08-02). High risk of recurrence with busy/12-month presets.
+**Effort:** S (alert + auto-vacuum hook in simulator.py delete path)
+
+---
+
 ### QOL-001 · Phone gets stale JS after deploy — hard refresh required
 **Symptom:** After a deploy, phones running the app serve old JS until the user manually hard-refreshes.
 **Manual workaround applied:** Told users to hard refresh. Occurred every deploy.
