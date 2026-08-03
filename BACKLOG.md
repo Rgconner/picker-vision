@@ -165,6 +165,19 @@ Options ranked by effort and install friction:
 
 ---
 
+### QOL-037 · Redundant `global` re-declaration inside `with _state_lock:` block — vision_service.py
+
+**Symptom:** Code smell flagged by two independent AI code reviewers. `global _events_published, _last_event_at` appears at line 199 inside a `with _state_lock:` block in `_run_capture()`. The same four globals are already declared at function scope on line 123. The inner declaration is a no-op (Python `global` is function-scoped, not block-scoped) but misleads readers into thinking the declaration is lock-guarded, and matches the pattern of a real bug fixed in v1.1.2 (`_frames_captured`).
+
+**Manual workaround applied:** None needed — functionally harmless. Counters work correctly.
+
+**Proper fix:** Remove lines 198-199 (`with _state_lock:` + `global _events_published, _last_event_at`). The assignment on line 200-201 is already protected by the outer lock on line 198. One-line deletion.
+
+**Recurrence count:** Flagged by 2 reviewers independently (2026-08-02). Pattern matches v1.1.2 bug.
+**Effort:** XS (delete 1 line)
+
+---
+
 ### QOL-036 · cloudflared tunnel QUIC connections go stale after ~9 hours — silent 504
 
 **Symptom:** `https://bobstinytreasures.snwbd.com` returns Cloudflare 504. All pods healthy. cloudflared pods show `Running` with no recent log output. Tunnel connected cleanly at last restart but QUIC connections silently died hours later.
