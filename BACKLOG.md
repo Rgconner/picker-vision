@@ -1266,6 +1266,48 @@ Per-picker performance data requires careful handling — union agreements, loca
 
 ---
 
+## Data Points
+
+> Observed facts from the work that support or challenge claims about Human-AI coding teams.
+> These are not stories — they are evidence. Cite them precisely.
+
+### DATA-001 · Silent bug found in synergy, not crisis (2026-08-03)
+
+**Observation:**
+`qrSvg.ts` contained a broken mask expression — `Math.floor(r/2 + c/3) % 2` — that does not
+match any of the 8 standard QR mask patterns (confirmed computationally: 70/441 cells wrong,
+zero matches across all spec patterns). Every QR code the application ever generated was
+undecodable by any external scanner. The bug had been present since the generator was first
+written.
+
+**How it was found:**
+Not by a failing test. Not by a user filing a bug during a crisis demo. It was found during a
+structured improvement session — Russ ran a smoke test ("native camera sees the grid but does
+not decode"), reported the observation precisely, and the systematic investigation that followed
+isolated the root cause in one iteration.
+
+**What it took to find it:**
+1. Russ's smoke test: native camera sees grid → QR structurally valid → must be encoding wrong
+2. Bob's hypothesis: dwell gate too strict (ruled out — dwell doesn't matter if decode fails)
+3. Bob verified format bits correct (EC-L values match spec exactly)
+4. Bob verified mask expression against all 8 spec patterns → zero matches → found
+
+**The point:**
+The bug was not found during a crisis because the sessions before this one were not structured
+enough to run a smoke test at all — the demo was being stabilised, not verified. The moment
+the system reached a calm enough state to run one deliberate check, the bug surfaced
+immediately. This is the loop in synergy. You cannot find bugs like this while firefighting.
+
+**Russ's framing (verbatim):** *"This is the loop in synergy, not crisis."*
+
+**Related:** BE-006 (BarcodeDetector removed without evidence — also a silent regression found
+late). The difference: BE-006 was found under pressure. DATA-001 was found in calm.
+
+**Cite as:** Evidence that structured Human-AI iteration in a stable system finds deeper bugs
+faster than reactive debugging under pressure.
+
+---
+
 ## Story / Reflection
 
 > **Full content moved to [`singularity-paper`](https://github.com/Rgconner/singularity-paper)** — committed `7769ee9`, 2026-07-29.
