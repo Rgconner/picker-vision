@@ -113,6 +113,33 @@ That shows exactly which bundle the phone will load. Compare to what's in the po
 > Any problem that required manual intervention OR has occurred more than once.
 > These get properly fixed — not worked around again.
 
+### QOL-041 · Screen-mode dwell — SCREEN: prefix carries its own dwell hint
+
+**Idea:** On-screen QR codes (supervisor panel, demo controls, PackWizard) encode
+`SCREEN:BTT-00101` instead of `BTT-00101`. The scanner sees the `SCREEN:` prefix in
+`classifyValue()`, strips it, fires with dwell=1 for that scan, and passes the bare
+barcode value to the rest of the pipeline unchanged.
+
+**Why it's good:**
+- Self-describing — the code carries its own scan context, no runtime detection needed
+- Fits the existing prefix pattern (`STAGING:`, `NAV:`) — zero new architecture
+- Physical labels keep their current encoding and dwell unchanged
+- Eliminates the futzy screen-scan UX without touching the dwell constant globally
+
+**Implementation:**
+1. `classifyValue()` in `useBarcodeScanner.ts` — add `SCREEN:` prefix handling,
+   return `dwellOverride: 1` alongside the existing fields
+2. `processDwell()` — honour `dwellOverride` when present
+3. On-screen `qrSvg()` call sites (supervisor panel, demo controls, PackWizard) —
+   prefix the payload with `SCREEN:`
+4. No server changes needed — event-processor never sees the prefix
+
+**Effort:** S
+**Status:** Idea — not started. Build after physical label testing confirms dwell=2
+is stable for printed labels (QOL-038).
+
+---
+
 ### QOL-040 · Debounce not holding — same barcode fires 6x in 300ms (2026-08-03)
 
 **Symptom:** Scan log shows BTT-00303 fired 6 times in ~300ms at 23:38:15, all with
