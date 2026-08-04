@@ -55,7 +55,8 @@ class WorkflowConfig(Base):
     haptic_enabled_default  = Column(Boolean, nullable=False, default=True)
     mid_pick_validate_after = Column(Integer, nullable=False, default=5)
     instance_profile        = Column(String, nullable=False, default="")   # "" | "bobs-tiny-treasures"
-    demo_scenario           = Column(String, nullable=False, default="web-demo")  # "web-demo" | "physical-demo"
+    demo_scenario           = Column(String, nullable=False, default="web-demo")   # "web-demo" | "physical-demo"
+    control_layout          = Column(String, nullable=False, default="auto")       # "auto" | "mirrored" | "bottom"
 
 
 class Product(Base):

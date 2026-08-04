@@ -17,17 +17,23 @@
  *   └──────────────────────────┴──────────────────┘
  *        55 % width                 45 % width
  *
- *  PORTRAIT (phone fallback):
+ *  PORTRAIT (phone) — camera-first fullscreen HUD:
  *
  *   ┌──────────────────────────────┐
- *   │  Header: picker ID           │
- *   ├──────────────────────────────┤
- *   │  Camera + AR  (max 42 vh)    │
- *   ├──────────────────────────────┤
- *   │  Controls bar                │
- *   ├──────────────────────────────┤
- *   │  Pick list (scrollable)      │
+ *   │ [●Live] [picker-1]  [⟳ flip] │  floating top bar (44px, semi-transparent)
+ *   │                              │
+ *   │                              │
+ *   │      CAMERA  (full screen)   │
+ *   │                              │
+ *   │  ┌────────────────────────┐  │
+ *   │  │ SCAN NEXT              │  │  floating "next item" card, above bottom bar
+ *   │  │ Widget A  ×2  [A-03]   │  │
+ *   │  └────────────────────────┘  │
+ *   │  [■ Stop Scanning] [≡ List]  │  floating bottom bar (thumb reach)
  *   └──────────────────────────────┘
+ *
+ *  Tap [≡ List] → bottom sheet slides up (50 % height), camera visible above.
+ *  Tap camera → sheet dismisses.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -44,8 +50,8 @@ import { useDebugSnapshot } from './useDebugSnapshot';
 import { ConfirmOverlay } from './ConfirmOverlay';
 import { PackWizard } from './PackWizard';
 
-// ── Next-item banner — shown above camera in the new scan-from-screen workflow ─
-function NextItemBanner({ orders }: { orders: Order[] }) {
+// ── Next-item card — floating overlay, glove-first sizing ────────────────────
+function NextItemCard({ orders }: { orders: Order[] }) {
   const nextLine = useMemo(() => {
     const active = orders.find((o) => o.status === 'picking' || o.status === 'pending');
     return active?.lines.find((l) => l.status !== 'picked') ?? null;
@@ -53,18 +59,21 @@ function NextItemBanner({ orders }: { orders: Order[] }) {
 
   if (!nextLine) return null;
   return (
-    <div className="shrink-0 flex items-center gap-3 px-3 py-2 border-b border-[#2d3142] bg-[#12151f]">
+    <div
+      className="flex items-center gap-4 px-5 py-4 mx-3 rounded-2xl"
+      style={{ background: 'rgba(12,14,22,0.94)', backdropFilter: 'blur(10px)', border: '1px solid rgba(45,49,66,0.9)' }}
+    >
       <div className="flex flex-col min-w-0 flex-1">
-        <span className="text-[#57606a] text-[10px] font-semibold uppercase tracking-wider">
+        <span className="text-[#57606a] text-xs font-bold uppercase tracking-widest mb-1">
           Scan next
         </span>
-        <span className="text-[#e2e8f0] text-sm font-bold truncate">
+        <span className="text-[#e2e8f0] text-2xl font-bold leading-tight">
           {nextLine.product_description ?? nextLine.product_barcode}
         </span>
-        <span className="text-[#94a3b8] text-xs font-mono">{nextLine.product_barcode}</span>
+        <span className="text-[#94a3b8] text-sm font-mono mt-1">{nextLine.product_barcode}</span>
       </div>
       {nextLine.staging_code && (
-        <span className="shrink-0 text-xs font-mono font-bold px-2 py-1 rounded-lg bg-[#0a1e2d] text-[#06b6d4] border border-[#06b6d4]/30">
+        <span className="shrink-0 text-lg font-mono font-bold px-4 py-2 rounded-2xl bg-[#0a1e2d] text-[#06b6d4] border border-[#06b6d4]/40">
           {nextLine.staging_code}
         </span>
       )}
@@ -173,12 +182,21 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   const [orders, setOrders]       = useState<Order[]>([]);
   const [localValidation, setLocalValidation] = useState<ReturnType<typeof useMobilePickerSession>['validationResult']>(null);
 
-  // ── Demo scenario ────────────────────────────────────────────────────────
+  // ── Workflow config (demo_scenario + control_layout) ─────────────────────
   const [demoScenario, setDemoScenario] = useState<'web-demo' | 'physical-demo'>('web-demo');
+  // "auto" → guess from screen width at mount: ≥768px = mirrored, <768 = bottom
+  const [controlLayout, setControlLayout] = useState<'mirrored' | 'bottom'>(
+    () => window.innerWidth >= 768 ? 'mirrored' : 'bottom'
+  );
   useEffect(() => {
     fetch('/api/workflow-config')
       .then((r) => r.ok ? r.json() : null)
-      .then((cfg) => { if (cfg?.demo_scenario) setDemoScenario(cfg.demo_scenario); })
+      .then((cfg) => {
+        if (cfg?.demo_scenario) setDemoScenario(cfg.demo_scenario);
+        if (cfg?.control_layout && cfg.control_layout !== 'auto') {
+          setControlLayout(cfg.control_layout as 'mirrored' | 'bottom');
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -474,71 +492,84 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   const detections     = pickerState?.detections     ?? [];
   const stagingRegions = pickerState?.staging_regions ?? [];
 
-  // ── Shared sub-sections ────────────────────────────────────────────────────
+  // ── Portrait: bottom-sheet visibility state ────────────────────────────────
+  const [listSheetOpen, setListSheetOpen] = useState(false);
 
-  const scannerWarning = scannerUnsupported ? (
-    <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-[#f1c21b]/30"
-         style={{ background: 'rgba(241,194,27,0.08)' }}>
-      <span className="text-[#f1c21b] text-lg shrink-0">⚠</span>
-      <span className="text-[#f1c21b] text-xs">
-        Native barcode scanner not available on this device — scanning disabled.
-        Performance may be compromised. Use Chrome on Android for best results.
+  // ── Shared overlays (all layouts) ─────────────────────────────────────────
+
+  // ── QOL-025: order-complete gate — full-width stacked buttons, glove-first ─
+  const orderCompleteOverlay = orderCompleteGate ? (
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 px-8"
+      style={{ background: 'rgba(10,12,20,0.97)' }}
+    >
+      <span className="text-[#22c55e] text-7xl">✓</span>
+      <span className="text-[#e2e8f0] text-3xl font-bold text-center">
+        Order {orderCompleteGate.reference} complete
+      </span>
+      <span className="text-[#94a3b8] text-xl text-center">
+        Ready for the next order?
+      </span>
+      <div className="flex flex-col gap-4 mt-2 w-full max-w-sm">
+        <button
+          onClick={handleOrderCompleteAccept}
+          className="w-full py-6 rounded-3xl text-2xl font-bold text-[#161616] transition-all active:scale-95"
+          style={{ background: '#22c55e' }}
+        >
+          ✓  Accept
+        </button>
+        <button
+          onClick={handleOrderCompleteNotYet}
+          className="w-full py-5 rounded-3xl text-xl font-bold text-[#e2e8f0] border-2 border-[#2d3142] transition-all active:scale-95"
+          style={{ background: 'rgba(45,49,66,0.6)' }}
+        >
+          ✗  Not yet
+        </button>
+      </div>
+    </div>
+  ) : null;
+
+  // ── QOL-028: demo ended — tap anywhere on full screen ────────────────────
+  const demoEndedOverlay = demoEnded ? (
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 px-8"
+      style={{ background: 'rgba(10,12,20,0.97)' }}
+      onClick={() => setDemoEnded(false)}
+    >
+      <span className="text-[#f1c21b] text-7xl">■</span>
+      <span className="text-[#e2e8f0] text-2xl font-bold text-center">Demo ended by supervisor</span>
+      <span className="text-[#94a3b8] text-lg text-center mt-1">
+        Tap anywhere to dismiss
       </span>
     </div>
   ) : null;
 
-  const joinBanner = showJoinBanner ? (
-    <div className="shrink-0 flex items-center gap-3 px-3 py-2 border-b border-[#f1c21b]/30 bg-[#f1c21b]/8"
-         style={{ background: 'rgba(241,194,27,0.07)' }}>
-      <span className="w-2 h-2 rounded-full bg-[#f1c21b] animate-pulse shrink-0" />
-      <span className="text-[#f1c21b] text-xs flex-1">
-        Demo running as <span className="font-mono font-semibold">{demoPickerId}</span>
+  // ── QOL-017: move-away gate — tap anywhere ────────────────────────────────
+  const moveAwayOverlay = showMoveAway && !orderCompleteGate ? (
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 px-8"
+      style={{ background: 'rgba(10,12,20,0.97)' }}
+      onClick={() => { setShowMoveAway(false); moveAwayBarcodeRef.current = null; setScanning(true); }}
+    >
+      <span className="text-[#22c55e] text-7xl">✓</span>
+      <span className="text-[#e2e8f0] text-3xl font-bold text-center">Picked!</span>
+      <span className="text-[#94a3b8] text-xl text-center">
+        Move item away, then tap to continue
       </span>
-      <button
-        onClick={handleJoinDemo}
-        className="shrink-0 px-3 py-1 rounded-md text-xs font-bold bg-[#f1c21b] text-black active:brightness-90 transition-all"
-      >
-        Join Demo
-      </button>
     </div>
   ) : null;
 
-  const header = (
-    <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-[#2d3142] bg-[#1a1d27]">
-      {!lockedPickerId && editMode ? (
-        <>
-          <input
-            autoFocus
-            type="text"
-            value={editId}
-            onChange={(e) => setEditId(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveId(); }}
-            placeholder="Enter picker ID (e.g. picker-1)"
-            className="flex-1 bg-[#0f1117] border border-[#2d3142] text-[#e2e8f0] text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-[#06b6d4]"
-          />
-          <button
-            onClick={handleSaveId}
-            className="px-4 py-2 rounded-lg bg-[#06b6d4] text-black font-bold text-sm shrink-0"
-          >
-            Set
-          </button>
-        </>
-      ) : (
-        <>
-          <span className="text-[#94a3b8] text-xs">Picker</span>
-          <span className="font-semibold text-[#e2e8f0] text-sm flex-1 truncate">{pickerId}</span>
-          {!lockedPickerId && (
-            <button
-              onClick={() => setEditMode(true)}
-              className="text-[#57606a] text-xs px-2 py-1 rounded hover:text-[#94a3b8]"
-            >
-              ✎ Edit
-            </button>
-          )}
-        </>
-      )}
-    </div>
-  );
+  // ── PWZ-001: PackWizard — rendered once (fixed overlay, layout-agnostic) ──
+  const packWizardOverlay = packTarget ? (
+    <PackWizard
+      orderId={packTarget.orderId}
+      orderRef={packTarget.reference}
+      onClose={() => handlePackedAndAdvance(packTarget.orderId)}
+      onPacked={() => handlePackedAndAdvance(packTarget.orderId)}
+    />
+  ) : null;
+
+  // ── Shared sub-components (both layouts) ──────────────────────────────────
 
   const cameraPanel = (
     <MobileCameraView
@@ -562,123 +593,29 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     />
   );
 
-  const scanStrip = scanning && (
-    <div className="shrink-0 flex items-center justify-center gap-2 py-1 bg-[#1a1d27] border-b border-[#2d3142]">
-      <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />
-      <span className="text-[#22c55e] text-xs font-semibold">Scanning…</span>
-    </div>
-  );
-
-  const controls = (
-    <MobileControls
-      pickerId={pickerId}
-      scanning={scanning}
-      onStartStop={handleStartStop}
-      onValidate={() => sendAction('validate')}
-      validationResult={localValidation}
-      onClearValidation={() => setLocalValidation(null)}
-      lastScanValue={lastScan?.value ?? null}
-      connected={connected}
-      compact={isLandscape}
-    />
-  );
-
-  const pickList = (
-    <div className="flex-1 min-h-0 overflow-y-auto">
-      <div className="px-3 pt-2 pb-1">
+  const pickListPanel = (
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="px-3 pt-2 pb-1 shrink-0">
         <span className="text-[#57606a] text-xs font-semibold uppercase tracking-wider">
           Pick List
         </span>
       </div>
-      <MobilePickList
-        orders={orders}
-        detections={detections}
-        orderCompletePending={pickerState?.order_complete_pending}
-        onConfirmPacked={handleConfirmPacked}
-      />
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <MobilePickList
+          orders={orders}
+          detections={detections}
+          orderCompletePending={pickerState?.order_complete_pending}
+          onConfirmPacked={handleConfirmPacked}
+        />
+      </div>
     </div>
   );
 
-  // ── QOL-025 / QOL-031: order-complete gate overlay ───────────────────────
-  const orderCompleteOverlay = orderCompleteGate ? (
-    <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 px-8"
-      style={{ background: 'rgba(10,12,20,0.97)' }}
-    >
-      <span className="text-[#22c55e] text-6xl">✓</span>
-      <span className="text-[#e2e8f0] text-2xl font-bold text-center">
-        Order {orderCompleteGate.reference} complete
-      </span>
-      <span className="text-[#e2e8f0] text-lg font-bold text-center">
-        Ready for the next order?
-      </span>
-      <div className="flex gap-4 mt-2">
-        <button
-          onClick={handleOrderCompleteAccept}
-          className="px-8 py-4 rounded-2xl text-lg font-bold text-[#161616] transition-all active:scale-95"
-          style={{ background: '#22c55e' }}
-        >
-          ✓ Accept
-        </button>
-        <button
-          onClick={handleOrderCompleteNotYet}
-          className="px-8 py-4 rounded-2xl text-lg font-bold text-[#e2e8f0] border border-[#2d3142] transition-all active:scale-95"
-          style={{ background: 'rgba(45,49,66,0.8)' }}
-        >
-          ✗ Not yet
-        </button>
-      </div>
-    </div>
-  ) : null;
-
-  // ── QOL-028 / QOL-031: demo ended overlay ────────────────────────────────
-  const demoEndedOverlay = demoEnded ? (
-    <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 px-8"
-      style={{ background: 'rgba(10,12,20,0.97)' }}
-      onClick={() => setDemoEnded(false)}
-    >
-      <span className="text-[#f1c21b] text-6xl">■</span>
-      <span className="text-[#e2e8f0] text-xl font-bold text-center">Demo ended by supervisor</span>
-      <span className="text-[#e2e8f0] text-lg font-bold text-center">
-        Tap anywhere to dismiss
-      </span>
-      <span className="text-[#57606a] text-sm text-center mt-1">
-        Wait for the next demo session to begin
-      </span>
-    </div>
-  ) : null;
-
-  // ── QOL-017 / QOL-031: move-away gate ────────────────────────────────────
-  const moveAwayOverlay = showMoveAway && !orderCompleteGate ? (
-    <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 px-8"
-      style={{ background: 'rgba(10,12,20,0.97)' }}
-      onClick={() => { setShowMoveAway(false); moveAwayBarcodeRef.current = null; setScanning(true); }}
-    >
-      <span className="text-[#22c55e] text-6xl">✓</span>
-      <span className="text-[#e2e8f0] text-2xl font-bold text-center">Picked!</span>
-      <span className="text-[#e2e8f0] text-lg font-bold text-center">
-        Move item away, then tap to continue
-      </span>
-      <span className="text-[#57606a] text-sm text-center mt-1">Tap anywhere</span>
-    </div>
-  ) : null;
-
-  // ── PWZ-001: PackWizard — rendered once (fixed overlay, layout-agnostic) ──
-  const packWizardOverlay = packTarget ? (
-    <PackWizard
-      orderId={packTarget.orderId}
-      orderRef={packTarget.reference}
-      onClose={() => handlePackedAndAdvance(packTarget.orderId)}
-      onPacked={() => handlePackedAndAdvance(packTarget.orderId)}
-    />
-  ) : null;
-
   // ── LANDSCAPE layout ───────────────────────────────────────────────────────
   if (isLandscape) {
-    return (
-      <div className="flex overflow-hidden bg-[#0f1117] text-[#e2e8f0]" style={{ height: '100dvh' }}>
+    // Shared overlays block used by both landscape variants
+    const landscapeOverlays = (
+      <>
         {packWizardOverlay}
         {pendingConfirm && (
           <ConfirmOverlay
@@ -695,39 +632,157 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
         {moveAwayOverlay}
         {orderCompleteOverlay}
         {demoEndedOverlay}
+      </>
+    );
 
-        {/* Left column — camera + controls (55 %) */}
+    // Glove-sized header bar (shared)
+    const landscapeHeader = (
+      <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-[#2d3142] bg-[#1a1d27]">
+        <span className={`shrink-0 w-3 h-3 rounded-full ${connected ? 'bg-[#22c55e]' : 'bg-[#94a3b8]'}`} />
+        {!lockedPickerId && editMode ? (
+          <>
+            <input
+              autoFocus type="text" value={editId}
+              onChange={(e) => setEditId(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveId(); }}
+              placeholder="Enter picker ID"
+              className="flex-1 bg-[#0f1117] border border-[#2d3142] text-[#e2e8f0] text-base rounded-xl px-4 py-2 focus:outline-none focus:border-[#06b6d4]"
+            />
+            <button onClick={handleSaveId} className="px-5 py-2 rounded-xl bg-[#06b6d4] text-black font-bold text-base shrink-0">Set</button>
+          </>
+        ) : (
+          <>
+            <span className="text-[#94a3b8] text-sm shrink-0">Picker</span>
+            <span className="font-bold text-[#e2e8f0] text-base flex-1 truncate">{pickerId}</span>
+            {!lockedPickerId && (
+              <button onClick={() => setEditMode(true)} className="shrink-0 text-[#57606a] text-base px-3 py-2 rounded-xl hover:text-[#94a3b8]">✎</button>
+            )}
+          </>
+        )}
+        {scannerUnsupported && <span className="shrink-0 text-[#f1c21b] text-xl" title="Native scanner unavailable — use Chrome on Android">⚠</span>}
+        {showJoinBanner && (
+          <button
+            onClick={handleJoinDemo}
+            className="shrink-0 px-4 py-2 rounded-xl text-sm font-bold bg-[#f1c21b] text-black active:brightness-90"
+          >
+            Join Demo
+          </button>
+        )}
+      </div>
+    );
+
+    // Controls rail — used in both left and right rails for mirrored layout
+    const controlsRail = (
+      <div className="flex flex-col gap-3 px-4 py-4 justify-between h-full">
+        <NextItemCard orders={orders} />
+        <MobileControls
+          pickerId={pickerId}
+          scanning={scanning}
+          onStartStop={handleStartStop}
+          onValidate={() => sendAction('validate')}
+          validationResult={localValidation}
+          onClearValidation={() => setLocalValidation(null)}
+          lastScanValue={lastScan?.value ?? null}
+          connected={connected}
+        />
+      </div>
+    );
+
+    // ── MIRRORED: three-column — left rail | camera | right rail ─────────────
+    if (controlLayout === 'mirrored') {
+      return (
+        <div className="flex overflow-hidden bg-[#0f1117] text-[#e2e8f0]" style={{ height: '100dvh' }}>
+          {landscapeOverlays}
+
+          {/* LEFT RAIL — 22% */}
+          <div
+            className="flex flex-col overflow-hidden border-r border-[#2d3142] bg-[#0f1117]"
+            style={{ width: '22%' }}
+          >
+            {landscapeHeader}
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {controlsRail}
+            </div>
+          </div>
+
+          {/* CENTER — camera viewport, 56% */}
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {cameraPanel}
+            </div>
+          </div>
+
+          {/* RIGHT RAIL — 22% */}
+          <div
+            className="flex flex-col overflow-hidden border-l border-[#2d3142] bg-[#0f1117]"
+            style={{ width: '22%' }}
+          >
+            {/* Spacer matching header height so rails align */}
+            <div className="shrink-0 border-b border-[#2d3142]" style={{ height: 56 }} />
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {controlsRail}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── BOTTOM: classic two-column — camera+controls | pick list ─────────────
+    return (
+      <div className="flex overflow-hidden bg-[#0f1117] text-[#e2e8f0]" style={{ height: '100dvh' }}>
+        {landscapeOverlays}
+
+        {/* Left column — camera + controls (55%) */}
         <div className="flex flex-col overflow-hidden border-r border-[#2d3142]" style={{ width: '55%' }}>
-          {header}
-          {scannerWarning}
-          {joinBanner}
-          <NextItemBanner orders={orders} />
-          {/* Camera fills the remaining vertical space */}
+          {landscapeHeader}
+          <NextItemCard orders={orders} />
           <div className="flex-1 min-h-0 overflow-hidden">
             {cameraPanel}
           </div>
-          {scanStrip}
-          <div className="shrink-0">
-            {controls}
+          <div className="shrink-0 px-4 py-4 bg-[#0f1117]">
+            <MobileControls
+              pickerId={pickerId}
+              scanning={scanning}
+              onStartStop={handleStartStop}
+              onValidate={() => sendAction('validate')}
+              validationResult={localValidation}
+              onClearValidation={() => setLocalValidation(null)}
+              lastScanValue={lastScan?.value ?? null}
+              connected={connected}
+            />
           </div>
         </div>
 
-        {/* Right column — pick list (45 %) */}
+        {/* Right column — pick list (45%) */}
         <div className="flex flex-col overflow-hidden" style={{ width: '45%' }}>
-          {pickList}
+          {pickListPanel}
         </div>
-
       </div>
     );
   }
 
-  // ── PORTRAIT layout (phone fallback) ───────────────────────────────────────
-  const isCompact = window.innerWidth < 430;
+  // ── PORTRAIT layout — camera-first fullscreen HUD ─────────────────────────
+  //
+  //  Camera sits fixed behind everything.
+  //  All UI elements float as absolute/fixed layers on top.
+  //  Pick list slides up as a bottom sheet (50 % height) on demand.
+  //
+  const pendingCount = orders.reduce(
+    (n, o) => n + o.lines.filter((l) => l.status !== 'picked').length,
+    0,
+  );
+
   return (
     <div
-      className="flex flex-col overflow-hidden bg-[#0f1117] text-[#e2e8f0]"
-      style={{ height: '100dvh', paddingBottom: 'env(safe-area-inset-bottom, 0px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      className="fixed inset-0 bg-black text-[#e2e8f0] overflow-hidden"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
+      {/* ── Full-screen camera — always behind everything ── */}
+      <div className="absolute inset-0">
+        {cameraPanel}
+      </div>
+
+      {/* ── Fixed overlays ── */}
       {packWizardOverlay}
       {pendingConfirm && (
         <ConfirmOverlay
@@ -744,29 +799,140 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
       {moveAwayOverlay}
       {orderCompleteOverlay}
       {demoEndedOverlay}
-      {header}
-      {scannerWarning}
-      {joinBanner}
-      <NextItemBanner orders={orders} />
-      {/* Camera takes up to 55 dvh — leaves ~45 dvh for controls + pick list */}
-      <div className="shrink-0 w-full overflow-hidden" style={{ maxHeight: '55dvh' }}>
-        {cameraPanel}
+
+      {/* ── TOP BAR — picker identity + connection + scanner warning ── */}
+      <div
+        className="absolute top-0 left-0 right-0 flex items-center gap-2 px-3 py-2"
+        style={{ background: 'rgba(10,12,20,0.75)', backdropFilter: 'blur(6px)' }}
+      >
+        {/* Connection dot */}
+        <span className={`shrink-0 w-2 h-2 rounded-full ${connected ? 'bg-[#22c55e]' : 'bg-[#94a3b8]'}`} />
+
+        {/* Picker ID — tap to edit */}
+        {!lockedPickerId && editMode ? (
+          <>
+            <input
+              autoFocus
+              type="text"
+              value={editId}
+              onChange={(e) => setEditId(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveId(); }}
+              placeholder="picker-1"
+              className="flex-1 min-w-0 bg-black/40 border border-[#2d3142] text-[#e2e8f0] text-sm rounded-lg px-3 py-1 focus:outline-none focus:border-[#06b6d4]"
+            />
+            <button
+              onClick={handleSaveId}
+              className="px-3 py-1 rounded-lg bg-[#06b6d4] text-black font-bold text-sm shrink-0"
+            >
+              Set
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="text-[#94a3b8] text-xs shrink-0">Picker</span>
+            <span className="font-semibold text-[#e2e8f0] text-sm flex-1 truncate min-w-0">{pickerId}</span>
+            {!lockedPickerId && (
+              <button
+                onClick={() => setEditMode(true)}
+                className="shrink-0 text-[#57606a] text-xs px-2 py-1 rounded hover:text-[#94a3b8]"
+              >
+                ✎
+              </button>
+            )}
+          </>
+        )}
+
+        {/* Scanner warning icon — shown inline in top bar to avoid stealing rows */}
+        {scannerUnsupported && (
+          <span
+            className="shrink-0 text-[#f1c21b] text-base"
+            title="Native barcode scanner not available — use Chrome on Android for best results."
+          >
+            ⚠
+          </span>
+        )}
       </div>
-      {scanStrip}
-      <div className="shrink-0">
-        <MobileControls
-          pickerId={pickerId}
-          scanning={scanning}
-          onStartStop={handleStartStop}
-          onValidate={() => sendAction('validate')}
-          validationResult={localValidation}
-          onClearValidation={() => setLocalValidation(null)}
-          lastScanValue={lastScan?.value ?? null}
-          connected={connected}
-          compact={isCompact}
-        />
+
+      {/* ── JOIN DEMO banner — tap anywhere on the banner to join ── */}
+      {showJoinBanner && (
+        <div
+          className="absolute left-0 right-0 flex items-center gap-3 px-4 py-4 active:brightness-125"
+          style={{ top: 44, background: 'rgba(241,194,27,0.15)', backdropFilter: 'blur(6px)', borderBottom: '1px solid rgba(241,194,27,0.3)', cursor: 'pointer' }}
+          onClick={handleJoinDemo}
+        >
+          <span className="w-3 h-3 rounded-full bg-[#f1c21b] animate-pulse shrink-0" />
+          <span className="text-[#f1c21b] text-base font-bold flex-1 truncate">
+            Demo running as <span className="font-mono">{demoPickerId}</span> — tap to join
+          </span>
+        </div>
+      )}
+
+      {/* ── BOTTOM SHEET — pick list, slides up on demand ── */}
+      {listSheetOpen && (
+        <>
+          {/* Tap-away backdrop — pressing camera area closes sheet */}
+          <div
+            className="absolute inset-0 z-20"
+            onClick={() => setListSheetOpen(false)}
+          />
+          <div
+            className="absolute left-0 right-0 bottom-0 z-30 flex flex-col rounded-t-2xl overflow-hidden"
+            style={{
+              height: '55dvh',
+              background: 'rgba(15,17,23,0.97)',
+              backdropFilter: 'blur(12px)',
+              borderTop: '1px solid rgba(45,49,66,0.8)',
+            }}
+          >
+            {/* Sheet handle — tap anywhere on the bar to dismiss */}
+            <div
+              className="shrink-0 flex items-center justify-between px-5 pt-4 pb-3 border-b border-[#2d3142]"
+              onClick={() => setListSheetOpen(false)}
+            >
+              <div className="w-10 h-1.5 rounded-full bg-[#2d3142] mx-auto absolute left-1/2 -translate-x-1/2 top-2.5" />
+              <span className="text-[#57606a] text-sm font-bold uppercase tracking-wider flex-1">
+                Pick List
+              </span>
+              <span className="text-[#57606a] text-2xl font-light leading-none ml-3">↓</span>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <MobilePickList
+                orders={orders}
+                detections={detections}
+                orderCompletePending={pickerState?.order_complete_pending}
+                onConfirmPacked={handleConfirmPacked}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── BOTTOM HUD — next item card + action bar ── */}
+      <div className="absolute left-0 right-0 bottom-0 flex flex-col gap-2 pb-3 z-10"
+           style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}>
+
+        {/* Next item card — hidden when list sheet is open */}
+        {!listSheetOpen && (
+          <NextItemCard orders={orders} />
+        )}
+
+        {/* Action bar */}
+        <div className="flex gap-3 px-3">
+          <MobileControls
+            pickerId={pickerId}
+            scanning={scanning}
+            onStartStop={handleStartStop}
+            onValidate={() => sendAction('validate')}
+            validationResult={localValidation}
+            onClearValidation={() => setLocalValidation(null)}
+            lastScanValue={lastScan?.value ?? null}
+            connected={connected}
+            onToggleList={() => setListSheetOpen((v) => !v)}
+            listOpen={listSheetOpen}
+            pendingCount={pendingCount}
+          />
+        </div>
       </div>
-      {pickList}
     </div>
   );
 }

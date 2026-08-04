@@ -337,23 +337,14 @@ export function MobileCameraView({
         </div>
       )}
 
-      {/* ── Camera controls overlay (top bar) ── */}
-      <div className="absolute top-2 left-2 right-2 flex items-center gap-2">
-        {/* Facing toggle */}
-        <button
-          onClick={onToggleFacing}
-          className="flex items-center gap-1 px-2 py-1 rounded-full bg-black/60 text-white text-xs font-medium backdrop-blur-sm"
-          title="Flip camera"
-        >
-          🔄 {facing === 'environment' ? 'Rear' : 'Front'}
-        </button>
-
+      {/* ── Camera controls overlay (top-right corner) — glove-sized ── */}
+      <div className="absolute top-3 right-3 flex items-center gap-2">
         {/* Device selector — only shown when >1 camera available */}
         {devices.length > 1 && (
           <select
             value={activeDeviceId ?? ''}
             onChange={(e) => onSwitch(e.target.value)}
-            className="flex-1 min-w-0 bg-black/60 text-white text-xs rounded-full px-2 py-1 backdrop-blur-sm border border-white/20 focus:outline-none"
+            className="bg-black/70 text-white text-sm rounded-2xl px-3 py-3 backdrop-blur-sm border border-white/20 focus:outline-none"
           >
             {devices.map((d) => (
               <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
@@ -361,42 +352,49 @@ export function MobileCameraView({
           </select>
         )}
 
+        {/* Facing toggle — 56px square, easy glove target */}
+        <button
+          onClick={onToggleFacing}
+          className="flex items-center justify-center w-14 h-14 rounded-2xl bg-black/70 text-white text-2xl backdrop-blur-sm border border-white/15 active:brightness-125"
+          title="Flip camera"
+        >
+          🔄
+        </button>
+
         {/* Debug mode indicator */}
         {debugMode && (
-          <span className="ml-auto px-2 py-0.5 rounded-full bg-[#7c5cd8]/80 text-white text-[10px] font-bold backdrop-blur-sm">
+          <span className="px-3 py-1.5 rounded-2xl bg-[#7c5cd8]/80 text-white text-xs font-bold backdrop-blur-sm">
             ⬤ DEBUG
           </span>
         )}
       </div>
 
-      {/* ── HUD status strip — driven entirely from local candidates (no server round-trip needed) ── */}
+      {/* ── HUD status strip — candidate feedback, large text ── */}
       {(() => {
         const count = candidates.length;
         if (count === 0) return null;
 
-        // Multiple objects in frame — dwell gate is holding, picker must isolate
         if (count > 1) {
           return (
             <div
-              className="absolute bottom-16 left-3 right-3 flex items-center gap-2 px-3 py-2 rounded-xl pointer-events-none"
-              style={{ background: 'rgba(161,98,7,0.92)', backdropFilter: 'blur(4px)' }}
+              className="absolute bottom-24 left-4 right-4 flex items-center gap-3 px-4 py-3 rounded-2xl pointer-events-none"
+              style={{ background: 'rgba(161,98,7,0.94)', backdropFilter: 'blur(6px)' }}
             >
-              <span className="text-[#fef9c3] text-base font-bold shrink-0">⚠</span>
-              <span className="text-[#fef9c3] text-xs font-semibold leading-tight">
-                {count} items in view — isolate one before scanning
+              <span className="text-[#fef9c3] text-2xl font-bold shrink-0">⚠</span>
+              <span className="text-[#fef9c3] text-base font-bold leading-tight">
+                {count} items in view — isolate one
               </span>
             </div>
           );
         }
 
-        // Single candidate building dwell — show "hold steady" nudge
         return (
           <div
-            className="absolute bottom-16 left-3 right-3 flex items-center gap-2 px-3 py-2 rounded-xl pointer-events-none"
-            style={{ background: 'rgba(88,28,135,0.85)', backdropFilter: 'blur(4px)' }}
+            className="absolute bottom-24 left-4 right-4 flex items-center gap-3 px-4 py-3 rounded-2xl pointer-events-none"
+            style={{ background: 'rgba(88,28,135,0.88)', backdropFilter: 'blur(6px)' }}
           >
-            <span className="text-[#e9d5ff] text-base shrink-0">◎</span>
-            <span className="text-[#e9d5ff] text-xs font-semibold leading-tight">Hold steady…</span>
+            <span className="text-[#e9d5ff] text-2xl shrink-0">◎</span>
+            <span className="text-[#e9d5ff] text-base font-bold leading-tight">Hold steady…</span>
           </div>
         );
       })()}

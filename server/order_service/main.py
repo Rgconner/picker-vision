@@ -68,8 +68,28 @@ _SessionLocal = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
 
 
 def _init_db() -> None:
-    """Create all tables (no-op if they already exist) then seed."""
+    """Create all tables (no-op if they already exist) then seed.
+
+    SQLite's CREATE TABLE IF NOT EXISTS handles new tables, but does not add
+    columns to existing tables.  Any column added to an existing model after
+    initial deployment needs an explicit ADD COLUMN guard here.
+    """
     Base.metadata.create_all(bind=_engine)
+
+    # ── Column migration guards (idempotent ADD COLUMN IF NOT EXISTS) ─────────
+    with _engine.connect() as _conn:
+        _existing = {
+            row[1]
+            for row in _conn.execute(
+                __import__("sqlalchemy").text("PRAGMA table_info(workflow_config)")
+            )
+        }
+        if "control_layout" not in _existing:
+            _conn.execute(__import__("sqlalchemy").text(
+                "ALTER TABLE workflow_config ADD COLUMN control_layout VARCHAR NOT NULL DEFAULT 'auto'"
+            ))
+            _conn.commit()
+
     session = _SessionLocal()
     try:
         run_seed(session)
@@ -454,7 +474,7 @@ async def update_workflow_config(request: Request):
             row = _WorkflowConfig(); s.add(row)
         for k in ("batch_mode", "validation_threshold", "voice_enabled_default",
                   "haptic_enabled_default", "mid_pick_validate_after", "instance_profile",
-                  "demo_scenario"):
+                  "demo_scenario", "control_layout"):
             if k in body:
                 setattr(row, k, body[k])
         s.commit()

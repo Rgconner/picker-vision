@@ -183,7 +183,6 @@ export function MobileLiteView({ pickerId, onChangeId }: Props) {
           onClearValidation={() => setLocalValidation(null)}
           lastScanValue={null}   /* rendered inline above instead */
           connected={connected}
-          compact={false}
         />
       </div>
 
