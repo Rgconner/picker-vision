@@ -228,6 +228,11 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   // (which is empty by the time the WS response arrives — scan loop already stopped).
   const lastFiredBarcodeRef = useRef<string | null>(null);
 
+  // QOL-040 fix: pause scanner immediately on fire, before WS round-trip sets
+  // pendingConfirm. Prevents second unit of a multi-qty item auto-confirming
+  // in the background while the ConfirmOverlay is mounting.
+  const scanFiredRef = useRef(false);
+
   // Recently-confirmed line IDs — populated by handleConfirm, cleared when
   // orders state refreshes.  Prevents the overlay re-firing on the same line
   // when the barcode stays in-frame after confirmation but before setOrders runs.
@@ -269,6 +274,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     if (demoResetSeq === 0) return; // ignore initial value
     setScanning(false);
     setShowMoveAway(false);
+    scanFiredRef.current = false;
     setPendingConfirm(null);
     setOrderCompleteGate(null);
     setDemoEnded(true);
@@ -285,6 +291,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     }
     // NAV:SKIP while confirm overlay is showing — skip this item
     if (result.type === 'nav' && result.navAction === 'SKIP' && pendingConfirm) {
+      scanFiredRef.current = false;
       setPendingConfirm(null);
       return;
     }
@@ -302,6 +309,9 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     // pickerState.detections (which is empty because the loop stops on fire).
     lastFiredBarcodeRef.current = result.value;
 
+    // QOL-040: stop scanner immediately — don't wait for WS round-trip
+    scanFiredRef.current = true;
+
     publish(result);
 
   }, [scanning, publish, pendingConfirm]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -311,7 +321,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   // the overlay gate can fire. The loop is paused only once pendingConfirm is set
   // (overlay is showing) to prevent re-fires during confirmation.
   const { unsupported: scannerUnsupported, candidates } =
-    useBarcodeScanner(videoRef as React.RefObject<HTMLVideoElement | null>, scanning && !pendingConfirm, handleDetect);
+    useBarcodeScanner(videoRef as React.RefObject<HTMLVideoElement | null>, scanning && !pendingConfirm && !scanFiredRef.current, handleDetect);
 
   // Debug snapshot — posts composite JPEG every 2 s when ?debug=1
   useDebugSnapshot(
@@ -358,6 +368,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     // barcode that stays in-frame after confirmation.
     if (confirmedLinesRef.current.has(line.id)) return;
     lastFiredBarcodeRef.current = null;
+    scanFiredRef.current = false; // overlay is up — scanner can re-arm for next pick
     setPendingConfirm({
       orderId:        activeOrder.id,
       lineId:         line.id,
@@ -404,6 +415,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
 
     // QOL-017: stop scan loop and show "move item away" overlay instead of
     // the 2-second blackout band-aid. Picker taps to resume scanning.
+    scanFiredRef.current = false;
     setPendingConfirm(null);
     setScanning(false);
     moveAwayBarcodeRef.current = barcode;
