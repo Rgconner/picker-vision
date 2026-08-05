@@ -557,16 +557,34 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   ) : null;
 
   // ── QOL-017: move-away gate — tap anywhere ────────────────────────────────
+  // 2-second enforced minimum before tap is honoured — Ma Window for reorientation.
+  // Prevents the scanner immediately re-locking on a target still in frame.
+  const moveAwayReadyRef = useRef(false);
+  const [moveAwayCountdown, setMoveAwayCountdown] = useState(0);
+  useEffect(() => {
+    if (!showMoveAway) { moveAwayReadyRef.current = false; setMoveAwayCountdown(0); return; }
+    moveAwayReadyRef.current = false;
+    setMoveAwayCountdown(2);
+    const t1 = setTimeout(() => setMoveAwayCountdown(1), 1000);
+    const t2 = setTimeout(() => { moveAwayReadyRef.current = true; setMoveAwayCountdown(0); }, 2000);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [showMoveAway]);
+
   const moveAwayOverlay = showMoveAway && !orderCompleteGate ? (
     <div
       className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 px-8"
       style={{ background: 'rgba(10,12,20,0.97)' }}
-      onClick={() => { setShowMoveAway(false); moveAwayBarcodeRef.current = null; setScanning(true); }}
+      onClick={() => {
+        if (!moveAwayReadyRef.current) return;
+        setShowMoveAway(false); moveAwayBarcodeRef.current = null; setScanning(true);
+      }}
     >
       <span className="text-[#22c55e] text-7xl">✓</span>
       <span className="text-[#e2e8f0] text-3xl font-bold text-center">Picked!</span>
       <span className="text-[#94a3b8] text-xl text-center">
-        Move item away, then tap to continue
+        {moveAwayCountdown > 0
+          ? `Move item away… (${moveAwayCountdown})`
+          : 'Tap to continue'}
       </span>
     </div>
   ) : null;
