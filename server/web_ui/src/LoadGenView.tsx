@@ -133,8 +133,8 @@ export function LoadGenView({ auth }: Props) {
   const [cfg, setCfg] = useState<SwarmConfig>({
     pickerCount:        3,
     scanIntervalMs:     800,
-    misscanRate:        0.10,
-    multiScanRate:      0.25,
+    misscanRate:        0.01,
+    multiScanRate:      0.02,
     mistakeProbability: 0,
     autoStart:          true,
   });
