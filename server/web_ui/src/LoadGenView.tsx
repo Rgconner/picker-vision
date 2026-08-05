@@ -380,47 +380,47 @@ export function LoadGenView({ auth }: Props) {
 
             {/* Miscan rate */}
             <label className="flex flex-col gap-1">
-              <span className="text-[#57606a] text-xs">Miscan rate</span>
-              <select
-                value={cfg.misscanRate}
+              <div className="flex justify-between">
+                <span className="text-[#57606a] text-xs">Miscan rate</span>
+                <span className="text-[#e2e8f0] text-xs font-mono">{Math.round(cfg.misscanRate * 100)}%</span>
+              </div>
+              <input
+                type="range" min={0} max={50} step={1}
+                value={Math.round(cfg.misscanRate * 100)}
                 disabled={!isSupervisor}
-                onChange={(e) => setCfg((c) => ({ ...c, misscanRate: Number(e.target.value) }))}
-                className="rounded px-2 py-1 text-sm border border-[#2d3142] bg-[#0f1117] text-[#e2e8f0] disabled:opacity-40"
-              >
-                <option value={0}>Off (0 %)</option>
-                <option value={0.10}>Low (10 %)</option>
-                <option value={0.25}>High (25 %)</option>
-              </select>
+                onChange={(e) => setCfg((c) => ({ ...c, misscanRate: Number(e.target.value) / 100 }))}
+                className="w-full accent-[#f1c21b] disabled:opacity-40"
+              />
             </label>
 
             {/* Multi-scan rate */}
             <label className="flex flex-col gap-1">
-              <span className="text-[#57606a] text-xs">Multi-scan rate</span>
-              <select
-                value={cfg.multiScanRate}
+              <div className="flex justify-between">
+                <span className="text-[#57606a] text-xs">Multi-scan rate</span>
+                <span className="text-[#e2e8f0] text-xs font-mono">{Math.round(cfg.multiScanRate * 100)}%</span>
+              </div>
+              <input
+                type="range" min={0} max={50} step={1}
+                value={Math.round(cfg.multiScanRate * 100)}
                 disabled={!isSupervisor}
-                onChange={(e) => setCfg((c) => ({ ...c, multiScanRate: Number(e.target.value) }))}
-                className="rounded px-2 py-1 text-sm border border-[#2d3142] bg-[#0f1117] text-[#e2e8f0] disabled:opacity-40"
-              >
-                <option value={0}>Off (0 %)</option>
-                <option value={0.25}>Occasional (25 %)</option>
-                <option value={0.50}>Frequent (50 %)</option>
-              </select>
+                onChange={(e) => setCfg((c) => ({ ...c, multiScanRate: Number(e.target.value) / 100 }))}
+                className="w-full accent-[#be95ff] disabled:opacity-40"
+              />
             </label>
 
             {/* Mistake probability */}
             <label className="flex flex-col gap-1">
-              <span className="text-[#57606a] text-xs">Mistake probability</span>
-              <select
-                value={cfg.mistakeProbability}
+              <div className="flex justify-between">
+                <span className="text-[#57606a] text-xs">Mistake probability</span>
+                <span className="text-[#e2e8f0] text-xs font-mono">{Math.round(cfg.mistakeProbability * 100)}%</span>
+              </div>
+              <input
+                type="range" min={0} max={50} step={1}
+                value={Math.round(cfg.mistakeProbability * 100)}
                 disabled={!isSupervisor}
-                onChange={(e) => setCfg((c) => ({ ...c, mistakeProbability: Number(e.target.value) }))}
-                className="rounded px-2 py-1 text-sm border border-[#2d3142] bg-[#0f1117] text-[#e2e8f0] disabled:opacity-40"
-              >
-                <option value={0}>Off (0 %)</option>
-                <option value={0.10}>10 %</option>
-                <option value={0.20}>20 %</option>
-              </select>
+                onChange={(e) => setCfg((c) => ({ ...c, mistakeProbability: Number(e.target.value) / 100 }))}
+                className="w-full accent-[#ef4444] disabled:opacity-40"
+              />
             </label>
 
             {/* Auto-start */}

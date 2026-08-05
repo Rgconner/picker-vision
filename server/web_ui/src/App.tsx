@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { OperatorView } from './OperatorView';
 import { SupervisorView } from './SupervisorView';
 import { SystemView } from './SystemView';
@@ -43,10 +43,17 @@ export default function App() {
   }
 
   const isSupervisor = auth.user.role === 'supervisor';
+  const isOwner      = auth.user.role === 'owner';
   const isGuest      = auth.user.role === 'guest';
 
   // Pickers land on mobile and cannot navigate away
-  // Guests see supervisor-style tabs but cannot manage
+  // Owner lands on supervisor tab on first render
+  useEffect(() => {
+    if (auth.user?.role === 'owner' && mode === 'mobile') {
+      setMode('supervisor');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.user?.role]);
   const currentMode = auth.user.role === 'picker' ? 'mobile' : mode;
 
   return (
@@ -63,11 +70,14 @@ export default function App() {
           Picker Vision
         </span>
 
-        {/* Mode tabs — supervisors/guests see all (guests skip Management); pickers see nothing */}
-        {(isSupervisor || isGuest) && (
+        {/* Mode tabs — supervisors/owners/guests see tabs; pickers see nothing */}
+        {(isSupervisor || isOwner || isGuest) && (
           <nav className="flex gap-1 ml-4">
             {SUPERVISOR_TABS
-              .filter((t) => !(isGuest && (t.id === 'management' || t.id === 'load-gen' || t.id === 'regional-sim')))
+              .filter((t) => {
+                if (isGuest || isOwner) return t.id !== 'management' && t.id !== 'load-gen' && t.id !== 'regional-sim';
+                return true;
+              })
               .map((t) => (
                 <button
                   key={t.id}
@@ -88,7 +98,7 @@ export default function App() {
 
         {/* Right side: version badges + user pill + logout */}
         <div className="ml-auto flex items-center gap-2 text-xs text-[#94a3b8] flex-wrap justify-end">
-          {isSupervisor && telemetry && Object.entries(telemetry.services).map(([name, svc]) => (
+          {(isSupervisor || isOwner) && telemetry && Object.entries(telemetry.services).map(([name, svc]) => (
             <span key={name} className="rounded-full border border-[#2d3142] px-2 py-0.5 hidden sm:inline">
               {name} <span className="text-[#57606a]">{svc.version ?? '—'}</span>
             </span>
@@ -105,9 +115,11 @@ export default function App() {
           <span className={`rounded-full px-3 py-0.5 font-semibold ${
             isSupervisor
               ? 'bg-[#7c5cd8]/20 text-[#a78bfa] border border-[#7c5cd8]/30'
-              : isGuest
-                ? 'bg-[#f1c21b]/10 text-[#f1c21b] border border-[#f1c21b]/30'
-                : 'bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20'
+              : isOwner
+                ? 'bg-[#0f62fe]/15 text-[#78a9ff] border border-[#0f62fe]/30'
+                : isGuest
+                  ? 'bg-[#f1c21b]/10 text-[#f1c21b] border border-[#f1c21b]/30'
+                  : 'bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20'
           }`}>
             {auth.user.name}
           </span>
@@ -122,8 +134,8 @@ export default function App() {
         </div>
       </header>
 
-      {/* Health strip — supervisors and guests */}
-      {(isSupervisor || isGuest) && (
+      {/* Health strip — supervisors, owners, and guests */}
+      {(isSupervisor || isOwner || isGuest) && (
         <HealthStrip telemetry={telemetry} onServiceClick={handleServiceClick} />
       )}
 
@@ -144,19 +156,19 @@ export default function App() {
         {currentMode === 'system'      && (
           <SystemView telemetry={telemetry} focusService={focusService} />
         )}
-        {currentMode === 'management'  && isSupervisor && !isGuest && (
+        {currentMode === 'management'  && isSupervisor && (
           <ManagementView auth={auth} />
         )}
-        {currentMode === 'load-gen'    && isSupervisor && !isGuest && (
+        {currentMode === 'load-gen'    && isSupervisor && (
           <LoadGenView auth={auth} />
         )}
-        {currentMode === 'regional-sim' && isSupervisor && !isGuest && (
+        {currentMode === 'regional-sim' && isSupervisor && (
           <RegionalSimView auth={auth} />
         )}
       </main>
 
-      {/* Footer — supervisors and guests (pickers get full screen) */}
-      {(isSupervisor || isGuest) && (
+      {/* Footer — supervisors, owners, and guests (pickers get full screen) */}
+      {(isSupervisor || isOwner || isGuest) && (
         <footer
           className="shrink-0 text-center text-xs py-2 border-t border-[#2d3142]"
           style={{ color: '#57606a' }}

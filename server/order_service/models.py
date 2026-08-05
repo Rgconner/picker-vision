@@ -12,7 +12,7 @@ class User(Base):
 
     id        = Column(String, primary_key=True)          # UUID
     name      = Column(String, nullable=False)
-    role      = Column(String, nullable=False)             # "picker" | "supervisor"
+    role      = Column(String, nullable=False)             # "picker" | "supervisor" | "owner"
     picker_id = Column(String, nullable=True)             # matches picker registry; pickers only
     pin_hash  = Column(String, nullable=False)            # SHA-256 hex of PIN/password
 

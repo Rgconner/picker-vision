@@ -15,14 +15,16 @@ interface Props {
   auth: AuthState;
 }
 
-type Step = 'choose-role' | 'picker-select' | 'picker-pin' | 'supervisor-login';
+type Step = 'choose-role' | 'picker-select' | 'picker-pin' | 'supervisor-login' | 'owner-login';
 
 export function LoginScreen({ auth }: Props) {
-  const [step, setStep]         = useState<Step>('choose-role');
+  const [step, setStep]           = useState<Step>('choose-role');
   const [selectedName, setSelectedName] = useState('');
-  const [pin, setPin]           = useState('');
-  const [supUser, setSupUser]   = useState('');
-  const [supPass, setSupPass]   = useState('');
+  const [pin, setPin]             = useState('');
+  const [supUser, setSupUser]     = useState('');
+  const [supPass, setSupPass]     = useState('');
+  const [ownerUser, setOwnerUser] = useState('');
+  const [ownerPass, setOwnerPass] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const pickers = auth.users.filter((u) => u.role === 'picker');
@@ -43,11 +45,20 @@ export function LoginScreen({ auth }: Props) {
     if (!ok) setSupPass('');
   }
 
+  async function handleOwnerLogin() {
+    if (!ownerUser || !ownerPass) return;
+    setSubmitting(true);
+    const ok = await auth.login(ownerUser, ownerPass);
+    setSubmitting(false);
+    if (!ok) setOwnerPass('');
+  }
+
   function back() {
     auth.refresh();
     setStep('choose-role');
     setPin('');
     setSupPass('');
+    setOwnerPass('');
     setSelectedName('');
   }
 
@@ -79,8 +90,14 @@ export function LoginScreen({ auth }: Props) {
           I'm a Picker
         </button>
         <button
+          onClick={() => setStep('owner-login')}
+          className="w-full py-5 rounded-2xl bg-[#0f62fe] text-white font-bold text-xl active:brightness-90 transition-all"
+        >
+          Owner
+        </button>
+        <button
           onClick={() => setStep('supervisor-login')}
-          className="w-full py-5 rounded-2xl bg-[#1a1d27] border border-[#2d3142] text-[#94a3b8] font-bold text-xl active:brightness-90 transition-all"
+          className="w-full py-4 rounded-2xl bg-[#1a1d27] border border-[#2d3142] text-[#94a3b8] font-bold text-lg active:brightness-90 transition-all"
         >
           Supervisor
         </button>
@@ -157,7 +174,47 @@ export function LoginScreen({ auth }: Props) {
     );
   }
 
-  // ── Step 2: supervisor login ───────────────────────────────────────────────
+  // ── Step 2a: owner login ──────────────────────────────────────────────────
+  if (step === 'owner-login') {
+    return shell(
+      <>
+        <p className="text-center text-[#94a3b8] text-sm font-semibold uppercase tracking-wider">
+          Owner sign in
+        </p>
+        <div className="flex flex-col gap-3">
+          <input
+            autoFocus
+            type="text"
+            value={ownerUser}
+            onChange={(e) => setOwnerUser(e.target.value)}
+            placeholder="Username"
+            className="w-full py-4 px-4 rounded-2xl bg-[#1a1d27] border border-[#2d3142] text-[#e2e8f0] text-lg focus:outline-none focus:border-[#0f62fe]"
+          />
+          <input
+            type="password"
+            value={ownerPass}
+            onChange={(e) => setOwnerPass(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleOwnerLogin()}
+            placeholder="Password"
+            className="w-full py-4 px-4 rounded-2xl bg-[#1a1d27] border border-[#2d3142] text-[#e2e8f0] text-lg focus:outline-none focus:border-[#0f62fe]"
+          />
+        </div>
+        {auth.error && <p className="text-center text-[#ef4444] text-sm">{auth.error}</p>}
+        <button
+          onClick={handleOwnerLogin}
+          disabled={submitting || !ownerUser || !ownerPass}
+          className="w-full py-5 rounded-2xl bg-[#0f62fe] text-white font-bold text-xl disabled:opacity-40 active:brightness-90 transition-all"
+        >
+          {submitting ? 'Checking…' : 'Sign in'}
+        </button>
+        <button onClick={back} className="text-[#57606a] text-sm text-center w-full py-2">
+          ← Back
+        </button>
+      </>
+    );
+  }
+
+  // ── Step 2b: supervisor login ─────────────────────────────────────────────
   return shell(
     <>
       <p className="text-center text-[#94a3b8] text-sm font-semibold uppercase tracking-wider">

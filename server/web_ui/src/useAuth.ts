@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-export type UserRole = 'picker' | 'supervisor' | 'guest';
+export type UserRole = 'picker' | 'supervisor' | 'owner' | 'guest';
 
 export interface AppUser {
   id:         string;
