@@ -242,7 +242,7 @@ function UsersPanel({ auth }: { auth: AuthState }) {
             <Row label="Name"><Field value={selected.name} onChange={(v) => setSelected({ ...selected, name: v })} /></Row>
             <Row label="Role">
               <Select value={selected.role} onChange={(v) => setSelected({ ...selected, role: v })}
-                options={[{ value: 'picker', label: 'Picker' }, { value: 'supervisor', label: 'Supervisor' }]} />
+                options={[{ value: 'picker', label: 'Picker' }, { value: 'owner', label: 'Owner' }, { value: 'supervisor', label: 'Supervisor' }]} />
             </Row>
             <Row label="Picker ID"><Field value={selected.picker_id ?? ''} placeholder="auto" onChange={(v) => setSelected({ ...selected, picker_id: v || null })} /></Row>
             <Row label="New PIN"><Field type="password" value={newPin} placeholder="leave blank to keep" onChange={setNewPin} /></Row>
@@ -260,7 +260,7 @@ function UsersPanel({ auth }: { auth: AuthState }) {
             <Row label="Name"><Field value={newName} placeholder="Full name" onChange={setNewName} /></Row>
             <Row label="Role">
               <Select value={newRole} onChange={setNewRole}
-                options={[{ value: 'picker', label: 'Picker' }, { value: 'supervisor', label: 'Supervisor' }]} />
+                options={[{ value: 'picker', label: 'Picker' }, { value: 'owner', label: 'Owner' }, { value: 'supervisor', label: 'Supervisor' }]} />
             </Row>
             {newRole === 'picker' && (
               <Row label="Picker ID"><Field value={newPickerId} placeholder="auto from name" onChange={setNewPickerId} /></Row>
