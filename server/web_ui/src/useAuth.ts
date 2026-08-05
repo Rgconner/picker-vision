@@ -119,7 +119,8 @@ export function useAuth(): AuthState {
   }, []);
 
   const loginAsGuest = useCallback(() => {
-    const guest: AppUser = { id: 'guest', name: 'Guest', role: 'guest', picker_id: null };
+    const suffix = Math.random().toString(16).slice(2, 6).toUpperCase();
+    const guest: AppUser = { id: `guest-${suffix}`, name: `Guest-${suffix}`, role: 'guest', picker_id: null };
     setUser(guest);
     saveSession(guest);
     // Navigate to the app — WelcomePage and App are separate renders
