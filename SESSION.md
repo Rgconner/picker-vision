@@ -11,36 +11,33 @@
 
 ---
 
-## Current State (2026-08-08 — session 18)
+## Current State (2026-08-11 — session 19/20)
 
 **Branch:** `feature/bobs-tiny-treasures`
-**Last pushed commit:** `0647e38` — fix(#137): Guest picker_id now unique per device
-**CI status:** Unknown — runner was restarted mid-session; verify before assuming deployed
-**System state:** Demo prepped and run with OMS technical seller. Core flow stable. Three local changes uncommitted — see below.
+**Last local commit:** `228d492` — feat(#140,#141,#142): confirm crop, exit-scan button, auto-reload banner
+**Last pushed commit:** `a217790` — session 18 handoff
+**CI status:** Runner up and healthy
+**System state:** 3 new features committed locally, not yet pushed. 2 dirty files still pending from session 18.
 
 ## Immediate First Action Next Session
 
-**→ Read this file. Check runner. Build + commit local changes. Then verify deploy.**
+**→ Read this file. Commit dirty files below. Then push all + verify deploy.**
 
-### Three locally dirty files — NOT yet committed or pushed
+### Two locally dirty files — NOT yet committed or pushed
 
 | File | Card | What changed | Status |
 |---|---|---|---|
 | `server/web_ui/src/App.tsx` | #139 | Supervisor loses Management tab — Management is owner-only | Dirty, not committed |
 | `server/web_ui/src/DemoPage.tsx` | #137 | `tryScanning()` unique Guest suffix — same fix as `useAuth.ts`, catches hardcoded `id: 'guest'` | Dirty, not committed |
-| `server/load_gen/simulator.py` | #138 | Rolling window max 6, `rolled_off_id` in `_SimResult` | Dirty, not committed |
 
-**Before committing these:**
-1. Run `npm run build` in `server/web_ui` — confirm no TypeScript errors
-2. Commit `App.tsx` + `DemoPage.tsx` together against cards #139 + #137
-3. Surface `rolled_off_id` warning in `RegionalSimView.tsx` — banner when `rolled_off_id` is present (not yet done)
-4. Commit `simulator.py` against card #138
-
-**`main.py` note:** `simulations_start()` already returns `result.to_dict()` — `rolled_off_id` will appear automatically once `simulator.py` is committed. UI banner in `RegionalSimView.tsx` still needs wiring.
+**Before pushing:**
+1. Commit `App.tsx` + `DemoPage.tsx` together against cards #139 + #137
+2. Push all commits — `228d492` + dirty file commit
+3. Verify deploy (check runner, bundle hash, demo status)
 
 ---
 
-## What Shipped This Session (session 18)
+## What Shipped This Session (session 19/20)
 
 | Commit | Card | What |
 |---|---|---|
@@ -50,6 +47,7 @@
 | `795577b` | #132 | 2-second Ma Window on move-away gate with countdown |
 | `9e71302` | #136 | Load Gen noise defaults: miscan=0.01, multi-scan=0.02 |
 | `0647e38` | #137 | Guest unique suffix in `useAuth.ts` (Guest-XXXX) |
+| `228d492` | #140 #141 #142 #138 | Confirm crop, exit-scan button, auto-reload banner, simulator rolling window |
 
 ### Role hierarchy (current)
 `picker` → `guest` → `owner` → `supervisor`
@@ -77,8 +75,11 @@
 | # | Title | State |
 |---|---|---|
 | #139 | Supervisor loses Management tab | Code local, not pushed |
-| #138 | Regional simulation rolling window max 6 | Code local, not pushed (needs UI banner) |
 | #137 | THA-002-CONFIRMED dual-device picker_id collision | DemoPage.tsx local, not pushed |
+| #140 | Confirm overlay scan crop | Committed `228d492`, not pushed — **test in physical-demo mode** |
+| #141 | Exit scan corner button | Committed `228d492`, not pushed — **test portrait mode** |
+| #142 | Auto-reload banner | Committed `228d492`, not pushed — **test fires automatically after next deploy** |
+| #138 | Regional simulation rolling window max 6 | Committed `228d492`, not pushed — rolled_off_id UI banner still needs wiring in `RegionalSimView.tsx` |
 
 ### Parked (not critical for next demo)
 | # | Title |
