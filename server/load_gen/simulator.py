@@ -343,6 +343,22 @@ def generate_simulation(preset: str, months: int, db_url: str) -> RegionalSimula
         len(config["stores"]), total_events, elapsed,
     )
 
+    # Rolling window — keep at most 6 simulations; delete oldest if over limit
+    MAX_SIMULATIONS = 6
+    rolled_off_id: str | None = None
+    with Session(_get_engine(db_url)) as session:
+        rows = session.execute(
+            text("SELECT id, rs_id FROM regional_simulation ORDER BY generated_at ASC")
+        ).fetchall()
+        if len(rows) > MAX_SIMULATIONS:
+            oldest_id, oldest_rs_id = rows[0]
+            session.execute(text("DELETE FROM rs_pick_event WHERE simulation_id = :id"), {"id": oldest_id})
+            session.execute(text("DELETE FROM rs_picker_profile WHERE simulation_id = :id"), {"id": oldest_id})
+            session.execute(text("DELETE FROM regional_simulation WHERE id = :id"), {"id": oldest_id})
+            session.commit()
+            rolled_off_id = oldest_rs_id
+            logger.info("rolling-window: deleted oldest simulation %s to stay within limit of %d", oldest_rs_id, MAX_SIMULATIONS)
+
     # Return a lightweight dict-like record so caller doesn't need a live session
     return _SimResult(
         id=sim_id,
@@ -353,15 +369,22 @@ def generate_simulation(preset: str, months: int, db_url: str) -> RegionalSimula
         salt=salt_raw,
         pick_count=total_events,
         elapsed_sec=round(elapsed, 3),
+        rolled_off_id=rolled_off_id,
     )
 
 
 class _SimResult:
-    """Lightweight result object returned by generate_simulation (no open session needed)."""
+    """Lightweight result object returned by generate_simulation (no open session needed).
+
+    Extra field: rolled_off_id — rs_id of the simulation deleted to stay within the
+    6-simulation rolling window, or None if no rolloff occurred.
+    """
 
     def __init__(self, **kwargs: Any):
         for k, v in kwargs.items():
             setattr(self, k, v)
+        if not hasattr(self, "rolled_off_id"):
+            self.rolled_off_id = None
 
     def to_dict(self) -> dict:
         return {k: v for k, v in self.__dict__.items() if not k.startswith("_")}

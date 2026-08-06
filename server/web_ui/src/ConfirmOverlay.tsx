@@ -23,11 +23,13 @@ interface Props {
   quantityPicked?: number;
   /** QOL-024: total quantity required for this line */
   quantity?:       number;
+  /** Crop of the camera frame at the moment the barcode fired — for visual reference */
+  cropDataUrl?:    string;
 }
 
 export function ConfirmOverlay({
   scenario, itemName, barcode, stagingCode, onConfirm, onSkip,
-  quantityPicked = 0, quantity = 1,
+  quantityPicked = 0, quantity = 1, cropDataUrl,
 }: Props) {
   const [showFallback, setShowFallback] = useState(false);
 
@@ -44,6 +46,15 @@ export function ConfirmOverlay({
     >
       {/* Item identity */}
       <div className="flex flex-col items-center gap-3 text-center w-full max-w-sm">
+        {/* Scan crop — visual confirmation of what the camera saw */}
+        {cropDataUrl && (
+          <img
+            src={cropDataUrl}
+            alt="scan crop"
+            className="rounded-xl border border-[#2d3142]"
+            style={{ maxHeight: 120, maxWidth: '100%', objectFit: 'contain' }}
+          />
+        )}
         <span className="text-[#57606a] text-sm font-semibold uppercase tracking-widest">
           Place in tray
         </span>

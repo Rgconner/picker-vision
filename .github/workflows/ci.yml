@@ -78,6 +78,8 @@ jobs:
 
       - name: TypeScript build
         working-directory: server/web_ui
+        env:
+          VITE_APP_VERSION: ${{ github.sha }}
         run: npm run build
 
       - name: Upload build artifact

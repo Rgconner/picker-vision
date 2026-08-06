@@ -16,6 +16,11 @@ const hasCerts =
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    // Stamped at build time via VITE_APP_VERSION env var (set by CI to GITHUB_SHA).
+    // Falls back to 'dev' in local dev so the update check never fires locally.
+    __APP_VERSION__: JSON.stringify(process.env.VITE_APP_VERSION ?? 'dev'),
+  },
   server: {
     host: '0.0.0.0',   // listen on all interfaces so a phone on the same LAN can reach it
     port: 5173,
