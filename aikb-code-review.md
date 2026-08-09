@@ -7,6 +7,12 @@
 **Method:** Every claim below was checked against the live source. Line numbers refer to the tree as of this review.  
 **Verdict:** For a non-programmer + AI collaboration, this is genuinely impressive. The architecture is sound, the vision is clear, and the hard problems (RPGLE scanning, edge inference, session analysis) are solved correctly. The issues below are overwhelmingly AI-generation artifacts — the kind of cleanup a professional developer would clear in a focused day or two. It is **not** production-ready as-is.
 
+**Sprint-end re-evaluation:** Use [`aikb-adversarial-eval-playbook.md`](aikb-adversarial-eval-playbook.md) — identity, rubric, UI checks, trust-floor checklist, and per-sprint template. This file is the **baseline**; later sprints write `aikb-code-review-sprint-YYYYMMDD.md`.
+
+**Effort context (architect-reported):** The codebase under this review was produced in roughly **~5 hours of partial attention** (including architectural layout), after about **~2 hours** of ruminating and note-taking before the AI was engaged. Human output: **0 LOC**. Calibrate “impressive vs alarming” against that half-day-scale investment — not against a multi-engineer sprint.
+
+**Scope note — estimator:** `tools/estimate_repo.py` and related rates/tiers/HTML-MD outputs are **not functional Board/AIKB application code**. They generate a **management report on value and output of the AI/Human team**. Findings on contingency flags, monolith size, or HTML JS still matter for **report honesty**, but they are **out of band** for “does the board/API work.”
+
 ---
 
 ## 0. Context Matters: What "Non-Programmer + AI" Changes
@@ -14,7 +20,6 @@
 Before the defect list, recalibrate expectations. This codebase was not written by a software engineer. It was written by an AI responding to prompts from a human architect who understands domains, processes, and what good looks like — but cannot write or review code themselves.
 
 **What becomes more impressive:**
-- A coherent FastAPI service with SQLAlchemy 2.0 ORM, Pydantic v2 schemas, AST Python scanning, regex RPGLE scanning, dual-mode bootstrap tools, board export, and a full HTML estimate generator.
 - `CONTEXT.md` is excellent — exactly the document a domain expert would write to orient a fresh AI.
 - The RPGLE scanner handles free-format, fixed-format, mixed, SQLRPGLE, `/COPY`, CALLP, EXEC SQL, DCL-DS, CTL-OPT, and encoding fallback. That is real IBM i domain depth from the human, not generic AI knowledge.
 - AIKB-028 (try/except at every boundary, trace-id everywhere) is followed with remarkable consistency across the package.
@@ -117,7 +122,8 @@ AIKB is a FastAPI + SQLite service that stores structured "cards" and "edges" de
 | API surface | B- | Clean CRUD; missing auth, filters, pagination, DELETE |
 | Scanners | A- | RPGLE is standout; Python is solid with minor dead code |
 | Bootstrap / edge inference | B | Generic path is right; BTT-specific path undermines it; live board shows weak inference |
-| Estimator | C+ | Useful output, but flag ignored, monolith, brittle JS |
+| Estimator (mgmt value report — not app runtime) | C+ | Useful leadership narrative tool; `--contingency` ignored, monolith, brittle JS — grade as **comms honesty**, not product core |
+
 | Security | D | No auth, no rate limit, open by design if bound beyond localhost |
 | Ops / k8s | C | Gitea stack exists; Board API itself has no k8s deploy; secrets externalized correctly |
 | Tests | F | Empty `tests/` package |
@@ -251,6 +257,8 @@ async def _propagate_trace_id(request: Request, call_next):
 Handlers: `trace_id = getattr(request.state, "trace_id", None) or str(uuid.uuid4())`.
 
 ### 3.2 CONFIRMED BUG — `--contingency` CLI Flag Is Ignored
+
+**Scope:** Management value-report tool only — not Board API runtime. Still a real honesty bug if leadership is shown contingency-adjusted numbers.
 
 **File:** `tools/estimate_repo.py`
 
@@ -577,7 +585,7 @@ Because `ErrorResponse` is unused in routes.
 4. **CONTEXT.md as AI onboarding.** Model for other projects.
 5. **Dual-mode tools** (API vs direct DB) — pragmatic for bootstrap chicken-and-egg.
 6. **Board export to git** — the product’s semantic session memory; next Bob should read `aikb/board/`, not only a live API or cold source. This *is* giving Bob back his yesterdays.
-7. **Estimator separation of rates/tiers data from code** — right instinct (even if contingency flag is broken).
+7. **Estimator as management value/output report** (rates/tiers data separated from code) — right instinct for leadership storytelling, even though contingency flag is broken; correctly kept out of the Board runtime path.
 8. **Gitea manifests** — secrets, probes, TLS, rate limits show production instincts on the forge side.
 9. **Edge model with `truth_source` and `stale`** — ready for divergence detection later.
 10. **Success criterion is testable** — "fresh Bob answers from GET /cards only" is the right north star.
@@ -593,7 +601,7 @@ Because `ErrorResponse` is unused in routes.
 | 1 | Fix default API port 8000 → 8765 | First command must work; you cannot "see" the bug in source | 5 m |
 | 2 | Fix CONTEXT.md / README commands (uvicorn target, ports) | Docs are your control panel | 15 m |
 | 3 | Fix trace_id via `request.state` | Your stated non-negotiable rule; verify with `curl -v` + one log line | 30 m |
-| 4 | Fix `--contingency` ignored | Verify by generating two reports and comparing | 30 m |
+| 4 | Fix `--contingency` ignored (**value-report tool**, not Board runtime) | Verify by generating two management reports and comparing | 30 m |
 | 5 | Add API key auth + `.env.example` | Operational rule you own: no non-localhost without this | 1 h |
 | 6 | **Seed 3–8 pytest tests** (trace_id, contingency, card CRUD, port default) | **Behavioral memory** across AI sessions (complements board export, does not replace it) | 2–4 h |
 | 7 | Fix `get_session` rollback masking + SQLite-only `check_same_thread` | Small; bundle with auth session | 20 m |
@@ -756,3 +764,137 @@ That bar is exactly what AIKB is aimed at. Production polish (Alembic, k8s Board
 | What’s the success metric that isn’t vanity? | A fresh Bob, given only board export + CONTEXT, answers correctly about the system **and** a thin test/demo falsifier still passes after the last change. Client feedback appears as cards, not folklore. A coding team can start from the board without reverse-engineering chat. |
 
 **Verdict:** Given further refinement along the trust-floor and dual-memory path — and given your actual use case (demo → feedback → living spec for a real team) — AIKB is **strategically aligned with anti-wall practice** and likely to deliver **disproportionate benefit per hour** compared to building more demo features. Treat it as the **spine of yesterdays and of the design contract**, not as the production system and not as a substitute for hitting real runtime boundaries when you claim something works.
+
+---
+
+## 13. Evaluation — LLM Gatekeeper for the Board (Guarded Semantic Memory)
+
+**The proposal:** Place a local small LLM or remote large LLM in charge of the board. The human architect cannot touch or alter cards *except through* the LLM intermediary. The LLM only alters or promotes cards upon explicit human approval. Intent: a self-maintaining board, isolated from arbitrary changes.
+
+This is a governance model, not a feature. It changes *who is allowed to write* and under what conditions.
+
+### 13.1 What problem this solves
+
+| Pain point | How the gatekeeper addresses it |
+|---|---|
+| AI coding sessions silently corrupt the board (wrong edges, duplicate cards, hallucinated fields) | Only the gatekeeper writes; coding sessions talk to the gatekeeper, not the raw API |
+| Human accidentally POSTs a malformed card | Gatekeeper validates schema, FK references, edge consistency before writing |
+| No one notices that cards went stale after the last bootstrap | Gatekeeper actively compares static_hashes, flags drift, proposes updates |
+| The board accumulates nonsense because "Bob doesn't remember yesterday" | **Gatekeeper IS Bob's memory** — it reads the board, maintains consistency, and presents proposed changes for approval |
+| Bootstrap runs twice and doubles component cards | Gatekeeper detects duplicates and blocks or merges |
+| No audit trail of who changed what | Every mutation has: human approval timestamp, gatekeeper trace_id, before/after snapshot |
+
+This directly attacks the biggest risk in an AI-only architecture: **semantic memory corruption going undetected**.
+
+### 13.2 What the gatekeeper CAN do well
+
+| Capability | Model requirement |
+|---|---|
+| **Structural validation** (schema, FK, enums, required fields) | Deterministic; no LLM needed. LLM adds value by *explaining* rejections in plain language. |
+| **Cross-reference integrity** ("edge target doesn't exist — create it first?") | Small local model sufficient |
+| **Duplicate detection** (same component_name) | Deterministic; no LLM needed |
+| **Staleness detection** (static_hash drift) | Deterministic; LLM can summarize "what changed" |
+| **Edge inference assistance** ("CALLP to PROC_X in component A; PROC_X exported by B — add edge?") | Benefits from LLM reasoning about edge type and label |
+| **Consistency across card layers** ("description says 3 endpoints but semantic layer has 4") | Medium+ LLM for nuance |
+| **Audit trail** | Deterministic |
+| **Proactive maintenance proposals** ("5 cards not re-scanned in 2 weeks") | Small model for scheduling; LLM for explanation |
+
+### 13.3 What the gatekeeper CANNOT do
+
+| Cannot do | Why | Mitigation |
+|---|---|---|
+| **Verify factual truth of card content** | LLM has no more ground truth about your system than you do | Truth from scanners + tests + human domain knowledge |
+| **Replace behavioral memory (tests)** | A structurally valid board can still describe a broken system | Tests are behavioral memory; gatekeeper is semantic memory guardian |
+| **Judge architectural correctness** | "Should api_gateway proxy to order_service?" — gatekeeper checks if edge exists, not if architecture is sound | Human architect owns architectural judgment |
+| **Prevent the human from being wrong** | If architect says "add card X with description Y," gatekeeper writes it | Gatekeeper is a consistency layer, not an oracle |
+| **Operate without explicit approval rules** | "Promote only on human approval" is policy, not code | Define in config: auto-approve for schema fixes, require-approve for content changes |
+
+### 13.4 Risks and failure modes
+
+| Risk | Severity | Mitigation |
+|---|---|---|
+| **LLM gatekeeper hallucinates during mediation** | High | Gatekeeper should **propose, not auto-apply**. Human always sees the diff. |
+| **Gatekeeper becomes a bottleneck** | Medium | "Guarded" mode for production; "direct" mode (with audit) for rapid prototyping. Batch proposals. |
+| **Gatekeeper is unavailable → board frozen** | Medium | Direct DB mode as emergency fallback with strong audit. Board export in git as read-only reference. |
+| **Gatekeeper itself drifts across sessions** — governance rules change, rubber-stamps everything | High | **Governance rules in version-controlled config** (JSON/YAML). Gatekeeper behavior tests. Adversarial review of gatekeeper as part of sprint cadence. |
+| **Remote large model cost/latency for every card touch** | Low-Medium | Local small model for structural validation; remote only for semantic reasoning. Batch operations. |
+| **Architect can't do a quick typo fix without a conversation** | Low | "Quick-approve" path for well-understood mutation types (status updates, typo fixes). |
+| **Gatekeeper disagrees with architect and blocks progress** | Medium | Architect override capability (with audit). Gatekeeper advises; architect decides. Block only for structural violations. |
+
+### 13.5 Architecture sketch
+
+```
+CURRENT:
+  Human ──(prompt)──→ AI coding session ──(raw POST/PATCH)──→ Board API ──→ SQLite
+  Bootstrap tools ──(raw HTTP/DB)──→ Board API
+
+PROPOSED ("guarded board"):
+  Human Architect ──(approval)──→ LLM Gatekeeper ("aikb-guard")
+                                    │
+                                    ├── Proposes changes for approval
+                                    ├── Validates structure, FK, consistency
+                                    ├── Actively detects staleness, duplicates
+                                    ├── Maintains audit log
+                                    └── Writes approved changes → Board API
+                                    
+  AI coding sessions ──(propose)──→ Gatekeeper ──(await approval)──→ Board API
+  Bootstrap/scanners ──(propose)──→ Gatekeeper ──(await approval)──→ Board API
+  export_board ──→ reads Board API ──→ writes aikb/board/ to git (read-only; no bypass)
+
+NEW COMPONENTS:
+  aikb-guard/           # New service (or middleware on existing API)
+    guard.py            # Gatekeeper core: approve/reject/audit
+    policy.yaml         # Governance rules: what's auto, what needs approval
+    proposals/          # Queue of pending mutations awaiting human approval
+```
+
+**What survives:** Board API (cards.py, edges.py) — still canonical store. Gatekeeper calls it; no one else gets write access. Bootstrap tools become *proposal generators*. Export stays read-only.
+
+**What must change:**
+1. Board API must enforce auth (already Must Fix #5). Gatekeeper has its own API key; no other service account has write.
+2. `bootstrap_repo.py` becomes a proposal generator, not a direct writer.
+3. Gatekeeper needs its own pytest suite.
+4. Architect's operational rule: "read board + CONTEXT + pending proposals from gatekeeper."
+
+### 13.6 Gitea fork consideration
+
+**Gitea as git backend (unchanged):** The existing Gitea k8s stack hosts the board export in git. This is already the plan and needs no fork. The gatekeeper commits approved board exports to Gitea.
+
+**Gitea as approval workflow engine:** Using Gitea PR/issue/comment workflow as the human approval mechanism. Clever reuse of forge tooling, but adds friction for rapid single-human changes.
+
+**Recommendation:** Keep Gitea as the git backend. Don't force card-level approval through git PRs — too heavy for a single-human system. Instead, gatekeeper presents proposals through the UI (when Carbon UI exists) or a simple CLI approval loop (`aikb approve --proposal abc123`). For v1, even a terminal prompt ("Approve this change? [y/n/diff]") is sufficient.
+
+### 13.7 Implementation order (do NOT gatekeeper before trust floor)
+
+The current board has no auth, duplicate cards, 1 edge, and zero tests. Placing a gatekeeper in front of that is putting a security guard on a building with no locks, a leaky roof, and a wrong address on the front door.
+
+1. **Trust floor** (Sessions A–D: defaults, contingency, trace_id, API key) — non-negotiable
+2. **Behavioral memory** (Session E: pytest) — gatekeeper itself needs tests
+3. **Semantic memory hygiene** (Session F: idempotent bootstrap, export)
+4. **Richer edges** (Session G, post-F: edge inference quality) — gatekeeper's maintenance value scales with edge richness
+5. **Gatekeeper v1** (Session H, ~4–6h): structural validation, duplicate detection, approval queue, audit log. Local model for structure; remote model optional for semantic reasoning. Policy file in git.
+6. **Gatekeeper v2** (Session I): staleness detection, proactive maintenance proposals, edge inference assistance
+
+**Minimum viable gatekeeper (v1) spec:**
+- Service (`aikb-guard`) with its own API key
+- Validates all mutations against schema, FK integrity, duplicate component_name
+- Rejects invalid and returns plain-language reason
+- Queues valid mutations as "pending approval"
+- Architect approves/rejects via CLI or HTTP (`POST /approve/{id}`, `POST /reject/{id}`)
+- Audit log: (timestamp, mutation, gatekeeper_trace_id, human_approval_timestamp)
+- Bootstrap tools POST to gatekeeper, not to Board API
+- Pytest: structural validation, approval flow, rejection flow, duplicate detection
+
+### 13.8 Honest assessment
+
+| Question | Answer |
+|---|---|
+| Is this a good idea for the architecture? | **Yes.** Directly addresses the #1 risk in AI-only development (semantic memory corruption) and aligns with the dual-memory thesis. |
+| Does it need a dedicated "fork of Gitea"? | **Probably not.** Gitea is correctly scoped as the git backend. The gatekeeper is a new service (`aikb-guard`), not a fork. Gitea PR flow is too heavy for single-human approval. |
+| Local small LLM or remote large? | **Both, scoped.** Local for structural validation + duplicate detection (cheap, fast, always available). Remote large for semantic reasoning on complex proposals. Remote optional — gatekeeper works with local-only. |
+| Will this slow down the architect? | **Slightly, intentionally.** Every mutation gets a second set of eyes. For the 100:1 leverage model, a 5-second approval step per card change is noise against the productivity gain. The risk of NOT having it (silent board corruption) is far more expensive. |
+| Can a coding session still corrupt the board? | **Much harder.** Direct Board API is auth-gated. Coding session talks to gatekeeper. Gatekeeper validates. Human approves. Three layers of defense. |
+| Is this over-engineering for a "throwaway demo" tool? | **No — for the living-design-spec use case.** If the board is the handoff artifact to a real team, its integrity is the product. A gatekeeper is not enterprise cosplay; it's protecting the one artifact that survives demo sessions. |
+| What's the biggest risk? | **The gatekeeper itself becoming a vibe artifact** — an AI that rubber-stamps approvals, drifts its governance rules across sessions. Counter: governance rules in version-controlled config. Gatekeeper behavior tests. Adversarial review of the gatekeeper as part of sprint cadence. |
+
+**Bottom line:** The LLM gatekeeper is a **strong architectural addition** — not for this sprint, but for the roadmap after trust floor + tests + export hygiene. It converts the board from "any Bob session can silently corrupt it" to "every mutation is validated, proposed, and human-approved." That is exactly the shift from an unverified artifact to a living design contract. Build the guard after the floor is solid, and treat the gatekeeper's own integrity as a first-class concern in the adversarial review cadence.
