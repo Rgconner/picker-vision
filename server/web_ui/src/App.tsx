@@ -76,6 +76,7 @@ export default function App() {
             {SUPERVISOR_TABS
               .filter((t) => {
                 if (isGuest || isOwner) return t.id !== 'management' && t.id !== 'load-gen' && t.id !== 'regional-sim';
+                if (isSupervisor) return t.id !== 'management';
                 return true;
               })
               .map((t) => (
@@ -156,7 +157,7 @@ export default function App() {
         {currentMode === 'system'      && (
           <SystemView telemetry={telemetry} focusService={focusService} />
         )}
-        {currentMode === 'management'  && isSupervisor && (
+        {currentMode === 'management'  && isOwner && (
           <ManagementView auth={auth} />
         )}
         {currentMode === 'load-gen'    && isSupervisor && (

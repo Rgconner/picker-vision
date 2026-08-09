@@ -149,7 +149,9 @@ export function DemoPage() {
 
   function tryScanning() {
     // loginAsGuest() navigates to /app — override to /mobile instead
-    const guest = { id: 'guest', name: 'Guest', role: 'guest' as const, picker_id: null };
+    // Use same unique-suffix pattern as loginAsGuest() to prevent channel collision
+    const suffix = Math.random().toString(16).slice(2, 6).toUpperCase();
+    const guest = { id: `guest-${suffix}`, name: `Guest-${suffix}`, role: 'guest' as const, picker_id: null };
     try { sessionStorage.setItem('pv_session', JSON.stringify(guest)); } catch { /* ignore */ }
     window.location.href = '/mobile';
   }
