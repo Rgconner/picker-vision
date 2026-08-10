@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>picker-vision — Development Estimate</title>
+<style>
+:root{--bg:#ffffff;--surface:#f7f8fa;--border:#e5e7eb;--text:#1f2328;--muted:#57606a;--accent:#3b82d4;--purple:#7c5cd8;--green:#16a34a;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,"Segoe UI",system-ui,sans-serif;font-size:14px;line-height:1.6;color:var(--text);background:var(--bg);}
+.page-header{background:#161616;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px;}
+.wordmark{font-weight:700;font-size:15px;letter-spacing:.5px;}
+.header-title{font-size:13px;color:#a8b3c1;}
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:.4px;background:#2563eb;color:#fff;margin-left:auto;}
+.container{max-width:920px;margin:0 auto;padding:32px 24px;}
+h1{font-size:22px;font-weight:700;margin-bottom:4px;}
+.subtitle{color:var(--muted);font-size:13px;margin-bottom:28px;}
+.tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:24px;}
+.tab{padding:8px 18px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;background:none;border-top:none;border-left:none;border-right:none;}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{background:var(--surface);padding:8px 10px;text-align:left;font-weight:600;border-bottom:2px solid var(--border);white-space:nowrap;}
+td{padding:7px 10px;border-bottom:1px solid var(--border);}
+.total-row td{font-weight:700;background:var(--surface);}
+.tier{display:inline-block;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;}
+.tier-XL{background:#fef3c7;color:#92400e;}
+.tier-L{background:#dbeafe;color:#1e40af;}
+.tier-M{background:#dcfce7;color:#166534;}
+.tier-S{background:#f3f4f6;color:#374151;}
+.tier-XS{background:#f3f4f6;color:#374151;}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px;margin-bottom:24px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px;}
+.card .label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.card .value{font-size:22px;font-weight:700;}
+.card .sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.accent{color:var(--accent);}
+.section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:20px 0 10px;}
+.scenario-selector{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.scenario-btn{padding:5px 12px;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;font-weight:500;background:var(--bg);color:var(--text);}
+.scenario-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.activity-bar{display:flex;height:26px;border-radius:4px;overflow:hidden;margin-bottom:6px;}
+.act-seg{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;overflow:hidden;white-space:nowrap;padding:0 6px;}
+.pull-quote{border-left:3px solid var(--accent);padding:12px 16px;background:var(--surface);font-style:italic;margin-bottom:20px;font-size:13px;line-height:1.7;}
+.headline{font-size:14px;font-weight:600;background:var(--surface);border:1px solid var(--border);padding:16px;border-radius:6px;margin-bottom:20px;line-height:1.7;}
+.you{background:#eff6ff;font-weight:600;}
+footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--border);text-align:center;font-size:11px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="page-header">
+  <span class="wordmark">IBM</span>
+  <span class="header-title">picker-vision — Development Estimate &amp; Value Analysis</span>
+  <span class="badge">Client</span>
+</div>
+<div class="container">
+  <h1>picker-vision</h1>
+  <div class="subtitle">Generated 2026-08-09 · IBM Blended rates · 260 commits · ±25% confidence</div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('cost')">Cost</button>
+    <button class="tab" onclick="switchTab('timeline')">Timeline</button>
+    <button class="tab" onclick="switchTab('commits')">Commits</button>
+    <button class="tab" onclick="switchTab('roi')">ROI &amp; Value</button>
+  </div>
+
+  <!-- COST TAB -->
+  <div id="tab-cost" class="tab-panel active">
+    
+        <div class="card-grid">
+          <div class="card"><div class="label">Total Work Items</div><div class="value accent">0</div><div class="sub">Delivered deliverables</div></div>
+          <div class="card"><div class="label">Estimated Hours</div><div class="value">0</div><div class="sub">Traditional team estimate</div></div>
+          <div class="card"><div class="label">Calendar Duration</div><div class="value accent">0 wks</div><div class="sub">Traditional team timeline</div></div>
+          <div class="card"><div class="label">Actual Duration</div><div class="value">14 days</div><div class="sub">Jul 24, 2026 – Aug 06, 2026</div></div>
+        </div>
+        
+    <p style="color:#57606a;font-style:italic">No WBS file provided. Run with --wbs to add work breakdown.</p>
+  </div>
+
+  <!-- TIMELINE TAB -->
+  <div id="tab-timeline" class="tab-panel">
+    <div class="card-grid">
+      <div class="card"><div class="label">WBS Hours (base)</div><div class="value accent">0</div><div class="sub">Across 0 work items</div></div>
+      <div class="card"><div class="label">Calendar Duration</div><div class="value">0 wks</div><div class="sub">Traditional team</div></div>
+      <div class="card"><div class="label">Actual Duration</div><div class="value accent">14 days</div><div class="sub">Jul 24, 2026 – Aug 06, 2026</div></div>
+      <div class="card"><div class="label">Commits</div><div class="value">260</div><div class="sub">Across 57 active windows</div></div>
+    </div>
+    <div class="section-title">Phase Breakdown</div>
+    <p style='color:#57606a;font-style:italic'>No WBS data.</p>
+  </div>
+
+  <!-- COMMITS TAB -->
+  <div id="tab-commits" class="tab-panel">
+    <div class="card-grid">
+      <div class="card"><div class="label">Total Commits</div><div class="value accent">260</div><div class="sub">Jul 24, 2026 – Aug 06, 2026</div></div>
+      <div class="card"><div class="label">Functionality</div><div class="value">48</div><div class="sub">18% — new features</div></div>
+      <div class="card"><div class="label">Issue Fixes</div><div class="value">43</div><div class="sub">17% — substantive bugs</div></div>
+      <div class="card"><div class="label">Iteration</div><div class="value">91</div><div class="sub">35% — refinement</div></div>
+      <div class="card"><div class="label">Planning</div><div class="value">78</div><div class="sub">30% — docs/specs</div></div>
+      <div class="card"><div class="label">Active Hours</div><div class="value accent">16.9</div><div class="sub">Git-derived, 57 windows</div></div>
+    </div>
+    <div class="section-title">Activity Breakdown (Bob Effort Score)</div>
+    <div class="activity-bar">
+      <div class="act-seg" style="width:42.6%;background:#3b82d4">Building 42.6%</div>
+      <div class="act-seg" style="width:47.1%;background:#f59e0b">Iteration &amp; Fix 47.1%</div>
+      <div class="act-seg" style="width:10.3%;background:#16a34a">Planning 10.3%</div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:20px">Width proportional to Bob effort score per category</div>
+    <div class="section-title">Active Work Windows (first 20)</div>
+    <table><thead><tr><th>#</th><th>Date</th><th>Window</th><th>Duration</th></tr></thead>
+    <tbody><tr><td>1</td><td>Jul 24</td><td>15:15–15:37</td><td>22 min</td></tr>
+<tr><td>2</td><td>Jul 24</td><td>16:15–16:26</td><td>11 min</td></tr>
+<tr><td>3</td><td>Jul 24</td><td>16:45–16:47</td><td>2 min</td></tr>
+<tr><td>4</td><td>Jul 24</td><td>18:56–19:07</td><td>11 min</td></tr>
+<tr><td>5</td><td>Jul 24</td><td>21:07–21:14</td><td>6 min</td></tr>
+<tr><td>6</td><td>Jul 24</td><td>21:50–21:56</td><td>6 min</td></tr>
+<tr><td>7</td><td>Jul 24</td><td>23:17–23:28</td><td>11 min</td></tr>
+<tr><td>8</td><td>Jul 25</td><td>16:35–17:10</td><td>34 min</td></tr>
+<tr><td>9</td><td>Jul 25</td><td>17:45–18:08</td><td>23 min</td></tr>
+<tr><td>10</td><td>Jul 25</td><td>18:48–19:12</td><td>24 min</td></tr>
+<tr><td>11</td><td>Jul 26</td><td>19:58–20:14</td><td>16 min</td></tr>
+<tr><td>12</td><td>Jul 26</td><td>20:30–20:43</td><td>13 min</td></tr>
+<tr><td>13</td><td>Jul 26</td><td>21:46–21:57</td><td>11 min</td></tr>
+<tr><td>14</td><td>Jul 27</td><td>05:55–06:18</td><td>24 min</td></tr>
+<tr><td>15</td><td>Jul 27</td><td>06:43–07:02</td><td>19 min</td></tr>
+<tr><td>16</td><td>Jul 27</td><td>09:19–09:30</td><td>11 min</td></tr>
+<tr><td>17</td><td>Jul 27</td><td>09:50–10:04</td><td>14 min</td></tr>
+<tr><td>18</td><td>Jul 27</td><td>16:12–16:19</td><td>7 min</td></tr>
+<tr><td>19</td><td>Jul 27</td><td>16:36–16:40</td><td>4 min</td></tr>
+<tr><td>20</td><td>Jul 27</td><td>17:02–17:13</td><td>11 min</td></tr>
+<tr><td colspan='4' style='color:#57606a;font-style:italic'>…and 37 more windows</td></tr>
+</tbody></table>
+  </div>
+
+  <!-- ROI TAB -->
+  <div id="tab-roi" class="tab-panel">
+    
+        <div class="pull-quote">Art of the Possible: the same business outcomes a 7-person team would deliver
+        in 0 weeks — built in 14 calendar days.</div>
+        <div class="card-grid">
+          <div class="card"><div class="label">Active Build Time</div><div class="value accent">16.9 hrs</div><div class="sub">Actual hands-on time</div></div>
+          <div class="card"><div class="label">Traditional Team Time</div><div class="value">0 weeks</div><div class="sub">7-person team estimate</div></div>
+          <div class="card"><div class="label">Value Multiplier</div><div class="value accent">0.0×</div><div class="sub">vs equivalent dev team</div></div>
+          <div class="card"><div class="label">Calendar Days</div><div class="value">14</div><div class="sub">Jul 24, 2026 – Aug 06, 2026</div></div>
+        </div>
+        <div style="text-align:center;margin:20px 0 16px">
+          <div style="font-size:42px;font-weight:700;color:#3b82d4">0.0×</div>
+          <div style="font-size:13px;color:#57606a;margin-top:4px">Value delivered relative to a traditional engagement</div>
+        </div>
+        <div class="section-title">Capability Comparison</div>
+        <table><thead><tr><th>Dimension</th><th>You + Bob</th><th>Traditional Dev Team</th></tr></thead>
+        <tbody>
+          <tr><td>Speed to first demo</td><td>Hours–days</td><td>Weeks–months</td></tr>
+          <tr><td>Who holds the vision</td><td>You — directly translated</td><td>PM/BA layer required</td></tr>
+          <tr><td>Domain expertise</td><td>Native to your context</td><td>Requires full briefing</td></tr>
+          <tr><td>Iteration speed</td><td>Ask, get code, same session</td><td>Sprint cycles</td></tr>
+          <tr><td>Risk of vision drift</td><td>Minimal — you steer every turn</td><td>High — handoff gaps</td></tr>
+          <tr><td>Value multiplier</td><td><strong>0.0×</strong></td><td>1×</td></tr>
+        </tbody></table>
+        
+  </div>
+</div>
+<footer>Made with <a href="https://www.ibm.com/watsonx" style="color:var(--accent)">IBM Bob</a></footer>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+</script>
+
+</body>
+</html>

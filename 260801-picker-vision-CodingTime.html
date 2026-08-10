@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Picker Vision — Coding Time Report (Internal)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#ffffff;--surface:#f4f4f4;--surface2:#e0e0e0;--border:#e0e0e0;
+    --text:#161616;--muted:#525252;--accent:#0f62fe;--accent2:#8a3ffc;
+    --green:#24a148;--yellow:#f1c21b;--red:#da1e28;--header-bg:#161616;--header-text:#ffffff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'IBM Plex Sans',-apple-system,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;background:var(--bg);color:var(--text)}
+  .ibm-header{background:var(--header-bg);color:var(--header-text);padding:0 24px;height:48px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+  .ibm-header-left{display:flex;align-items:center;gap:16px}
+  .ibm-wordmark{font-size:20px;font-weight:700;letter-spacing:-0.5px;color:#fff}
+  .ibm-header-title{font-size:14px;color:#c6c6c6;font-weight:300;border-left:1px solid #393939;padding-left:16px}
+  .ibm-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:2px;text-transform:uppercase;letter-spacing:0.5px;background:#da1e28;color:#fff}
+  .page{max-width:900px;margin:0 auto;padding:0 24px 56px}
+  .hero{padding:32px 0 24px;border-bottom:1px solid var(--border);margin-bottom:24px}
+  .hero-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px}
+  .hero-title{font-size:30px;font-weight:700;line-height:1.2;margin-bottom:12px}
+  .hero-sub{font-size:15px;color:var(--muted);font-weight:300;max-width:680px}
+  .hero-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px}
+  .hero-meta-item{display:flex;flex-direction:column}
+  .hero-meta-label{font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)}
+  .hero-meta-value{font-size:22px;font-weight:700;color:var(--text);font-family:'IBM Plex Mono',monospace}
+  .section-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin:28px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+  .card-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:16px}
+  .card-label{font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:6px}
+  .card-value{font-size:22px;font-weight:700;font-family:'IBM Plex Mono',monospace}
+  .card-sub{font-size:12px;color:var(--muted);margin-top:4px}
+  .accent{border-left:3px solid var(--accent)} .green{border-left:3px solid var(--green)} .purple{border-left:3px solid var(--accent2)} .warn{border-left:3px solid var(--yellow)}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px}
+  th{background:var(--surface);font-weight:600;text-align:left;padding:8px 10px;border:1px solid var(--border);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.3px}
+  td{padding:7px 10px;border:1px solid var(--border);vertical-align:middle}
+  tr:nth-child(even) td{background:#fafafa}
+  tr.total td{background:#161616;color:#fff;font-weight:700}
+  .bar-wrap{margin-bottom:14px}
+  .bar-meta{display:flex;justify-content:space-between;margin-bottom:4px}
+  .bar-name{font-size:12px;font-weight:600}
+  .bar-pct{font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+  .bar-track{height:18px;background:var(--surface2);border-radius:2px;overflow:hidden}
+  .bar-fill{height:100%;display:flex;align-items:center;padding-left:8px;font-size:10px;font-weight:600;color:#fff;border-radius:2px}
+  .callout{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:4px;padding:14px 18px;margin:18px 0}
+  .value-headline{background:#161616;color:#fff;padding:20px 24px;border-radius:4px;margin:24px 0;font-size:15px;line-height:1.7}
+  .page-footer{margin-top:48px;padding-top:16px;border-top:1px solid var(--border);text-align:center;font-size:11px;color:var(--muted)}
+  @media(max-width:700px){.hero-meta,.card-row{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="ibm-header">
+  <div class="ibm-header-left">
+    <span class="ibm-wordmark">IBM</span>
+    <span class="ibm-header-title">Picker Vision — Coding Time Report</span>
+  </div>
+  <span class="ibm-badge">Internal Use</span>
+</div>
+
+<div class="page">
+  <div class="hero">
+    <div class="hero-label">Repository-Evidenced Active Time vs Strawman Delivery Team</div>
+    <h1 class="hero-title">38.5 hours of architect time produced work estimated at 1,770 development hours</h1>
+    <p class="hero-sub">This report extends the existing Picker Vision estimate forward to current HEAD using the same commit-gap methodology documented in the repository. It compares evidenced active effort to the previously estimated traditional delivery footprint.</p>
+    <div class="hero-meta">
+      <div class="hero-meta-item"><span class="hero-meta-label">Reported Active Time</span><span class="hero-meta-value">38.5 hrs</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">Equivalent Base Team Effort</span><span class="hero-meta-value">1,770 hrs</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">Adjusted Team Effort</span><span class="hero-meta-value">2,124 hrs</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">IBM Blended Value</span><span class="hero-meta-value">$306,720</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">Industry Standard Value</span><span class="hero-meta-value">$271,782</span></div>
+      <div class="hero-meta-item"><span class="hero-meta-label">Ceiling Check</span><span class="hero-meta-value" style="color:var(--green)">Under 48 hrs</span></div>
+    </div>
+  </div>
+
+  <div class="card-row">
+    <div class="card accent"><div class="card-label">Your Time Cost</div><div class="card-value">$9,625</div><div class="card-sub">38.5 hrs × $250/hr architect rate</div></div>
+    <div class="card"><div class="card-label">Bob Coins</div><div class="card-value">$150</div><div class="card-sub">Preserved from existing estimate baseline</div></div>
+    <div class="card green"><div class="card-label">Total Investment</div><div class="card-value">$9,775</div><div class="card-sub">Your time + Bob cost basis</div></div>
+    <div class="card purple"><div class="card-label">IBM Value Multiplier</div><div class="card-value">31.4×</div><div class="card-sub">$306,720 ÷ $9,775</div></div>
+  </div>
+
+  <div class="section-title">Comparison Summary</div>
+  <table>
+    <thead>
+      <tr><th>Metric</th><th>You + Bob</th><th>Traditional Dev Team</th><th>Industry Standard</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Total investment</td><td>$9,775</td><td>$306,720</td><td>$271,782</td></tr>
+      <tr><td>Professional value delivered</td><td>$306,720</td><td>$306,720</td><td>$271,782</td></tr>
+      <tr><td>Your active time</td><td>38.5 hrs</td><td>—</td><td>—</td></tr>
+      <tr><td>Equivalent base delivery effort</td><td>1 architect + Bob</td><td>1,770 hrs</td><td>1,770 hrs</td></tr>
+      <tr><td>Equivalent adjusted effort</td><td>—</td><td>2,124 hrs</td><td>2,124 hrs</td></tr>
+      <tr><td>Calendar duration</td><td>6 active days envelope</td><td>~9.5 weeks</td><td>~9.5 weeks</td></tr>
+      <tr><td>Team size</td><td>2</td><td>7</td><td>varies</td></tr>
+      <tr><td>Value multiplier vs IBM Blended</td><td>31.4×</td><td>1×</td><td>—</td></tr>
+      <tr><td>Value multiplier vs Industry Standard</td><td>27.8×</td><td>—</td><td>1×</td></tr>
+      <tr class="total"><td>Hours compression</td><td colspan="3">1,770 hrs estimated ÷ 38.5 hrs evidenced = 46.0× compression</td></tr>
+    </tbody>
+  </table>
+
+  <div class="section-title">Daily Active Time Distribution</div>
+  <div class="bar-wrap"><div class="bar-meta"><span class="bar-name">2026-07-24</span><span class="bar-pct">6.30 hrs</span></div><div class="bar-track"><div class="bar-fill" style="width:51.1%;background:#0f62fe">378 min</div></div></div>
+  <div class="bar-wrap"><div class="bar-meta"><span class="bar-name">2026-07-25</span><span class="bar-pct">2.62 hrs</span></div><div class="bar-track"><div class="bar-fill" style="width:21.2%;background:#8a3ffc">157 min</div></div></div>
+  <div class="bar-wrap"><div class="bar-meta"><span class="bar-name">2026-07-26</span><span class="bar-pct">2.05 hrs</span></div><div class="bar-track"><div class="bar-fill" style="width:16.6%;background:#24a148">123 min</div></div></div>
+  <div class="bar-wrap"><div class="bar-meta"><span class="bar-name">2026-07-27</span><span class="bar-pct">12.33 hrs</span></div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#0f62fe">740 min</div></div></div>
+  <div class="bar-wrap"><div class="bar-meta"><span class="bar-name">2026-07-28</span><span class="bar-pct">9.20 hrs</span></div><div class="bar-track"><div class="bar-fill" style="width:74.6%;background:#8a3ffc">552 min</div></div></div>
+  <div class="bar-wrap"><div class="bar-meta"><span class="bar-name">2026-07-29</span><span class="bar-pct">1.57 hrs</span></div><div class="bar-track"><div class="bar-fill" style="width:12.7%;background:#24a148">94 min</div></div></div>
+  <div class="bar-wrap"><div class="bar-meta"><span class="bar-name">2026-07-30</span><span class="bar-pct">0.00 hrs</span></div><div class="bar-track"><div class="bar-fill" style="width:0%;background:#525252">0 min</div></div></div>
+  <div class="bar-wrap"><div class="bar-meta"><span class="bar-name">2026-07-31</span><span class="bar-pct">0.00 hrs</span></div><div class="bar-track"><div class="bar-fill" style="width:0%;background:#525252">0 min</div></div></div>
+  <div class="bar-wrap"><div class="bar-meta"><span class="bar-name">2026-08-01</span><span class="bar-pct">4.40 hrs</span></div><div class="bar-track"><div class="bar-fill" style="width:35.7%;background:#24a148">264 min</div></div></div>
+
+  <div class="section-title">Methodology</div>
+  <div class="callout">
+    Active time is derived from repository commit timestamps using the same rule documented in the existing commit log: each commit receives the gap to the prior commit, capped at 60 minutes; gaps greater than 60 minutes count as zero; the first commit receives 15 minutes. This report uses the highest evidence-backed total through current HEAD because that is the most conservative reporting posture requested.
+  </div>
+
+  <div class="section-title">What the Strawman Team Represents</div>
+  <table>
+    <thead>
+      <tr><th>Estimate Input</th><th>Value</th><th>Source</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Base total hours</td><td>1,770 hrs</td><td>Existing repository estimate</td></tr>
+      <tr><td>Adjusted total hours</td><td>2,124 hrs</td><td>Existing repository estimate with 20% contingency</td></tr>
+      <tr><td>IBM Blended total</td><td>$306,720</td><td>Existing repository estimate</td></tr>
+      <tr><td>Industry Standard total</td><td>$271,782</td><td>Existing repository estimate</td></tr>
+      <tr><td>Schedule estimate</td><td>~9.5 weeks</td><td>Existing repository estimate</td></tr>
+      <tr><td>Strawman team shape</td><td>7 people</td><td>Manager, Architect, Designer, Senior Dev, 2 Mid Devs, 2 Junior Devs across the estimate model</td></tr>
+    </tbody>
+  </table>
+
+  <div class="value-headline">
+    The conservative, evidence-backed reading is that Picker Vision consumed about <strong>38.5 hours</strong> of direct architect time while producing a codebase previously estimated at <strong>1,770 hours</strong> of traditional delivery effort and <strong>$306,720</strong> of IBM blended delivery value.
+  </div>
+
+  <div class="page-footer">
+    Derived from picker-vision git history, <code>picker-vision-commit-log.md</code>, and <code>picker-vision-estimate.md</code>. Updated through current HEAD on 2026-08-01.
+  </div>
+</div>
+</body>
+</html>

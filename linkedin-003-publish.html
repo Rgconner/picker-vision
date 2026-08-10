@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kanban for the Everyman</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: #ffffff;
+    color: #1f2328;
+    font-size: 16px;
+    line-height: 1.75;
+    padding: 40px 32px;
+    max-width: 740px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 24px; line-height: 1.2; }
+  p { margin-bottom: 20px; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 28px 0; }
+  strong { font-weight: 700; }
+  em { font-style: italic; }
+  a { color: #0a66c2; }
+  blockquote {
+    background: #f0f7ff;
+    border-left: 4px solid #0a66c2;
+    padding: 16px 20px;
+    margin: 0 0 20px;
+    border-radius: 0 4px 4px 0;
+  }
+  blockquote p { margin-bottom: 12px; }
+  blockquote p:last-child { margin-bottom: 0; }
+  .series-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.09em;
+    color: #0a66c2; font-weight: 700; margin-bottom: 10px;
+  }
+  .thesis {
+    font-size: 20px; font-weight: 700;
+    border-left: 3px solid #0a66c2;
+    padding-left: 16px;
+    margin: 24px 0;
+    line-height: 1.5;
+  }
+  .quad-box {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .quad-box p { margin-bottom: 16px; font-size: 15px; }
+  .quad-box p:last-child { margin-bottom: 0; }
+  /* Diagram */
+  .diagram { margin: 24px 0; border: 1.5px solid #d0d7de; border-radius: 6px; overflow: hidden; font-size: 13px; }
+  .diagram-title { background: #1f2328; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; padding: 8px 14px; text-align: center; }
+  .diagram-x { display: flex; justify-content: space-between; padding: 5px 14px 4px 106px; background: #f7f8fa; border-bottom: 1px solid #e5e7eb; font-size: 10px; color: #57606a; }
+  .diagram-x span:nth-child(2) { font-weight: 700; color: #1f2328; }
+  .diagram-body { display: flex; }
+  .diagram-y { width: 90px; flex-shrink: 0; background: #f7f8fa; border-right: 1px solid #e5e7eb; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 10px 4px; font-size: 10px; color: #57606a; text-align: center; }
+  .diagram-y strong { color: #1f2328; font-size: 11px; }
+  .diagram-grid { display: grid; grid-template-columns: 1fr 1fr; flex: 1; }
+  .dq { padding: 12px 14px; border-right: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; min-height: 80px; }
+  .dq:nth-child(2n) { border-right: none; }
+  .dq:nth-child(3), .dq:nth-child(4) { border-bottom: none; }
+  .dq-name { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+  .dq-desc { font-size: 11px; color: #57606a; line-height: 1.4; }
+  .dq-signal { background: #faf9ff; } .dq-signal .dq-name { color: #7c5cd8; }
+  .dq-arena  { background: #f0f7ff; } .dq-arena  .dq-name { color: #0a66c2; }
+  .dq-wall   { background: #fff8f8; } .dq-wall   .dq-name { color: #b03030; }
+  .dq-fridge { background: #f9fafb; } .dq-fridge .dq-name { color: #57606a; }
+  .tagline-block { border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 28px; font-size: 13px; color: #57606a; }
+  .tagline-block p { margin-bottom: 10px; font-style: italic; }
+  .tagline-block .btb { font-style: normal; margin-top: 14px; padding-top: 14px; border-top: 1px solid #f0f0f0; }
+  .hashtag-note { margin-top: 28px; padding: 12px 16px; background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 12px; color: #57606a; }
+</style>
+</head>
+<body>
+
+<h1>Kanban for the Everyman</h1>
+
+<blockquote>
+  <div class="series-label">Third in an ongoing theme</div>
+  <p>The first was about a spontaneous live demo that nobody planned. A meeting invite at 11AM, a live demo by 2PM. Nobody asked for it. Nobody expected it. It happened anyway, and it worked, but not because we could see it coming. Neither of us saw it coming. That is a lower-left story (the unknown unknowns), and the outcome was fortunate, not designed.</p>
+  <p>The second was about a bug we found during the demo itself. Two guests on the same Redis channel, orders crossed, both phones locked up. The bug was flagged the day before. Bob saw the risk. I didn't know the blast radius. We carded it, put it in the hopper, ran out of time at the worst possible moment. That is an upper-left story: the signal existed, Bob had it, and we didn't act on it in time.</p>
+  <p>Two stories. Two different quadrants. The same question underneath.</p>
+  <p>What can you see? What can Bob see? What can neither of you see yet? And what happens when the gap between those things goes unmanaged?</p>
+  <p>I have been thinking about that gap. I have been thinking about what it is, what it costs, and whether there is a way to name it clearly enough to do something about it.</p>
+  <p><strong>This is that article.</strong></p>
+</blockquote>
+
+<hr>
+
+<p>Everyone has a grocery list.</p>
+<p>And everyone has gotten to the store, list in hand, and discovered the list was wrong.</p>
+<p>You needed the thing you already had two of. You forgot the one thing you actually went for. You grabbed everything in no particular order, walked the store twice, and got home to find you still need to go back because you forgot the cream cheese.</p>
+<p><strong>The list was there. The list was useless.</strong></p>
+
+<hr>
+
+<p>I spent years in enterprise technology, and along the way I started using something called a Kanban board to manage the team's work. It wasn't my choice. My team leads, a designer and a master coder, beat it into me. Because to lead I needed it, even if I didn't think I needed it. But I could not argue the results. So I embraced it.</p>
+<p>Kanban is a Japanese word meaning "signboard," a visual signal. Cards. Columns. Things to do, things in progress, things done. Simple enough that it sounds like a kindergarten art project. Sophisticated enough that Toyota built an entire manufacturing system around it. So relevant it is the paradigm for GitHub Projects.</p>
+<p>I used it for software. I used it for client engagements. I used it for the complex, multi-threaded, never-fully-done work that doesn't fit in a task list app and doesn't fit in your head.</p>
+<p>It helped. But it still had the grocery list problem.</p>
+<p>The board knew what was on the cards. It didn't know why. It didn't know what was already in the fridge.</p>
+
+<hr>
+
+<p>A couple of months ago, I started working with an AI assistant. Not for writing emails. Not for summarizing documents. As a genuine collaborator: planning, building, deciding, day after day.</p>
+<p>And I kept the Kanban board. Just like before, it provided me clarity and direction. I knew that. But what I didn't know was Bob needed it too, for a different reason.</p>
+<p>Here is what changed.</p>
+<p>By design, the AI holds context only in the current session. Token length is a hard limit of the technology. As shipped, the problem is not addressed. RAG is one option, but the Kanban system is another path. Not perfect, not magic, but enough. When I open a card that says "fix the login timeout," Bob doesn't just see the card. He sees the board. He sees the shared history recorded on the board. Every decision we made, every constraint we hit, every tradeoff we chose since the last time we touched that thread. The card is the title. The context is the book. It is a unit of currency, its value determined by the knowledge encoded in it, one that both human and AI can exchange, establishing the value, recognizing the value.</p>
+<p>That is the thing the grocery list cannot do.</p>
+<p>A grocery list tells you to buy cream cheese. It does not remember that you're out because you made a bagel brunch three weeks ago, that you bought the store brand last time and your family made a face, and that the block near the deli counter is half the price of the one in the dairy aisle. The list doesn't know any of that. You know it. And you have to hold it in your head, along with everything else.</p>
+
+<div class="thesis">Bob holds it. Bob carries the load. Bob runs the board.<br><br>That's the difference.</div>
+
+<hr>
+
+<p>But here is the part that took me longer to see.</p>
+<p>There are actually four versions of this problem, and they are not equal.</p>
+<p>There is the stuff we both know. The card. The explicit instruction. The thing written down and shared. That is the easy case: when both you and your system have the same picture, the work flows.</p>
+
+<div class="quad-box">
+  <p><strong>The fridge problem:</strong> The stuff you know that your system doesn't. What's in the fridge. What happened last Tuesday. Why you made that call six weeks ago. The fridge is real. It requires hands to open and eyes to see, possibly a nose to tell you the milk has turned. You have to show up. You have to look. Nobody can do that for you. The Kanban board fixes this: writing a card makes the invisible visible.</p>
+  <p><strong>The signal:</strong> The stuff your system can see that you haven't noticed yet. The pattern in the work. The thread that keeps coming back. The dependency you haven't named. The signal is like a radio wave, undetectable, pulsing in a sea of chaos, present whether you're listening or not. To catch it you have to see the pattern in the noise. That is what humans are good at perceiving. It is what AI is good at exposing. Bob has been watching the whole board. You have been living inside one card at a time. That asymmetry is useful, if you let it be.</p>
+  <p><strong>The fourth case:</strong> The things neither of you can see yet. The unknown unknowns. The bug that isn't on anyone's radar. The assumption baked so deep into the plan that nobody thought to question it. The thing you won't know is missing until you get to the store.</p>
+  <p><strong>This is where projects die. Here be dragons.</strong></p>
+</div>
+
+<div class="diagram">
+  <div class="diagram-title">The Observability Quadrant</div>
+  <div class="diagram-x">
+    <span>&#8592; Human doesn't know</span>
+    <span>YOU</span>
+    <span>Human knows &#8594;</span>
+  </div>
+  <div class="diagram-body">
+    <div class="diagram-y">
+      <span>Bob knows &#8593;</span>
+      <strong>BOB</strong>
+      <span>&#8595; Bob doesn't know</span>
+    </div>
+    <div class="diagram-grid">
+      <div class="dq dq-signal">
+        <div class="dq-name">The Signal</div>
+        <div class="dq-desc">Bob sees the pattern, not the context. You haven't noticed yet. Partnership earns here.</div>
+      </div>
+      <div class="dq dq-arena">
+        <div class="dq-name">The Arena &#11088;</div>
+        <div class="dq-desc">Both aligned. Full visibility. Work flows. Maximum performance.</div>
+      </div>
+      <div class="dq dq-wall">
+        <div class="dq-name">The Wall</div>
+        <div class="dq-desc">Unknown unknowns. Neither instrument can see it. Where projects die. Here be dragons.</div>
+      </div>
+      <div class="dq dq-fridge">
+        <div class="dq-name">The Fridge</div>
+        <div class="dq-desc">You know it, Bob doesn't. Hidden context. It's all in your head.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p>I call this the Observability Quadrant. Four squares. Performance gradient from lower-left to upper-right: least visible to most. The goal of the system is not to be productive. The goal is to move everything toward upper-right, where both you and your system have the same picture, and to shrink the lower-left, where neither of you can see what's coming.</p>
+<p><strong>The grocery list problem is not a productivity problem. It is an observability problem.</strong></p>
+
+<hr>
+
+<p>The wrong order matters too.</p>
+<p>A grocery list written in the order you remember things is a terrible guide for actually walking a store. Produce first, then bakery, then dairy, circle back for the one thing you can't find, and you've covered the store three times while your ice cream is melting.</p>
+<p>Kanban does priority. Cards move. What matters most sits at the top. When a new thing comes in that is more urgent than what you were doing, you don't carry it in your head hoping to remember it later. You put it on the board, in the right position, and the board handles the coordination.</p>
+<p><strong>I'm not describing software development anymore. I'm describing a Tuesday.</strong></p>
+
+<hr>
+
+<p>There is a thing that happens when a project gets complicated enough. The coordination overhead starts to cost more than the work itself.</p>
+<p>You spend twenty minutes figuring out where you left off. You spend another twenty figuring out what to tackle next. You do the wrong thing with full effort, at the wrong time, and it doesn't matter that you worked hard. The order was wrong and the context was missing and you have to go back to the store.</p>
+<p>That is not a productivity problem. That is an observability problem.</p>
+<p>The Kanban board is a system. Bob is the context layer the board was always missing. The board is the memory that AI was always missing. Together, they move you toward upper-right. They make the invisible visible. They surface the pattern before it becomes the problem.</p>
+<p>They let you show up and work, instead of showing up and figuring out where you are.</p>
+
+<hr>
+
+<p>I am not a system designer. I am not describing a methodology. I am describing the thing I wish I'd had ten years ago when I was managing a client engagement out of a spreadsheet and a prayer.</p>
+<p>The spreadsheet knew what was on the list. It did not know what was in the fridge. And it had no idea what neither of us could see yet.</p>
+<p>If you have ever gotten to the store and discovered the list was wrong, you already understand the Observability Quadrant. You have lived in lower-left. You know what it costs.</p>
+<p>The sophisticated parts are invisible. The value is immediate. The next time you get to the store and realize the list is wrong, you will know which quadrant you are in. The goal is to spend less time there.</p>
+
+<div class="tagline-block">
+  <p>The Observability Quadrant is a framework for understanding visibility gaps in human-AI work. The first two articles in this series are already on the map: one in the lower-left, one in the upper-left, both about what happens when the gap goes unmanaged. The map is still being drawn. Ideas that need a home. These articles are how I draw it.</p>
+  <p><a href="https://www.linkedin.com/pulse/one-domain-expert-ai-deliverable-client-didnt-expect-made-russ-conner-9bpgc/">Article 1: One domain expert, one AI, one deliverable the client didn't expect</a></p>
+  <p><a href="https://www.linkedin.com/pulse/we-did-survive-contact-reality-russ-conner-n3yxc/">Article 2: We did not survive contact with reality</a></p>
+  <p class="btb"><em>Bob's Tiny Treasures is a live warehouse AI picking system built in my home office. Every card, every decision, every mistake is on the board. The board always wins.</em></p>
+</div>
+
+<div class="hashtag-note">
+  <strong>First comment:</strong> #Kanban #IBMBob #HumanAI #PairProgramming #ObservabilityQuadrant
+</div>
+
+</body>
+</html>

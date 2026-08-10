@@ -1,0 +1,17 @@
+# Local demo node k8s manifests
+# Single-node k3s on 192.168.1.73
+# Uses local-path-provisioner (built into k3s) instead of Ceph
+# Uses Traefik NodePort instead of MetalLB
+# Apply with: kubectl apply -f k8s/local-node/
+
+---
+# Namespaces
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: picker-vision
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aikb

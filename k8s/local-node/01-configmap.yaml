@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: picker-vision-config
+  namespace: picker-vision
+data:
+  ORDER_SERVICE_URL: "http://order-service:8001"
+  EVENT_PROCESSOR_URL: "http://event-processor:8002"
+  WEBSOCKET_HUB_URL: "http://websocket-hub:8003"
+  API_GATEWAY_URL: "http://api-gateway:8000"
+  REDIS_URL: "redis://redis:6379"
+  DATABASE_URL: "sqlite:////data/picker.db"
+  USE_SAP_ADAPTER: "false"
+  REQUIRE_API_KEY: "false"
+  LOAD_GEN_URL: "http://load-gen:8004"

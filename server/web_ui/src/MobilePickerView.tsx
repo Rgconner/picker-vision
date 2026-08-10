@@ -49,6 +49,7 @@ import { MobileControls } from './MobileControls';
 import { useDebugSnapshot } from './useDebugSnapshot';
 import { ConfirmOverlay } from './ConfirmOverlay';
 import { PackWizard } from './PackWizard';
+import { useUpdateCheck } from './useUpdateCheck';
 
 // ── Next-item card — floating overlay, glove-first sizing ────────────────────
 function NextItemCard({ orders }: { orders: Order[] }) {
@@ -201,7 +202,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   }, []);
 
   // ── Confirm overlay state ────────────────────────────────────────────────
-  interface PendingConfirm { orderId: string; lineId: string; itemName: string; barcode: string; stagingCode: string | null; quantity: number; quantityPicked: number; }
+  interface PendingConfirm { orderId: string; lineId: string; itemName: string; barcode: string; stagingCode: string | null; quantity: number; quantityPicked: number; cropDataUrl?: string; }
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
 
   // QOL-017: 'confirmed' state — shown after confirm tap, before picker moves item away
@@ -242,9 +243,10 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
   // loop gate can block re-fires on that same value while the overlay is shown.
   const moveAwayBarcodeRef = useRef<string | null>(null);
 
-  const videoRef    = useRef<HTMLVideoElement>(null);
-  const canvasRef   = useRef<HTMLCanvasElement>(null);
-  const isLandscape = useIsLandscape();
+  const videoRef      = useRef<HTMLVideoElement>(null);
+  const canvasRef     = useRef<HTMLCanvasElement>(null);
+  const isLandscape   = useIsLandscape();
+  const updateAvailable = useUpdateCheck();
 
   // Debug mode — activated by ?debug=1 in the URL
   const debugMode = useMemo(
@@ -369,6 +371,24 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     if (confirmedLinesRef.current.has(line.id)) return;
     lastFiredBarcodeRef.current = null;
     scanFiredRef.current = false; // overlay is up — scanner can re-arm for next pick
+    // Capture a crop from the live video frame using the stashed bbox
+    let cropDataUrl: string | undefined;
+    const bbox = pendingBboxRef.current.get(fired);
+    const video = videoRef.current;
+    if (bbox && video && video.readyState >= 2) {
+      try {
+        const pad = 24;
+        const sx = Math.max(0, bbox.x - pad);
+        const sy = Math.max(0, bbox.y - pad);
+        const sw = Math.min(video.videoWidth  - sx, bbox.w + pad * 2);
+        const sh = Math.min(video.videoHeight - sy, bbox.h + pad * 2);
+        const offscreen = document.createElement('canvas');
+        offscreen.width  = sw;
+        offscreen.height = sh;
+        offscreen.getContext('2d')?.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+        cropDataUrl = offscreen.toDataURL('image/jpeg', 0.85);
+      } catch { /* ignore — overlay just shows without image */ }
+    }
     setPendingConfirm({
       orderId:        activeOrder.id,
       lineId:         line.id,
@@ -377,6 +397,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
       stagingCode:    line.staging_code ?? null,
       quantity:       line.quantity,
       quantityPicked: line.quantity_picked,
+      cropDataUrl,
     });
   }, [pickerState, orders]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -646,6 +667,22 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
     // Shared overlays block used by both landscape variants
     const landscapeOverlays = (
       <>
+        {/* Update available banner */}
+        {updateAvailable && (
+          <div
+            className="fixed top-0 left-0 right-0 z-60 flex items-center justify-between px-4 py-2 gap-3"
+            style={{ background: 'rgba(6,182,212,0.15)', borderBottom: '1px solid rgba(6,182,212,0.4)', backdropFilter: 'blur(6px)' }}
+          >
+            <span className="text-[#06b6d4] text-sm font-semibold flex-1">Update available</span>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-1.5 rounded-lg text-sm font-bold text-[#161616] shrink-0"
+              style={{ background: '#06b6d4' }}
+            >
+              Reload
+            </button>
+          </div>
+        )}
         {packWizardOverlay}
         {pendingConfirm && (
           <ConfirmOverlay
@@ -655,6 +692,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
             stagingCode={pendingConfirm.stagingCode}
             quantity={pendingConfirm.quantity}
             quantityPicked={pendingConfirm.quantityPicked}
+            cropDataUrl={pendingConfirm.cropDataUrl}
             onConfirm={handleConfirm}
             onSkip={() => setPendingConfirm(null)}
           />
@@ -822,6 +860,7 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
           stagingCode={pendingConfirm.stagingCode}
           quantity={pendingConfirm.quantity}
           quantityPicked={pendingConfirm.quantityPicked}
+          cropDataUrl={pendingConfirm.cropDataUrl}
           onConfirm={handleConfirm}
           onSkip={() => setPendingConfirm(null)}
         />
@@ -829,6 +868,23 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
       {moveAwayOverlay}
       {orderCompleteOverlay}
       {demoEndedOverlay}
+
+      {/* Update available banner */}
+      {updateAvailable && (
+        <div
+          className="fixed top-0 left-0 right-0 z-60 flex items-center justify-between px-4 py-2 gap-3"
+          style={{ background: 'rgba(6,182,212,0.15)', borderBottom: '1px solid rgba(6,182,212,0.4)', backdropFilter: 'blur(6px)' }}
+        >
+          <span className="text-[#06b6d4] text-sm font-semibold flex-1">Update available</span>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-1.5 rounded-lg text-sm font-bold text-[#161616] shrink-0"
+            style={{ background: '#06b6d4' }}
+          >
+            Reload
+          </button>
+        </div>
+      )}
 
       {/* ── TOP BAR — picker identity + connection + scanner warning ── */}
       <div
@@ -880,6 +936,17 @@ export function MobilePickerView({ defaultPickerId, lockedPickerId = false }: Mo
           >
             ⚠
           </span>
+        )}
+
+        {/* Exit scanning — small corner button, visible only while scanning */}
+        {scanning && (
+          <button
+            onClick={() => handleStartStop(false)}
+            className="shrink-0 ml-auto px-3 py-1 rounded-lg text-sm font-bold text-[#ef4444] border border-[#ef4444]/40 active:brightness-125"
+            style={{ background: 'rgba(239,68,68,0.10)' }}
+          >
+            ✕
+          </button>
         )}
       </div>
 
