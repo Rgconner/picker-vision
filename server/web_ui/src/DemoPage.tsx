@@ -157,8 +157,13 @@ export function DemoPage() {
   }
 
   function browseDashboard() {
-    // loginAsGuest() handles navigation to /app internally — no second redirect needed
-    auth.loginAsGuest();
+    // Demo visitors get supervisor role so they land on the supervisor tab
+    // with full demo controls (start/stop/restart). No PIN required.
+    // Multi-demo collision prevention is a future card — one demo at a time in practice.
+    const suffix = Math.random().toString(16).slice(2, 6).toUpperCase();
+    const demoUser = { id: `demo-${suffix}`, name: `Demo-${suffix}`, role: 'supervisor' as const, picker_id: null };
+    try { sessionStorage.setItem('pv_session', JSON.stringify(demoUser)); } catch { /* ignore */ }
+    window.location.href = '/app';
   }
 
   return (
@@ -300,7 +305,7 @@ export function DemoPage() {
             </button>
           </div>
           <p style={{ fontSize: '11px', color: '#57606a', marginTop: '8px', textAlign: 'center' }}>
-            No account needed — you'll enter as a read-only guest
+            No account needed — scanning opens mobile picker view · dashboard opens supervisor view
           </p>
         </section>
 
