@@ -47,9 +47,9 @@ export default function App() {
   const isGuest      = auth.user.role === 'guest';
 
   // Pickers land on mobile and cannot navigate away
-  // Owner lands on supervisor tab on first render
+  // Owner and supervisor land on supervisor tab on first render
   useEffect(() => {
-    if (auth.user?.role === 'owner' && mode === 'mobile') {
+    if ((auth.user?.role === 'owner' || auth.user?.role === 'supervisor') && mode === 'mobile') {
       setMode('supervisor');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
