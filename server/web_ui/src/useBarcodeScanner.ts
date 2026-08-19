@@ -302,6 +302,7 @@ export function useBarcodeScanner(
 
     if (engineRef.current === 'native') {
       // Native: rAF loop — await detect() before next frame to avoid races
+      const roiCanvas = document.createElement('canvas'); // allocated once, reused every tick
       const rafRef = { id: 0 };
       async function nativeLoop() {
         if (!active) return;
@@ -316,7 +317,20 @@ export function useBarcodeScanner(
           }
           if (video && video.readyState >= 2 && video.videoWidth > 0 && nativeRef.current) {
             try {
-              const results = await nativeRef.current.detect(video);
+              // ROI crop: centre 65% of the short side — matches how users aim the phone
+              // and how stock camera apps effectively focus their decoder.
+              const vw = video.videoWidth;
+              const vh = video.videoHeight;
+              const roiSize  = Math.round(Math.min(vw, vh) * 0.65);
+              const roiX     = Math.round((vw - roiSize) / 2);
+              const roiY     = Math.round((vh - roiSize) / 2);
+              roiCanvas.width  = roiSize;
+              roiCanvas.height = roiSize;
+              const roiCtx = roiCanvas.getContext('2d');
+              if (roiCtx) {
+                roiCtx.drawImage(video, roiX, roiY, roiSize, roiSize, 0, 0, roiSize, roiSize);
+              }
+              const results = await nativeRef.current.detect(roiCtx ? roiCanvas : video);
               const seen = results
                 .filter((r) => r.rawValue)
                 .map((r)  => ({ value: r.rawValue, result: nativeToScanResult(r) }));
@@ -369,16 +383,21 @@ export function useBarcodeScanner(
           remoteLog('info', `[Scanner] tick #${tickCount} — ${vstate} hits:${decodeHits} misses:${decodeMisses}`);
         }
         if (video && reader && video.readyState >= 2 && video.videoWidth > 0) {
-          const shortSide = Math.min(video.videoWidth, video.videoHeight);
-          const scale     = Math.min(1, 480 / shortSide);
-          canvas.width  = Math.round(video.videoWidth  * scale);
-          canvas.height = Math.round(video.videoHeight * scale);
+          // ROI crop: centre 65% of short side, then cap at 720px for ZXing performance
+          const vw       = video.videoWidth;
+          const vh       = video.videoHeight;
+          const roiSize  = Math.round(Math.min(vw, vh) * 0.65);
+          const roiX     = Math.round((vw - roiSize) / 2);
+          const roiY     = Math.round((vh - roiSize) / 2);
+          const scale    = Math.min(1, 720 / roiSize);
+          canvas.width   = Math.round(roiSize * scale);
+          canvas.height  = Math.round(roiSize * scale);
           if (logThisTick) {
-            remoteLog('info', `[Scanner] canvas: ${canvas.width}x${canvas.height} (scale:${scale.toFixed(3)})`);
+            remoteLog('info', `[Scanner] canvas: ${canvas.width}x${canvas.height} roi:${roiSize} (scale:${scale.toFixed(3)})`);
           }
           const ctx = canvas.getContext('2d');
           if (ctx) {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(video, roiX, roiY, roiSize, roiSize, 0, 0, canvas.width, canvas.height);
             try {
               const result = await reader.decodeFromCanvas(canvas);
               const text   = result.getText();

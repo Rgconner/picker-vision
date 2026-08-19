@@ -126,6 +126,18 @@ export function useMobileCamera(): MobileCameraState {
       console.info(streamMsg);
       remoteLog('info', streamMsg);
 
+      // Apply continuous AF after stream-up — improves decode rate significantly
+      // on Android Chrome (S24 etc.) where BarcodeDetector sees soft frames without it.
+      // try/catch: capability is not universal; failure is non-fatal.
+      if (track?.applyConstraints) {
+        try {
+          await track.applyConstraints({ advanced: [{ focusMode: 'continuous' } as MediaTrackConstraintSet] });
+          remoteLog('info', '[Camera] continuous AF applied');
+        } catch {
+          remoteLog('info', '[Camera] continuous AF not supported on this device — skipped');
+        }
+      }
+
       setFacing(resolvedFacing);
       setActiveDeviceId(resolvedDevice);
 
