@@ -132,6 +132,9 @@ const DEBOUNCE_MS      = 1200;  // same value must wait this long before re-firi
  *  single-frame noise fires while still working on LCD screens with moiré/flicker. */
 export const DWELL_FRAMES = 2;
 
+// ?debug=1 in the URL bumps per-tick decode logging from every 50/100 ticks to every tick.
+const DEBUG_SCAN = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debug') === '1';
+
 // ── Candidate — a barcode building toward the dwell threshold ────────────────
 
 export interface DwellCandidate {
@@ -214,8 +217,10 @@ export function useBarcodeScanner(
   useEffect(() => {
     if (!scanning || !engineReady) return;
 
-    let active    = true;
-    let tickCount = 0;
+    let active       = true;
+    let tickCount    = 0;
+    let decodeHits   = 0;   // frames where at least one barcode was decoded
+    let decodeMisses = 0;   // frames where decode returned nothing
 
     // Clear stale dwell state from the previous scan session.
     // Without this, items that were in frame when Stop was pressed still have
@@ -304,9 +309,10 @@ export function useBarcodeScanner(
           inFlightRef.current = true;
           const video = videoRef.current;
           tickCount++;
-          if (tickCount === 1 || tickCount % 100 === 0) {
+          const logThisTick = DEBUG_SCAN || tickCount === 1 || tickCount % 100 === 0;
+          if (logThisTick) {
             const vstate = video ? `readyState:${video.readyState} ${video.videoWidth}x${video.videoHeight}` : 'no video';
-            remoteLog('info', `[Scanner] tick #${tickCount} — ${vstate}`);
+            remoteLog('info', `[Scanner] tick #${tickCount} — ${vstate} hits:${decodeHits} misses:${decodeMisses}`);
           }
           if (video && video.readyState >= 2 && video.videoWidth > 0 && nativeRef.current) {
             try {
@@ -314,9 +320,18 @@ export function useBarcodeScanner(
               const seen = results
                 .filter((r) => r.rawValue)
                 .map((r)  => ({ value: r.rawValue, result: nativeToScanResult(r) }));
+              if (seen.length > 0) {
+                decodeHits++;
+                if (DEBUG_SCAN) remoteLog('info', `[Scanner] decode-hit: ${seen.map((s) => s.value).join(', ')}`);
+              } else {
+                decodeMisses++;
+              }
               const cands = processDwell(seen);
               setCandidates(cands);
-            } catch { /* ignore mid-scan errors */ }
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : String(e);
+              remoteLog('warn', `[Scanner] native detect() error: ${msg}`);
+            }
           } else {
             // No video — ensure stale candidates are cleared
             if (dwellMap.current.size > 0) {
@@ -334,7 +349,7 @@ export function useBarcodeScanner(
         cancelAnimationFrame(rafRef.id);
         dwellMap.current.clear();
         setCandidates([]);
-        remoteLog('info', `[Scanner] scan loop stopped after ${tickCount} ticks`);
+        remoteLog('info', `[Scanner] scan loop stopped after ${tickCount} ticks — hits:${decodeHits} misses:${decodeMisses}`);
       };
 
     } else {
@@ -348,16 +363,17 @@ export function useBarcodeScanner(
         const video  = videoRef.current;
         const reader = await getZXingReader();
         tickCount++;
-        if (tickCount === 1 || tickCount % 50 === 0) {
+        const logThisTick = DEBUG_SCAN || tickCount === 1 || tickCount % 50 === 0;
+        if (logThisTick) {
           const vstate = video ? `readyState:${video.readyState} ${video.videoWidth}x${video.videoHeight}` : 'no video';
-          remoteLog('info', `[Scanner] tick #${tickCount} — ${vstate}`);
+          remoteLog('info', `[Scanner] tick #${tickCount} — ${vstate} hits:${decodeHits} misses:${decodeMisses}`);
         }
         if (video && reader && video.readyState >= 2 && video.videoWidth > 0) {
           const shortSide = Math.min(video.videoWidth, video.videoHeight);
           const scale     = Math.min(1, 480 / shortSide);
           canvas.width  = Math.round(video.videoWidth  * scale);
           canvas.height = Math.round(video.videoHeight * scale);
-          if (tickCount === 1 || tickCount % 50 === 0) {
+          if (logThisTick) {
             remoteLog('info', `[Scanner] canvas: ${canvas.width}x${canvas.height} (scale:${scale.toFixed(3)})`);
           }
           const ctx = canvas.getContext('2d');
@@ -368,9 +384,12 @@ export function useBarcodeScanner(
               const text   = result.getText();
               const fmt    = result.getBarcodeFormat();
               if (text) {
+                decodeHits++;
+                if (DEBUG_SCAN) remoteLog('info', `[Scanner] decode-hit: ${text}`);
                 const cands = processDwell([{ value: text, result: zxingToScanResult(text, fmt) }]);
                 setCandidates(cands);
               } else {
+                decodeMisses++;
                 // Nothing decoded this tick — reset all dwell
                 if (dwellMap.current.size > 0) {
                   dwellMap.current.clear();
@@ -378,6 +397,7 @@ export function useBarcodeScanner(
                 }
               }
             } catch {
+              decodeMisses++;
               // NotFoundException is normal — nothing in frame, reset dwell
               if (dwellMap.current.size > 0) {
                 dwellMap.current.clear();
@@ -395,7 +415,7 @@ export function useBarcodeScanner(
         clearTimeout(timer);
         dwellMap.current.clear();
         setCandidates([]);
-        remoteLog('info', `[Scanner] scan loop stopped after ${tickCount} ticks`);
+        remoteLog('info', `[Scanner] scan loop stopped after ${tickCount} ticks — hits:${decodeHits} misses:${decodeMisses}`);
       };
     }
   }, [scanning, engineReady, videoRef]);
