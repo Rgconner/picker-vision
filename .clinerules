@@ -1,0 +1,117 @@
+# Cline Rules — picker-vision workspace
+
+Loaded 2026-08-16 from `F:\git\bob-config` (Russ Conner's IBM Bob config backup) and
+`F:\git\picker-vision\.bob\skills` (workspace-local skills). Canonical protocol text lives
+in those files — read the referenced SKILL.md before applying its protocol. Do not re-derive
+what is written below from source code.
+
+---
+
+## 1. Operational Standards (source: bob-config/russ-development-standards.md)
+
+These are constraints, not preferences. Flag a violation BEFORE proceeding, not after.
+
+1. **Minimal change** — solve the stated problem, nothing else. No unrequested refactors,
+   features, or cleanup of surrounding code.
+2. **Every changed line traces to the request.** If a simpler version works, use it.
+3. **Read before you write.** Never claim behavior of code that has not been read.
+4. **Surgical edits over rewrites.** Full rewrites only when genuinely required, and then
+   complete — no truncation, no placeholders.
+5. **Validate before done.** Run the project's tests/lint/typecheck/build. "Looks complete"
+   is not done.
+6. **No error handling for impossible scenarios.** Handle real failure modes only.
+7. **Follow existing conventions** in the file being edited. The existing convention is the
+   authority unless changing it is the explicit task.
+8. **The board is the memory.** Any decision, blocker, or scope item not immediately
+   resolved gets a card (GitHub issue on RgConner/picker-vision or an entry in BACKLOG.md).
+9. **Propose, then confirm.** No autonomous irreversible actions: writing persistent
+   context files, committing, pushing, updating boards/GitHub — the human confirms first.
+10. **The relationship is a working relationship.** Engage with shorthand and references
+    when Russ brings them; don't force it.
+
+## 2. Evidence-First Rule (source: BACKLOG.md BS-001/BS-002 — applies to every task)
+
+Every claim about system state requires a preceding tool call whose output supports it.
+Evidence first. Claim second. Never reversed.
+
+| Before saying... | Run this first |
+|---|---|
+| "The fix is deployed" | grep fix string in running pod / check pod imageID digest |
+| "The phone has new code" | check served `index.html` bundle hash vs pod |
+| "The user needs to reload" | confirm hash mismatch first |
+| "The camera isn't working" | pull and read the debug snapshot |
+| "No scans reaching server" | check `events_received` counter + scan-log |
+
+When the user reports a state exists, the next action is a tool call to check that state.
+Not a rebuttal, not an explanation of why it probably isn't true. A tool call.
+
+## 3. Skill Index — read the SKILL.md before acting
+
+| Trigger | Skill | File |
+|---|---|---|
+| ANY picker-vision issue / misbehavior | picker-vision-debug — hit the debug APIs FIRST, form hypothesis only from output | `F:\git\bob-config\skills\picker-vision-debug\SKILL.md` |
+| After any push, before declaring "deployed" | picker-vision-deploy-verify — runner alive check, pod digest, fix-string grep, runtime check | `F:\git\bob-config\skills\picker-vision-deploy-verify\SKILL.md` |
+| Problem recurs or needed manual workaround | picker-vision-qol-backlog — log QOL-NNN in BACKLOG.md | `F:\git\bob-config\skills\picker-vision-qol-backlog\SKILL.md` |
+| Code changed, commit being prepared | pre-commit-checklist — unused vars, orphaned code, build/test, card gate before push | `F:\git\bob-config\skills\pre-commit-checklist\SKILL.md` |
+| Any kubectl command | kubectl-context — `& "C:\Users\RussConner\kubectl.exe" <args>`, no --kubeconfig needed | `F:\git\bob-config\skills\kubectl-context\SKILL.md` |
+| "give me the board" / "next card" | board-status — `gh.exe` at `C:\Program Files\GitHub CLI\gh.exe` (full path, not on PATH) | `F:\git\bob-config\skills\board-status\SKILL.md` |
+| Session start across all boards | kanban-session-start | `F:\git\bob-config\skills\kanban-session-start\SKILL.md` |
+| Milestone reached mid-session | kanban-milestone-writeback — propose, wait for confirmation, then write | `F:\git\bob-config\skills\kanban-milestone-writeback\SKILL.md` |
+| Effort/time/cost estimate requested | dev-estimator | `F:\git\bob-config\skills\dev-estimator\SKILL.md` |
+| Building a document/paper/framework | document-artifact-process (Capture → Shuffle → Validate → Write) | `F:\git\bob-config\skills\document-artifact-process\SKILL.md` |
+| CE Framework paper session | ce-framework-board | `F:\git\bob-config\skills\ce-framework-board\SKILL.md` |
+| AIKB work | AIKB priming prompt — T/E + UUID trace_id on every boundary (AIKB-028) | `F:\git\bob-config\aikb-prompt.md` |
+| "close out the chat" / "wrap up" | close-out-chat | `F:\git\picker-vision\.bob\skills\close-out-chat\SKILL.md` |
+| GitHub API / runner auth | github-auth — PAT from `$env:GH_PAT`, never hard-coded | `F:\git\picker-vision\.bob\skills\github-auth\SKILL.md` |
+| Death spiral / frustration / too fast | ma-window-reminder — stop, list confirmed facts only, one next action | `F:\git\picker-vision\.bob\skills\ma-window-reminder\SKILL.md` |
+
+## 4. Picker Vision — Key Facts (source: SESSION.md — never re-derive)
+
+| Fact | Value |
+|---|---|
+| Production URL | `https://bobstinytreasures.snwbd.com` |
+| K8s namespace (BTT) | `picker-vision-btt` (also: `picker-vision` = main, `picker-vision-test` = test) |
+| Active branch | `feature/bobs-tiny-treasures` |
+| API gateway (BTT) | `http://192.168.11.213` — header `X-API-Key: changeme` |
+| Web UI (BTT) | `http://192.168.11.214` |
+| Debug APIs | `/health`, `/api/versions`, `/api/telemetry`, `/pickers`, `/api/scan-log?limit=N`, `/api/debug/snapshot/{id}`, `/api/logs/{service}` |
+| Self-hosted runner | `C:\Users\RussConner\actions-runner\` — goes stale regularly; check Runner.Listener/Runner.Worker before waiting on CI |
+| DB in pod | `/data/picker.db` (persistent volume), NOT `/app/picker.db` |
+| Board | GitHub issues on `RgConner/picker-vision` |
+
+Debug rules (SESSION.md):
+1. When something breaks, start with "what did I change?" before environmental theories.
+2. Native camera reads it = code problem, not physical. Full stop.
+3. Patched the same thing three times and it still fails → replace the layer, don't patch again.
+
+
+## 5. Session Protocol
+
+- **First action of every session:** read `F:\git\picker-vision\SESSION.md`.
+- **Session end:** update SESSION.md (current state, what shipped, immediate first action
+  next session) and commit it — after Russ confirms.
+- **Commit locally first; push waits for the card gate.** No card on the board → write the
+  card, then push. Urgency does not override this.
+- **No demo exemptions.** Demo code is production code. A bug found in a demo gets fixed or
+  carded — never passed over.
+- **Review concerns** resolve exactly one way: fix it now, card it, or state the specific
+  technical reason it does not apply. "It's only a demo" and "we can fix it later" are not
+  valid resolutions.
+
+## 6. Python Testing Conventions
+
+- In THIS repo: follow the existing convention — pytest-style plain test classes
+  (see `tests/test_packer.py`), no unittest import.
+- General rule (bob-config python-unittest mode): unittest is the DEFAULT framework for new
+  code with no existing convention; use pytest only when explicitly requested or when
+  matching an existing pytest codebase.
+- Target ≥80% coverage, 100% pass rate, exact user-specified paths, terminating mock
+  `side_effect` values for any loop, no `_enhanced` file copies.
+
+## 7. The Ma Window
+
+CI/deploy latency is the team's sprint boundary, not waste. If the same bug is fixed
+multiple times in a row, or fixes are chaining into new bugs: stop, list only confirmed
+facts from live APIs/logs, name one next action with a success condition.
+
+> "The machine never needs to breathe. The human always does. The pipeline enforces parity."
