@@ -1,0 +1,179 @@
+# Behavior log — rules learned from past failures
+
+## R0 — Session start: load canonical standards & skills (bob-config)
+The user maintains ONE canonical AI config at F:\git\bob-config\ (shared with
+IBM Bob). It is NOT auto-loaded by this environment — these pointers are the
+load mechanism. Use them every session.
+
+1. READ AND APPLY `F:\git\bob-config\russ-development-standards.md` before
+   planning or editing anything — it is authoritative. Core rules:
+   1. Minimal change — solve the stated problem, nothing else
+   2. Every changed line traces to the requirement
+   3. Read before you write — no claims about unseen code
+   4. Surgical edits over rewrites; a required rewrite is complete, never truncated
+   5. Validate before done — checks pass, not "looks complete"
+   6. No error handling for impossible scenarios
+   7. Follow existing conventions in the file being edited
+   8. The board is the memory — unresolved decisions get a card, not chat memory
+   9. AI proposes, human confirms — no autonomous commits/pushes/persistent changes
+   10. Direct communication is a feature — engage like a colleague
+
+2. SKILLS are procedure documents in `F:\git\bob-config\skills\<name>\SKILL.md`
+   — NOT registered with the skills tool. When a task matches one, READ the
+   SKILL.md and follow it:
+   - picker-vision-debug — any picker-vision issue: debug APIs FIRST, source later
+   - picker-vision-deploy-verify — after any push: runner + pod digest + fix
+     string + debug APIs before declaring a fix live
+   - picker-vision-qol-backlog — recurring/manual-fix problems → BACKLOG.md entry
+   - pre-commit-checklist — before every commit; includes card gate before push
+   - kubectl-context, board-status, kanban-session-start,
+     kanban-milestone-writeback, ce-framework-board, dev-estimator,
+     document-artifact-process — check when the task matches
+
+## Rule precedence & known tensions (noted 2026-08-29)
+Rules were layered on over time. Where they pull against each other:
+
+1. ACT vs CONFIRM — R1 ("next call must be an edit") vs standard #9 (propose,
+   human confirms). Split by scope: R1 governs in-task file edits (act mode /
+   approved plan); #9 governs commits, pushes, board updates, external
+   systems, and persistent-context edits — including THIS file. Rule-file
+   edits so far were covered by the user's standing "log it" directives;
+   treat future ones as proposals.
+2. PLAN MODE vs R1 — R1's forced-edit mandate applies in act mode only. In
+   plan mode the equivalent is: stop measuring, present the plan built from
+   the data already in hand.
+3. MEASURE vs READ — R1 (stop measuring) vs standard #3 (read before write).
+   ONE complete read of the target region satisfies #3; R1 forbids repeating
+   it. R1's permitted "one read needed for the edit" IS #3's required read.
+4. WSL vs SKILLS — R5 (prefer WSL) vs bob-config skills whose procedures are
+   PowerShell-native (deploy-verify: Get-Process, actions-runner, Windows
+   kubectl.exe). Inside a skill's trigger scope the skill's commands are
+   authoritative — R5's "Windows-only tasks" carve-out covers them.
+5. BOARD vs BEHAVIOR LOG — standard #8 (board is the memory) vs these
+   .clinerules files. Split: .clinerules holds agent-behavior rules ONLY;
+   project decisions and work items belong on the board.
+   - CLEARED (2026-08-29): the GitHub-issue boards (RgConner/kanban-team,
+     kanban-bob, kanban-publishing, picker-vision issues). Access via
+     gh.exe ("C:\Program Files\GitHub CLI\gh.exe", authorized account
+     Rgconner; scopes repo/workflow/read:org/gist, NO read:project — use
+     --json field lists, never projectItems). The MCP servers are disabled
+     deliberately (kanban-bob#18: GitHub MCP breaks Bob's backend) — use
+     the CLI path. Follow board-status + kanban-milestone-writeback
+     procedures: read current body before any edit, propose the write and
+     wait for confirmation, append never overwrite.
+   - PENDING (2026-08-29): AIKB (AI-Human Kanban) at F:\git\aikb-app +
+     aikb.snwbd.com — a real app (Python/FastAPI + SQLite + Carbon UI)
+     where the AI is a first-class participant via ModelAdapter and cards
+     carry machine-computed truth tracking (spec/static/runtime hashes,
+     knowledge_state). A second agent writing cards could collide
+     semantically, not just textually. User is conferring with IBM Bob on
+     shared use vs. a separate instance — do not write to AIKB until the
+     user decides; do not re-ask. User's stated direction (2026-08-29):
+     wants this assistant creating ground-truth cards about the code it
+     works on (Bob credits AIKB with major bug-prevention/detection gains).
+     Interim: read-only API access is the safe path; writes await the
+     decision. Interim mechanics (2026-08-29): local mirror at
+     F:\git\aikb-app\aikb\board\cards\*.json = full card records readable
+     with NO server/API — read manifest.json first (exported_at, counts),
+     then card files; check card commit_sha vs repo HEAD for staleness
+     (2026-08-09 export predates current picker-vision HEAD). Live API at
+     aikb.snwbd.com is currently broken twice over: TLS cert hostname
+     mismatch, and (bypassing it with -k) /health returns a plain 404 —
+     something answers but not the FastAPI app's routes. Fix both before
+     relying on it. The app has a built-in read-only key
+     (AIKB_API_KEY_RO env var; RW key AIKB_API_KEY governs writes) — the
+     natural enforcement path for this assistant's access once decided.
+6. ASK vs ACT — R6 (ask for tools early) vs "act, don't ask permission".
+   R6 never stalls work: surface the problem AND ask in the same response,
+   continuing with what is possible. Asking is reporting, not blocking.
+7. PY-3.13 GOTCHA SCOPE — Path.write_text(mode=) is legal on WSL python 3.14
+   but stays forbidden in code targeting the Pi (older Python). The
+   constraint follows the deploy target, not the host.
+
+Known overlaps (aligned, not conflicting): R4 ≈ standard #5; R2 ≈ standard
+#4's complete-rewrite corollary; R3 ≈ the harness's batching guidance.
+
+Precedence when rules collide: bob-config standards (user principles) beat
+R-rules (my tactics); gotchas are environment facts, not rules. Note any new
+collision here and amend the losing rule.
+
+## Incident 2026-08-29 — inspection loop (recap/spikes/s0-camera-path-stability/audit_paths.py)
+12+ tool calls across two sessions re-measuring byte offsets of one malformed
+function without ever editing it. Once a strategy was forced, the whole fix
+took 4 calls. These rules exist to prevent a repeat. They are non-negotiable.
+
+## R1 — Hard cap on inspection: 3 strikes, then act
+- Re-measuring a fact already measured = a wasted call. If a code region has
+  been printed in full once, the data is in hand — stop measuring.
+- After 3 inspection calls on the same question, the next call MUST be a
+  state-changing edit (or the one read needed directly for that edit).
+- Never RESUME a stalled task with another measurement. If a handoff summary
+  says "couldn't pin down the boundaries after multiple attempts", that IS the
+  loop already happening: print the region once, completely, then edit it.
+
+## R2 — One committed edit strategy for large/deformed code regions
+- Do NOT hand-transcribe large `old_text` blocks (one wrong char = failed
+  match = another loop). Use a marker-based splice instead:
+  1. editor tool: write the replacement content to a temp file beside the target;
+  2. ONE python script: locate anchors with str.find(), assert each anchor
+     occurs exactly once and start < end, rebuild the file, write it back
+     (open with newline='' to preserve LF endings), delete the temp file,
+     then verify (py_compile + functional smoke test) in the SAME script.
+- Small edits whose exact text is already in hand: editor tool directly.
+
+## R3 — Batch aggressively
+- All independent reads/prints go in ONE tool call (read_files array, or one
+  python script that prints everything needed). Serial single-purpose
+  inspection commands are a symptom of the loop.
+
+## R4 — Verify, then report
+- Every edit batch ends with a run that proves the change: compile check plus
+  exercising the new code path (e.g. import the module, call the new function
+  with fake inputs, assert on output). Report pass/fail facts, not intentions.
+
+## R5 — Prefer WSL over raw PowerShell
+- run_commands routes through PowerShell, whose escaping/native re-quoting
+  corrupts inline code (see gotcha below). Route around it via WSL:
+  * `wsl bash -c '...'` — the PowerShell single-quoted string passes through
+    literally; normal bash quoting applies inside.
+  * Non-trivial logic: write a script file, then run
+    `wsl bash /mnt/f/.../x.sh` or `wsl python3 /mnt/f/.../x.py`.
+    Zero inline-quoting risk.
+- Default distro is Ubuntu (user ran `wsl --set-default Ubuntu` on 2026-08-29:
+  Ubuntu 26.04 LTS, python3.14, /mnt/f works), so bare `wsl <cmd>` is now safe.
+  Prefer explicit `wsl -d Ubuntu` anyway — before the switch the default was
+  docker-desktop (no python3, no /mnt/*), and a Docker Desktop change could
+  silently flip the default back.
+- Windows paths map f:\ -> /mnt/f/ inside WSL.
+- Caveats: WSL2 exposes no /dev/video* or USB sysfs — audit_paths.py can be
+  compile/unit-tested in WSL, but hardware runs still need the Pi.
+- Raw PowerShell only for Windows-only tasks (registry, Windows services).
+
+## R6 — Surface problems and ask for tools/preferences early
+- When the toolchain fights back (escaping bugs, missing tools, slow paths,
+  wrong shell), SAY SO in the response and ask the user for the preferred
+  fix (install a package, switch environments, provide a tool). The user
+  decides whether it's appropriate — but only if asked.
+- Incident 2026-08-29: fought PowerShell escaping for an entire session
+  without ever mentioning it. The user had WSL installed the whole time and
+  redirected instantly once asked. User directive: "Never hesitate to ask
+  for tools, I will decide if they are not appropriate, but you should ask,
+  it will make things smoother, as I don't know what issues you are running
+  into."
+- Asking is cheap and fast. Silent workarounds compound — they get baked
+  into code and logged as gotchas instead of being fixed at the source.
+
+## Environment gotchas (this machine)
+- PowerShell corrupts `\r` inside `python3 -c "..."` strings (it becomes a
+  real carriage return mid-literal → SyntaxError: unterminated string).
+  Prefer R5 (WSL), which sidesteps this entirely; without WSL use chr(13) /
+  chr(10) and avoid escape sequences in inline -c code.
+- read_files may return "[outdated - see the latest file content]" for paths
+  outside the open workspace (e.g. f:/git/recap while workspace = picker-vision).
+  Read those files via python in run_commands instead.
+- importlib exec_module on a module containing @dataclass with
+  `from __future__ import annotations` raises AttributeError unless
+  `sys.modules[spec.name] = mod` is set BEFORE exec_module.
+- Path.write_text(..., mode=...) requires Python >= 3.13 (Pi OS may run older);
+  Path has no .quote() method. Prefer open() + os.chmod, and `sudo tee` with
+  stdin for privileged writes.
