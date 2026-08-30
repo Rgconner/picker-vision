@@ -1,35 +1,31 @@
 # Behavior log — rules learned from past failures
 
-## R0 — Session start: load canonical standards & skills (bob-config)
-The user maintains ONE canonical AI config at F:\git\bob-config\ (shared with
-IBM Bob). It is NOT auto-loaded by this environment — these pointers are the
-load mechanism. Use them every session.
+## R0 — Inlined development standards (from bob-config, de-Bob-ified)
+These are the universal rules from russ-development-standards.md, written inline
+to avoid reading a file that references Bob's tool names (apply_diff, etc.)
+which causes tool hallucination in this environment.
 
-1. READ AND APPLY `F:\git\bob-config\russ-development-standards.md` before
-   planning or editing anything — it is authoritative. Core rules:
-   1. Minimal change — solve the stated problem, nothing else
-   2. Every changed line traces to the requirement
-   3. Read before you write — no claims about unseen code
-   4. Surgical edits over rewrites; a required rewrite is complete, never truncated
-   5. Validate before done — checks pass, not "looks complete"
-   6. No error handling for impossible scenarios
-   7. Follow existing conventions in the file being edited
-   8. The board is the memory — unresolved decisions get a card, not chat memory
-   9. AI proposes, human confirms — no autonomous commits/pushes/persistent changes
-   10. Direct communication is a feature — engage like a colleague
+1. Minimal change — solve the stated problem, nothing else
+2. Every changed line traces to the requirement
+3. Read before you write — no claims about unseen code
+4. Surgical edits over rewrites; a required rewrite is complete, never truncated
+5. Validate before done — checks pass, not looks-complete
+6. No error handling for impossible scenarios
+7. Follow existing conventions in the file being edited
+8. The board is the memory — unresolved decisions get a card, not chat memory
+9. AI proposes, human confirms — no autonomous commits/pushes/persistent changes
+10. Direct communication is a feature — engage like a colleague
 
-2. SKILLS are procedure documents in `F:\git\bob-config\skills\<name>\SKILL.md`
-   — NOT registered with the skills tool. When a task matches one, READ the
-   SKILL.md and follow it:
-   - picker-vision-debug — any picker-vision issue: debug APIs FIRST, source later
-   - picker-vision-deploy-verify — after any push: runner + pod digest + fix
-     string + debug APIs before declaring a fix live
-   - picker-vision-qol-backlog — recurring/manual-fix problems → BACKLOG.md entry
-   - pre-commit-checklist — before every commit; includes card gate before push
-   - kubectl-context, board-status, kanban-session-start,
-     kanban-milestone-writeback, ce-framework-board, dev-estimator,
-     document-artifact-process — check when the task matches
-
+## SKILLS — procedure documents in F:\git\bob-config\skills\<name>\SKILL.md
+When a task matches one, READ the SKILL.md and follow it:
+- picker-vision-debug — any picker-vision issue: debug APIs FIRST, source later
+- picker-vision-deploy-verify — after any push: runner + pod digest + fix
+  string + debug APIs before declaring a fix live
+- picker-vision-qol-backlog — recurring/manual-fix problems -> BACKLOG.md entry
+- pre-commit-checklist — before every commit; includes card gate before push
+- kubectl-context, board-status, kanban-session-start,
+  kanban-milestone-writeback, ce-framework-board, dev-estimator,
+  document-artifact-process — check when the task matches
 ## Rule precedence & known tensions (noted 2026-08-29)
 Rules were layered on over time. Where they pull against each other:
 
@@ -114,12 +110,13 @@ took 4 calls. These rules exist to prevent a repeat. They are non-negotiable.
 ## R2 — One committed edit strategy for large/deformed code regions
 - Do NOT hand-transcribe large `old_text` blocks (one wrong char = failed
   match = another loop). Use a marker-based splice instead:
-  1. editor tool: write the replacement content to a temp file beside the target;
+  1. run_commands: write the replacement content to a temp file beside the target;
   2. ONE python script: locate anchors with str.find(), assert each anchor
      occurs exactly once and start < end, rebuild the file, write it back
      (open with newline='' to preserve LF endings), delete the temp file,
      then verify (py_compile + functional smoke test) in the SAME script.
-- Small edits whose exact text is already in hand: editor tool directly.
+- Small edits whose exact text is already in hand: use the same WSL Python
+  splice pattern (temp file + str.find anchors). There is no editor tool.
 
 ## R3 — Batch aggressively
 - All independent reads/prints go in ONE tool call (read_files array, or one
@@ -162,6 +159,13 @@ took 4 calls. These rules exist to prevent a repeat. They are non-negotiable.
   into."
 - Asking is cheap and fast. Silent workarounds compound — they get baked
   into code and logged as gotchas instead of being fixed at the source.
+
+  ## R7 — Two failures = re-assess, do not retry
+- After 2 consecutive tool calls of the same type fail to produce the
+  expected result, STOP. List available tools. Pick a different approach.
+  Never try the same failing action a third time.
+- This is the anti-hallucination rule. Hallucinating a tool that doesn't
+  exist is a tool-call failure; the fix is using tools that do exist.
 
 ## Environment gotchas (this machine)
 - PowerShell corrupts `\r` inside `python3 -c "..."` strings (it becomes a
