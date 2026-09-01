@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Meeting Summary - IBM Account Team Introduction</title>
+    <style>
+        :root {
+            --blue: #0f62fe;
+            --ink: #161616;
+            --sub: #525252;
+            --line: #e0e0e0;
+            --bg: #ffffff;
+            --soft: #f4f4f4;
+            --green: #1b7047;
+            --mono: Consolas, Menlo, monospace;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--soft);
+            color: var(--ink);
+            line-height: 1.55;
+            padding: 2rem 1rem;
+        }
+        .page { max-width: 860px; margin: 0 auto; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+        header { background: var(--ink); color: #fff; padding: 2rem 2.25rem; }
+        header h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; }
+        header .sub { color: #c6c6c6; margin-top: 0.35rem; font-size: 0.95rem; }
+        main { padding: 1.75rem 2.25rem 2.25rem; }
+        section { margin-bottom: 2rem; }
+        h2 { font-size: 1.1rem; font-weight: 600; border-bottom: 2px solid var(--blue); padding-bottom: 0.35rem; margin-bottom: 1rem; }
+        h3 { font-size: 0.9rem; color: var(--sub); font-weight: 600; margin: 1rem 0 0.5rem; }
+        ul { padding-left: 1.3rem; }
+        li { margin-bottom: 0.4rem; font-size: 0.95rem; }
+        .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
+        .meta-card { background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 0.75rem 1rem; }
+        .meta-card .k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sub); font-weight: 600; }
+        .meta-card .v { font-size: 0.9rem; margin-top: 0.2rem; font-family: var(--mono); }
+        .attendee-block { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 2rem; }
+        .attendee-block .party { font-weight: 600; margin-bottom: 0.4rem; }
+        .party.client { color: var(--blue); }
+        .party.vendor { color: var(--green); }
+        .attendee-block ul { padding-left: 1.1rem; }
+        .attendee-block li { margin-bottom: 0.25rem; font-size: 0.92rem; }
+        .role { color: var(--sub); font-size: 0.85rem; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+        thead th { background: var(--soft); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sub); }
+        .note { font-size: 0.85rem; color: var(--sub); font-style: italic; }
+        @media (max-width: 640px) {
+            .attendee-block { grid-template-columns: 1fr; }
+            header, main { padding-left: 1.25rem; padding-right: 1.25rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class='page'>
+        <header>
+            <h1>IBM Account Team Introduction &amp; Security Strategy Discussion</h1>
+            <p class='sub'>Meeting ID: meeting-85d63dfb-36e9-4796-a6cb-27d1f95bdd03</p>
+        </header>
+        <main>
+            <section>
+                <h2>Meeting Metadata</h2>
+                <div class='meta-grid'>
+                    <div class='meta-card'><div class='k'>Date</div><div class='v'>2026-08-31, 11:36 AM</div></div>
+                    <div class='meta-card'><div class='k'>Copied On</div><div class='v'>2026-08-31, 11:58 AM</div></div>
+                </div>
+            </section>
+            <section>
+                <h2>Attendees</h2>
+                <div class='attendee-block'>
+                    <div>
+                        <div class='party client'>Bunzel (Client)</div>
+                        <ul>
+                            <li>Moses <span class='role'>&mdash; Global CISO</span></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div class='party vendor'>IBM (Vendor)</div>
+                        <ul>
+                            <li>Don Tavani <span class='role'>&mdash; Client Executive</span></li>
+                            <li>Abby <span class='role'>&mdash; Data &amp; AI Portfolio Lead</span></li>
+                            <li>Russ Connor <span class='role'>&mdash; Technical Counterpart</span></li>
+                            <li>Bobby Joe Friedman <span class='role'>&mdash; Automation &amp; Security Lead</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>Client Goals &amp; Success Criteria</h2>
+                <p class='note' style='margin-bottom:0.75rem;'>Moses outlined the requirements for a successful security and AI strategy, emphasizing that AI security cannot exist without robust data security.</p>
+                <ul>
+                    <li><strong>Holistic Visibility (360-degree view):</strong> A single pane of glass that integrates AI identity with data security.</li>
+                    <li><strong>Data Landscape Visibility:</strong> Understanding where sensitive information (PII, AIP, financial data) resides, its exposure, and current permission levels.</li>
+                    <li><strong>Gen AI Agent Oversight:</strong> The ability to track what AI agents are doing, where they are moving within the network, which users are employing them, and monitoring for malicious prompts.</li>
+                    <li><strong>Policy Enforcement:</strong> The ability to enforce granular policies, such as restricting an AI agent's access to specific databases or file shares.</li>
+                    <li><strong>Agnostic Integration:</strong> The solution must be able to plug into various environments (on-prem or cloud) to accommodate Bunzel's decentralized and acquired company structure.</li>
+                </ul>
+            </section>
+            <section>
+                <h2>Agreed Deliverables</h2>
+                <table>
+                    <thead>
+                        <tr><th>Deliverable</th><th>Owner</th><th>Due Date</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Updated demo incorporating feedback regarding holistic AI and data security visibility</td>
+                            <td>IBM / Carbon Helix Team</td>
+                            <td>Prior to Sept 23</td>
+                        </tr>
+                        <tr>
+                            <td>Meeting invitation for follow-up demo</td>
+                            <td>IBM Team</td>
+                            <td>Immediate</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section>
+                <h2>Commercial Terms Discussed</h2>
+                <p class='note'>None noted in this section.</p>
+            </section>
+
+            <section>
+                <h2>Risks &amp; Concerns</h2>
+                <table>
+                    <thead>
+                        <tr><th>Concern</th><th>Impact</th><th>Owner</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Decentralized corporate structure</td><td>Complexity in governing and implementing unified security strategies across numerous operating companies and regions.</td><td>Moses</td></tr>
+                        <tr><td>Diverse regulatory landscape</td><td>Difficulty in maintaining compliance across different countries and business sectors (healthcare, manufacturing, etc.).</td><td>Moses</td></tr>
+                        <tr><td>Fragmented vendor management</td><td>Risk of inconsistent support; Moses requires a 'single throat to choke' (central point of contact) for global deployment.</td><td>Moses / Don</td></tr>
+                        <tr><td>Stakeholder fatigue</td><td>Moses will only involve additional stakeholders once the solution is proven and 'ready' to avoid wasting their time.</td><td>Moses</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section>
+                <h2>Next Steps</h2>
+                <table>
+                    <thead>
+                        <tr><th>Owner</th><th>Action</th><th>Due Date</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>IBM Team</td><td>Send calendar invite for the follow-up demo</td><td>Immediate</td></tr>
+                        <tr><td>IBM Team</td><td>Involve Jason Hunt to align the demo with global architectural views</td><td>By Sept 23</td></tr>
+                        <tr><td>IBM &amp; Moses</td><td>Conduct follow-up demo including Jason Hunt</td><td>September 23, 2:00 PM &ndash; 3:00 PM CT</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

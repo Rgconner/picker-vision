@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Meeting Summary - Strategy for Client Software Upgrades and AI Implementation</title>
+    <style>
+        :root {
+            --blue: #0f62fe;
+            --ink: #161616;
+            --sub: #525252;
+            --line: #e0e0e0;
+            --bg: #ffffff;
+            --soft: #f4f4f4;
+            --green: #1b7047;
+            --mono: Consolas, Menlo, monospace;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--soft);
+            color: var(--ink);
+            line-height: 1.55;
+            padding: 2rem 1rem;
+        }
+        .page { max-width: 900px; margin: 0 auto; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+        header { background: var(--ink); color: #fff; padding: 2rem 2.25rem; }
+        header h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; }
+        header .sub { color: #c6c6c6; margin-top: 0.35rem; font-size: 0.95rem; }
+        main { padding: 1.75rem 2.25rem 2.25rem; }
+        section { margin-bottom: 2rem; }
+        h2 { font-size: 1.1rem; font-weight: 600; border-bottom: 2px solid var(--blue); padding-bottom: 0.35rem; margin-bottom: 1rem; }
+        ul { padding-left: 1.3rem; }
+        li { margin-bottom: 0.4rem; font-size: 0.95rem; }
+        .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
+        .meta-card { background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 0.75rem 1rem; }
+        .meta-card .k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sub); font-weight: 600; }
+        .meta-card .v { font-size: 0.9rem; margin-top: 0.2rem; font-family: var(--mono); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+        thead th { background: var(--soft); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--sub); }
+        td.mono { font-family: var(--mono); white-space: nowrap; }
+        td .t { font-family: var(--mono); color: var(--sub); font-size: 0.85rem; }
+        .badge { display: inline-block; background: #e8efff; color: var(--blue); font-size: 0.72rem; font-weight: 600; padding: 0.1rem 0.5rem; border-radius: 10px; margin-right: 0.35rem; }
+        footer { background: var(--soft); color: var(--sub); font-size: 0.8rem; padding: 1rem 2.25rem; border-top: 1px solid var(--line); }
+        @media (max-width: 640px) {
+            header, main, footer { padding-left: 1.25rem; padding-right: 1.25rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class='page'>
+        <header>
+            <h1>Strategy for Client Software Upgrades and AI Implementation</h1>
+            <p class='sub'>Meeting ID: meeting-17b3ab43-20e7-4914-8f11-1b2472c8589e</p>
+        </header>
+        <main>
+            <section>
+                <h2>Meeting Metadata</h2>
+                <div class='meta-grid'>
+                    <div class='meta-card'><div class='k'>Date</div><div class='v'>August 31, 2026</div></div>
+                    <div class='meta-card'><div class='k'>Time</div><div class='v'>01:33 PM</div></div>
+                    <div class='meta-card'><div class='k'>Copied On</div><div class='v'>01:37 PM</div></div>
+                </div>
+            </section>
+
+            <section>
+                <h2>Summary</h2>
+                <p>The meeting focused on preparing for an upcoming client interaction regarding software upgrades and the potential implementation of AI capabilities. The team discussed the significant cost increases associated with moving from perpetual licenses to subscription models and the technical complexities of on-premise AI, particularly the high memory requirements for running large models on Spire cards. To ensure the client's needs are met and to mitigate the risk of disrupting production environments, the team decided to adopt a <strong>"discovery-first"</strong> approach for the upcoming client call, prioritizing understanding the client's specific business objectives and use cases before proposing hardware or specific solutions.</p>
+            </section>
+
+            <section>
+                <h2>Key Decisions</h2>
+                <ul>
+                    <li><strong>Postpone Technical Discussion:</strong> The detailed technical discussion will be postponed until tomorrow to allow for better preparation and information gathering.</li>
+                    <li><strong>Discovery-Led Strategy:</strong> The team will approach the upcoming client call with a focus on discovery—asking "why" and "what are you trying to accomplish"—rather than presenting hardware or specific solutions immediately.</li>
+                    <li><strong>Avoid Direct Hardware Pitching:</strong> The team decided not to discuss specific hardware or solutions during the initial client interaction unless specifically asked, in order to avoid recommending inadequate solutions.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Action Items</h2>
+                <table>
+                    <thead>
+                        <tr><th>Owner</th><th>Task</th><th>Due</th><th>Ref</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Unspecified</td>
+                            <td>Reschedule the detailed technical discussion</td>
+                            <td class='mono'>Tomorrow</td>
+                            <td><span class='t'>[06:01]</span></td>
+                        </tr>
+                        <tr>
+                            <td>Unspecified</td>
+                            <td>Conduct discovery-focused client call (Mike, Bob, and Wally)</td>
+                            <td class='mono'>Today (3:30 PM)</td>
+                            <td><span class='t'>[07:50]</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section>
+                <h2>Discussion Highlights</h2>
+
+                <h3 style="margin:1rem 0 0.5rem;color:#525252"><span class='badge'>Economics</span>Upgrade Economics</h3>
+                <ul>
+                    <li>The team noted that the cost for the client is significantly higher because they missed the window to move from version 9 to 10 while still holding perpetual licenses. Moving to version 11 necessitates a transition to an expensive subscription model.</li>
+                </ul>
+
+                <h3 style="margin:1rem 0 0.5rem;color:#525252"><span class='badge'>AI Tech</span>Technical Requirements for AI</h3>
+                <ul>
+                    <li>There was an extensive technical discussion regarding the economics of on-premise AI. The team highlighted that while Spire cards are relatively inexpensive, the memory (RAM) required to load large models (e.g., 131 billion parameters) is substantial, requiring hundreds of gigabytes of memory to avoid performance degradation.</li>
+                </ul>
+
+                <h3 style="margin:1rem 0 0.5rem;color:#525252"><span class='badge'>Deployment</span>On-Prem vs. Cloud</h3>
+                <ul>
+                    <li>The team compared the costs of on-premise AI hardware against the cost-effectiveness of using cloud-based token generation, noting that inference costs have dropped significantly in recent years.</li>
+                </ul>
+
+                <h3 style="margin:1rem 0 0.5rem;color:#525252"><span class='badge'>Use Cases</span>Client Use Case Speculation</h3>
+                <ul>
+                    <li>Members brainstormed potential AI applications for the client, including warehouse automation (part/piece picking), inventory planning, visual inspection tools, and AI-driven forklifts.</li>
+                </ul>
+
+                <h3 style="margin:1rem 0 0.5rem;color:#525252"><span class='badge'>Risk</span>Risk Management and Business Resiliency</h3>
+                <ul>
+                    <li>A major concern was raised regarding the risk of running AI workloads on production machines. The team discussed the possibility of proposing a separate, smaller machine (e.g., an 1122) for development and testing to protect the client's primary business operations.</li>
+                </ul>
+            </section>
+        </main>
+        <footer>
+            Generated meeting summary &mdash; meeting-17b3ab43-20e7-4914-8f11-1b2472c8589e &bull; August 31, 2026
+        </footer>
+    </div>
+</body>
+</html>

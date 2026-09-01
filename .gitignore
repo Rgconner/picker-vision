@@ -36,3 +36,6 @@ Thumbs.db
 
 # Docker
 .dockerignore
+
+# Local MCP server config (holds the AIKB API key)
+.mcp.json
