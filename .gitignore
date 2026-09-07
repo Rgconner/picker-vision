@@ -39,3 +39,9 @@ Thumbs.db
 
 # Local MCP server config (holds the AIKB API key)
 .mcp.json
+
+# Kubeconfig (holds cluster-admin credentials)
+config
+
+# Talos client config (holds cluster-admin credentials)
+.talos/
