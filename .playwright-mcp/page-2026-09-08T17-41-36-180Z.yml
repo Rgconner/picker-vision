@@ -1,0 +1,22 @@
+- generic [active] [ref=e1]:
+  - heading "bunzl-ciso-demo" [level=1] [ref=e2]
+  - generic [ref=e3]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: Menu
+      - generic [ref=e8] [cursor=pointer]:
+        - button "★" [ref=e9]
+        - generic [ref=e10]: GEO ›
+    - generic [ref=e13]:
+      - generic [ref=e14]: Findings
+      - generic [ref=e15]:
+        - button "☆" [ref=e16] [cursor=pointer]
+        - generic [ref=e17]: Public S3 bucket exposes customer export dataset
+      - generic [ref=e18]:
+        - button "☆" [ref=e19] [cursor=pointer]
+        - generic [ref=e20]: MFA not enforced on admin console
+      - generic [ref=e21]:
+        - button "☆" [ref=e22] [cursor=pointer]
+        - generic [ref=e23]: Unpatched CVE on distribution edge node
+      - generic [ref=e24]:
+        - button "☆" [ref=e25] [cursor=pointer]
+        - generic [ref=e26]: TLS certificate expired on internal API gateway
